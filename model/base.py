@@ -230,3 +230,31 @@ class CompositeModel(torch.nn.Module):
         )
 
         return self.head(x_dict[entity_table][: seed_time.size(0)])
+    
+    def get_node_embedding(
+        self,
+        batch: HeteroData,
+        entity_table: NodeType
+    ):
+        seed_time = batch[entity_table].seed_time
+        x_dict = self.feature_encoder(batch.tf_dict)
+        x_dict = self.node_encoder(x_dict)
+        rel_time_dict = self.temporal_encoder(
+            seed_time, batch.time_dict, batch.batch_dict
+        )
+
+        for node_type, rel_time in rel_time_dict.items():
+            x_dict[node_type] = x_dict[node_type] + rel_time
+
+        for node_type, embedding in self.embedding_dict.items():
+            x_dict[node_type] = x_dict[node_type] + \
+                embedding(batch[node_type].n_id)
+
+        x_dict = self.gnn(
+            x_dict,
+            batch.edge_index_dict,
+            batch.num_sampled_nodes_dict,
+            batch.num_sampled_edges_dict,
+        )
+        
+        return x_dict
