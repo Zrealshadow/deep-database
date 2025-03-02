@@ -7,37 +7,73 @@ from relbench.base import Database
 from torch_frame.config import TextEmbedderConfig
 from torch_frame import stype
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, List, Tuple, Optional, Union
+
+from dataclasses import dataclass
+from collections import OrderedDict
 
 
-def make_pkey_fkey_edges(
+@dataclass
+class DBIndex(object):
+    """
+    Data structure to mapping between node global id and tuples in the database.
+    """
+
+    table_gid_offset: Dict[str, int]
+    # table_name -> scope
+    gid_table: List[str]
+
+    def get_tuple_positions(self, global_ids: Union[int, List[int]]) -> Union[Tuple[str, int], List[Tuple[str, int]]]:
+        if isinstance(global_ids, List):
+            max_gid = max(global_ids)
+            assert max_gid < len(self.gid_table)
+            def get_offset(
+                gid): return self.table_gid_offset[self.gid_table[gid]]
+            return [(self.gid_table[gid], gid - get_offset(gid)) for gid in global_ids]
+        else:
+            assert global_ids < len(self.gid_table)
+            return (self.gid_table[global_ids], global_ids - self.table_gid_offset[self.gid_table[global_ids]])
+
+    def get_global_ids(self, table_name: str, pkys: Union[int, List[int]]) -> Union[int, List[int]]:
+        if isinstance(pkys, List):
+            offset = self.table_gid_offset[table_name]
+            return [offset + pky for pky in pkys]
+        else:
+            return self.table_gid_offset[table_name] + pkys
+
+
+@dataclass
+class HomoGraph(object):
+    """
+    (row_i, col_i) represents the i-th edge in the graph.
+    """
+    row: List[int]
+    col: List[int]
+    dbindex: DBIndex
+
+
+def make_homograph_from_db(
     db: Database,
-    col_to_stype_dict: Dict[str, Dict[str, stype]] = None,
-    text_embedder_cfg: Optional[TextEmbedderConfig] = None,
-    cache_dir: Optional[str] = None,
-):
-
-    gid_to_entity, entity_to_gid = {}, {}
-    # node_id -> (table_name, pkey_index)
-    # table_name -> { pkey_index -> node_id}
-
-    # initialize node
+) -> HomoGraph:
+    """
+    Generate a homogeneous graph from the database for random-walk sampling.
+    """
+    # --------------- initialize node ----------------
+    dbindex = DBIndex(table_gid_offset={}, gid_table=[])
     for table_name, table in db.table_dict.items():
         df = table.df
+
         if table.pkey_col is not None:
             assert (df[table.pkey_col].values == np.arange(len(df))).all()
 
-        gid_init = len(gid_to_entity)
-        gid_end = gid_init + len(df)
-        gids = np.arange(gid_init, gid_end)
-        pkey_idxs = np.arange(len(df))
+        table_offset = len(dbindex.gid_table)
+        # update table offset
+        dbindex.table_gid_offset[table_name] = table_offset
+        # update gid to table
+        dbindex.gid_table.extend([table_name] * len(df))
 
-        gid_to_entity.update(dict(zip(gids, pkey_idxs)))
-        entity_to_gid[table_name] = dict(zip(pkey_idxs, gids))
-
-    # initialize edge
+    # --------------- initialize edge ----------------
     row, col = [], []
-    # source node, target node
     for table_name, table in db.table_dict.items():
         df = table.df
         for fkey_name, pkey_table_name in table.fkey_col_to_pkey_table.items():
@@ -51,21 +87,12 @@ def make_pkey_fkey_edges(
             fkey_index = fkey_index[mask]
 
             # convert to node id
-            pkey_gid = pkey_index.map(entity_to_gid[pkey_table_name]).values()
-            fkey_gid = fkey_index.map(entity_to_gid[table_name]).values()
+            pkey_gid = dbindex.get_global_ids(pkey_table_name, pkey_index)
+            fkey_gid = dbindex.get_global_ids(table_name, fkey_index)
 
-            pkey_gid = torch.LongTensor(pkey_gid)
-            fkey_gid = torch.LongTensor(fkey_gid)
+            row.extend(fkey_gid)
+            col.extend(pkey_gid)
 
-            # fkey -> pkey edges
-            row.append(fkey_gid)
-            col.append(pkey_gid)
+    return HomoGraph(row, col, dbindex)
 
-            # pkey -> fkey edges
-            row.append(pkey_gid)
-            col.append(fkey_gid)
 
-    row = torch.cat(row, dim=0)
-    col = torch.cat(col, dim=0)
-
-    return (row, col)(gid_to_entity, entity_to_gid)
