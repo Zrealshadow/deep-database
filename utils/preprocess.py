@@ -90,9 +90,11 @@ def custom_rule_infer(
     """rule_0 mainly rule based on the column name
     """
     if any([kw in col_name.lower() for kw in text_keywords]):
-        if verbose:
+        
+        if verbose and guess_type != stype.text_embedded:
             print(
                 f"[rule 0]: {prefix}Inferred {col_name} from {guess_type} as text_embedded")
+        
         return stype.text_embedded
 
     # rule 0: to numerical stype
@@ -117,12 +119,13 @@ def custom_rule_infer(
 
     # rule 0: to categorical stype
     if any([kw in col_name.lower() for kw in categorical_keywords]):
-
         if verbose and guess_type != stype.categorical:
             print(
                 f"[rule 0]: {prefix}Inferred {col_name} from {guess_type} as categorical")
 
         return stype.categorical
+
+    return guess_type
 
 
 def custom_rule_1_infer(
@@ -144,6 +147,7 @@ def custom_rule_1_infer(
                 print(
                     f"[rule 1]: {prefix}Inferred {col_name} from {guess_type} as categorical")
             return stype.categorical
+        return guess_type
     else:
         return guess_type
 
@@ -151,8 +155,8 @@ def custom_rule_1_infer(
 # ----------------- Tokenize attribute -----------------
 
 @dataclass
-class TokenizedDatabase(object):
-    table_dict = Dict[str, List[List[str]]]
+class TokenizedDatabase:
+    table_dict : Dict[str, List[List[str]]]
 
     def get_tuple_attributes_set(self, table_name: str, pky_idx: int) -> List[str]:
         # "word" -> "table_name-col_name-value"
@@ -173,8 +177,8 @@ def tokenize_database(
     """
     table_dict = {}
     # table_name -> List[row_attributes]
-    for table_name, df_ in db.table_dict.items():
-        df = df_.copy()
+    for table_name, table in db.table_dict.items():
+        df = table.df.copy()
 
         if verbose:
             print(f"----------------> Tokenizing {table_name} each column")
@@ -185,43 +189,53 @@ def tokenize_database(
         if file_path and os.path.exists(file_path):
             if verbose:
                 print(f"-> Load tokenized data from {file_path}")
-            table_dict[table_name] = np.load(file_path, allow_pickle=True)
+            table_dict[table_name] = np.load(file_path, allow_pickle=True).tolist()
             continue
 
         # if not exists, tokenize the data
-        for col_name in tqdm(df.columns, leave=False):
+        for col_name in df.columns:
             if col_name not in col_to_stype[table_name]:
                 continue
-
+            
+            # need to convert to object type, otherwise apply list will raise error
+            df[col_name] = df[col_name].astype(object)
             guess_type = col_to_stype[table_name][col_name]
 
             if guess_type != stype.text_embedded \
                     and guess_type != stype.numerical:
+                # print(f"Tokenize column {table_name}-{col_name}")
                 # tokenized the other data
                 # -> table_name-col_name-value
-                no_nan_mask = df[col_name].notna()
-                df[col_name][no_nan_mask] = df[col_name][no_nan_mask].apply(
-                    lambda x: ["{table_name}-{col_name}-{x}"])
+                not_nan_mask = df[col_name].notna()
+                df.loc[not_nan_mask, col_name] = df.loc[not_nan_mask, col_name].apply(
+                    lambda x: [f"{table_name}-{col_name}-{x}"])
 
                 # convert to list, for conveniece of subsequent aggregation
 
             if guess_type == stype.text_embedded:
-                tokenize_text_column(
+                print(f"Tokenize text column {table_name}-{col_name}")
+                __tokenize_text_column(
                     df, col_name, table_name, verbose)
 
             if guess_type == stype.numerical:
-                tokenize_numerical_column(df, col_name, table_name, verbose)
+                # print(f"Tokenize column column {table_name}-{col_name}")
+                __tokenize_numerical_column(df, col_name, table_name, verbose)
 
         # cache the tokenized data based on table_name
 
         # convert the row of the table to list of attributes
         if verbose:
-            print("-> Manage the tuple to list of attributes")
+            print(
+                f"-> Manage the tuple in table {table_name} to list of attributes ")
 
         pkys_attributes_doc = []
         for row in df.values:
             row = row[~pd.isna(row)].tolist()
-            attributes = [x for xx in row for x in xx]
+            try:
+                attributes = [x for xx in row for x in xx]
+            except:
+                print(row)
+                raise ValueError
             pkys_attributes_doc.append(attributes)
 
         if file_path:
@@ -232,7 +246,7 @@ def tokenize_database(
     return TokenizedDatabase(table_dict=table_dict)
 
 
-def tokenize_text_column(
+def __tokenize_text_column(
     df: pd.DataFrame,
     col_name: str,
     table_name: str = "",
@@ -277,7 +291,7 @@ def tokenize_text_column(
     # apply the token to the column
     not_nan_mask = df[col_name].notna()
 
-    df[col_name][not_nan_mask] = df[col_name][not_nan_mask].map(
+    df.loc[not_nan_mask,col_name] = df.loc[not_nan_mask, col_name].map(
         sentence_to_kws)
 
     if verbose:
@@ -286,7 +300,7 @@ def tokenize_text_column(
     return
 
 
-def tokenize_numerical_column(
+def __tokenize_numerical_column(
     df: pd.DataFrame,
     col_name: str,
     table_name: str = "",
@@ -297,10 +311,10 @@ def tokenize_numerical_column(
 
     n = (~df[col_name].isna()).sum()
     not_nan_mask = df[col_name].notna()
-    series = df[col_name][not_nan_mask]
-
+    series = df[col_name]
     binned = pd.Series(index=series.index, dtype='object')
-
+    binned[~not_nan_mask] = np.NaN
+    
     # Step 1. determine the bin number
     if n > 1_000:
         # rice Rule
@@ -311,8 +325,8 @@ def tokenize_numerical_column(
         bin_num = math.ceil(1 + math.log2(n))
 
     # Step 2. bin the outlier
-    q1 = series.quantile(0.1)
-    q2 = series.quantile(0.9)
+    q1 = df[not_nan_mask][col_name].quantile(0.1)
+    q2 = df[not_nan_mask][col_name].quantile(0.9)
     upper_bound = q2 + 1.5 * (q2 - q1)
     lower_bound = q1 - 1.5 * (q2 - q1)
 
@@ -342,8 +356,7 @@ def tokenize_numerical_column(
     if verbose:
         print(
             f"Bin {table_name}.{col_name} to {bin_num} bins, convert numerical data to categorical data")
-
-    df[col_name][not_nan_mask] = binned
-    df[col_name][not_nan_mask] = df[col_name][not_nan_mask].apply(
-        lambda x: [f"{table_name}-{col_name}-{x}"])
+    binned = binned.apply(lambda x: [f"{table_name}-{col_name}-{x}"])
+    df[col_name] = binned
     # wrapper with list, for the convenience of subsequent aggregation
+    return

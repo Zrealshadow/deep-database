@@ -10,11 +10,11 @@ from torch_frame import stype
 from typing import Dict, Optional, List, Tuple, Optional, Union
 
 from dataclasses import dataclass
-from collections import OrderedDict
+from collections import defaultdict, deque
 
 
 @dataclass
-class DBIndex(object):
+class DBIndex:
     """
     Data structure to mapping between node global id and tuples in the database.
     """
@@ -27,8 +27,10 @@ class DBIndex(object):
         if isinstance(global_ids, List):
             max_gid = max(global_ids)
             assert max_gid < len(self.gid_table)
+
             def get_offset(
                 gid): return self.table_gid_offset[self.gid_table[gid]]
+
             return [(self.gid_table[gid], gid - get_offset(gid)) for gid in global_ids]
         else:
             assert global_ids < len(self.gid_table)
@@ -43,7 +45,7 @@ class DBIndex(object):
 
 
 @dataclass
-class HomoGraph(object):
+class HomoGraph:
     """
     (row_i, col_i) represents the i-th edge in the graph.
     """
@@ -90,9 +92,72 @@ def make_homograph_from_db(
             pkey_gid = dbindex.get_global_ids(pkey_table_name, pkey_index)
             fkey_gid = dbindex.get_global_ids(table_name, fkey_index)
 
+            # fkey -> pkey edges
             row.extend(fkey_gid)
             col.extend(pkey_gid)
+
+            # pkey -> fkey edges
+            row.extend(pkey_gid)
+            col.extend(fkey_gid)
 
     return HomoGraph(row, col, dbindex)
 
 
+def identify_entity_table(
+    db: Database,
+) -> List[str]:
+    """following the mannul rule to identify the entity table
+    return: List of table name
+
+    based on assumption: *relation table has more rows than entity table*
+    algorithm:
+        1. calculate the average row of the tables
+        2. return the table with row > average
+    """
+    table_rows = {table_name: table.df.shape[0]
+                  for table_name, table in db.table_dict.items()}
+    ave_row = sum(table_rows.values()) / len(table_rows)
+    return [table_name for table_name, row in table_rows.items() if row < ave_row]
+
+
+@dataclass
+class TableHopMatrix:
+    graph: Dict[str, List[str]]
+    # table_name -> [table_name]
+
+    def search_tables(
+        self,
+        start_table: str,
+        hop_threshold: int
+    ) -> List[str]:
+        """Search tables above hop_threshold from the start_table.
+        Return: List of table names
+        """
+        assert start_table in self.graph, f"start_table {start_table} not in the graph"
+        queue = deque([(start_table, 0)])
+        visited = set(start_table)
+        result = []
+
+        while queue:
+            node, hops = queue.popleft()
+            if hops >= hop_threshold:
+                result.append(node)
+
+            for neighbor in self.graph.get(node, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, hops + 1))
+
+        return result
+
+
+def generate_hop_matrix(
+    db: Database,
+):
+    graph = defaultdict(list)
+    for table_name, table in db.table_dict.items():
+        for _, pkey_table in table.fkey_col_to_pkey_table.items():
+            graph[table_name].append(pkey_table)
+            graph[pkey_table].append(table_name)
+
+    return TableHopMatrix(graph)
