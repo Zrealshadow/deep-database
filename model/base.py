@@ -173,6 +173,16 @@ class CompositeModel(torch.nn.Module):
             num_layers=1
         )
 
+        self.out_embedding_dict = ModuleDict(
+            {
+                node: torch.nn.Sequential(
+                    torch.nn.Linear(channels, channels),
+                    torch.nn.LayerNorm(channels),
+                )
+                for node in data.node_types
+            }
+        )
+
         self.feature_encoder = feature_encoder
         self.node_encoder = node_encoder
         self.temporal_encoder = temporal_encoder
@@ -203,6 +213,11 @@ class CompositeModel(torch.nn.Module):
         if self.id_awareness_emb is not None:
             torch.nn.init.normal_(self.id_awareness_emb.weight, std=0.1)
 
+        # reset the out_embedding_dict
+        for emb in self.out_embedding_dict.values():
+            torch.nn.init.normal_(emb[0].weight, std=0.1)
+
+
     def forward(
         self,
         batch: HeteroData,
@@ -230,7 +245,7 @@ class CompositeModel(torch.nn.Module):
         )
 
         return self.head(x_dict[entity_table][: seed_time.size(0)])
-    
+
     def get_node_embedding(
         self,
         batch: HeteroData,
@@ -256,5 +271,11 @@ class CompositeModel(torch.nn.Module):
             batch.num_sampled_nodes_dict,
             batch.num_sampled_edges_dict,
         )
-        
+
+        # add another mapping layer for general node embedding
+        x_dict = {
+            node_type: self.out_embedding_dict[node_type](x)
+            for node_type, x in x_dict.items()
+        }
+
         return x_dict
