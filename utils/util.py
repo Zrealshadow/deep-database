@@ -1,8 +1,12 @@
 import gc
 import torch
+import numpy as np
+
 from keybert import KeyBERT
 from keybert.backend import BaseEmbedder
 from sentence_transformers import SentenceTransformer
+
+from typing import Dict
 
 global_kw_model = None
 is_cuda_available = torch.cuda.is_available()
@@ -44,3 +48,35 @@ def free_keyword_model():
         global_kw_model = None
         gc.collect()
         torch.cuda.empty_cache()
+
+
+
+
+def save_np_dict(edge_dict:Dict[str, np.array], path:str):
+    """_summary_
+
+    Parameters
+    ----------
+    edge_dict : Dict[str, np.array]
+        {"src_table-des_table": np.array} 2-D array
+    path : str
+        file path to save the edges
+    """
+    np.savez(path, **edge_dict)
+
+
+def load_np_dict(path:str) -> Dict[str, np.array]:
+    """_summary_
+
+    Parameters
+    ----------
+    path : str
+        file path to load the edges
+
+    Returns
+    -------
+    Dict[str, np.array]
+        {"src_table-des_table": np.array} 2-D array
+    """
+    loaded = np.load(path, allow_pickle=True)
+    return {key:loaded[key] for key in loaded.files}

@@ -56,6 +56,7 @@ class HomoGraph:
 
 def make_homograph_from_db(
     db: Database,
+    verbose: bool = True,
 ) -> HomoGraph:
     """
     Generate a homogeneous graph from the database for random-walk sampling.
@@ -99,6 +100,9 @@ def make_homograph_from_db(
             # pkey -> fkey edges
             row.extend(pkey_gid)
             col.extend(fkey_gid)
+            
+            if verbose:
+                print(f"table {table_name} -> table {pkey_table_name} has {len(pkey_gid)} edges")
 
     return HomoGraph(row, col, dbindex)
 
@@ -117,7 +121,15 @@ def identify_entity_table(
     table_rows = {table_name: table.df.shape[0]
                   for table_name, table in db.table_dict.items()}
     ave_row = sum(table_rows.values()) / len(table_rows)
-    return [table_name for table_name, row in table_rows.items() if row < ave_row]
+    
+    # check the foreign key number
+    table_names = [table_name for table_name, row in table_rows.items() if row < ave_row]
+    tables = []
+    for table_name in table_names:
+        fkey_dict = db.table_dict[table_name].fkey_col_to_pkey_table
+        if len(fkey_dict) <= 1:
+            tables.append(table_name)
+    return tables
 
 
 @dataclass

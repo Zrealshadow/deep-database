@@ -2,7 +2,7 @@ import torch
 from torch_cluster import random_walk
 
 from utils.builder import HomoGraph
-from utils.preprocess import TokenizedDatabase
+from utils.tokenize import TokenizedDatabase
 
 from functools import reduce
 
@@ -14,11 +14,18 @@ def generate_document_given_table(
     tk_db: TokenizedDatabase,
     table_name: str,
     walk_length: int = 20,
-    round: int = 15,
+    round: int = 10,
     p: float = 10,
     q: float = 0.5,
+    sample_size: int = -1,
     verbose: bool = False,
 ):
+    """
+    return:
+    - List[int]: List of primary keys of the target nodes.
+    - List[List[str]]: List of documents. Each document is a list of strings.
+    """
+    
     assert table_name in g.dbindex.table_gid_offset, "Table not found in the database."
     assert table_name in tk_db.table_dict, "Table not found in the tokenized database."
 
@@ -28,8 +35,13 @@ def generate_document_given_table(
     # default walk_length is the number of table
     walk_length = min(walk_length, len(tk_db.table_dict))
 
-    # collect target node pkys
-    pkys = list(range(len(tk_db.table_dict[table_name])))
+    # collect target node pkys, sample_size
+    n = len(tk_db.table_dict[table_name])
+    if sample_size == -1:
+        pkys = torch.arange(n).tolist()
+    else:
+        pkys = torch.randperm(n)[:sample_size].tolist()
+    
     gids = g.dbindex.get_global_ids(table_name, pkys)
     gids = torch.LongTensor(gids)
     
@@ -55,7 +67,8 @@ def generate_document_given_table(
         node_bags = walks[idx].tolist() # [round, walk_length]
         # for each walks, remove repeated node to construct subgraph.
         # make sure in each round of sample, the node is unqiue.
-        doc_node_ids = reduce(lambda a, b: list(set(a)) + list(set(b)), node_bags)
+        # doc_node_ids = reduce(lambda a, b: list(set(a)) + list(set(b)), node_bags)
+        doc_node_ids = [i for walk in node_bags for i in list(set(walk))]
         # [node_ids]
         table_pks = g.dbindex.get_tuple_positions(doc_node_ids)
         # [(table_name, pky)]
@@ -64,5 +77,5 @@ def generate_document_given_table(
         doc = reduce(lambda a, b: a + b, tuple_list)
         docs.append(doc)
     
-    return docs
+    return pkys, docs
 
