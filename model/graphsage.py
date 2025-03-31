@@ -28,7 +28,7 @@ class HeteroGraphSAGE(torch.nn.Module):
                     edge_type: SAGEConv((channels, channels), channels, aggr=aggr)
                     for edge_type in edge_types
                 },
-                aggr="sum",
+                aggr=aggr,
             )
             self.convs.append(conv)
 
