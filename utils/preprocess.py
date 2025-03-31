@@ -1,5 +1,7 @@
 import math
 import os
+import re
+import wordninja
 import numpy as np
 import pandas as pd
 
@@ -8,7 +10,7 @@ from torch_frame import stype
 from torch_frame.utils import infer_df_stype
 from typing import Dict, Optional, Tuple, List
 
-from utils.util import get_keyword_model
+from utils.resource import get_keyword_model
 from dataclasses import dataclass
 from tqdm import tqdm
 
@@ -29,16 +31,25 @@ def infer_type_in_db(
     inferred_col_to_stype_dict = {}
 
     for table_name, table in db.table_dict.items():
+
+        
         df = table.df
         df = df.sample(min(10_000, len(df)))
         inferred_col_to_stype = infer_df_stype(df)
 
-        inferred_col_to_stype_dict[table_name] = basic_infer_stype(
+        col_type_in_table = basic_infer_stype(
             df,
             inferred_col_to_stype,
             table_name,
             verbose)
-
+        
+        # add a rule, if it is primary key or foreign key, just categorical data
+        col_type_in_table[table.pkey_col] = stype.categorical
+        for fk in table.fkey_col_to_pkey_table.keys():
+            col_type_in_table[fk] = stype.categorical
+        
+        inferred_col_to_stype_dict[table_name] = col_type_in_table
+        
     return inferred_col_to_stype_dict
 
 
@@ -51,13 +62,31 @@ numerical_keywords = [
 ]
 
 categorical_keywords = [
-    'type', 'category', 'class', 'label', 'status', 'code', 'id',
-    'region', 'zone', 'flag', 'is_', 'has_', 'mode', 'duration'
+    'type', 'category', 'class', 'label', 'status', 'code', 'id', 'guid',
+    'region', 'zone', 'flag', 'is_', 'has_', 'mode', 'duration','url', 'pid'
 ]
 
 text_keywords = [
     'description', 'comments', 'content', 'name', 'review', 'message', 'note', 'query', 'summary'
 ]
+
+
+
+def tokenize_identifier(identifier):
+    # Try to split snake_case and kebab-case first
+    if '_' in identifier:
+        return identifier.split('_')
+    elif '-' in identifier:
+        return identifier.split('-')
+    else:
+        # Fallback to CamelCase or plain
+        tokens = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', identifier)
+        # Use wordninja to further split tokens if needed
+        
+        final_tokens = []
+        for token in tokens:
+            final_tokens.extend(wordninja.split(token))
+        return final_tokens + tokens
 
 
 def basic_infer_stype(
@@ -89,16 +118,17 @@ def custom_rule_infer(
 ) -> stype:
     """rule_0 mainly rule based on the column name
     """
-    if any([kw in col_name.lower() for kw in text_keywords]):
+    tokens = [i.lower() for i in tokenize_identifier(col_name)]
+    if set(tokens) & set(text_keywords):
         
         if verbose and guess_type != stype.text_embedded:
             print(
-                f"[rule 0]: {prefix}Inferred {col_name} from {guess_type} as text_embedded")
+                f"[rule 0]: {prefix} Inferred {col_name} from {guess_type} as text_embedded")
         
         return stype.text_embedded
 
     # rule 0: to numerical stype
-    if any([kw in col_name.lower() for kw in numerical_keywords]):
+    if set(tokens) & set(numerical_keywords):
         if guess_type == stype.numerical:
             return guess_type
 
@@ -118,10 +148,10 @@ def custom_rule_infer(
         return stype.numerical
 
     # rule 0: to categorical stype
-    if any([kw in col_name.lower() for kw in categorical_keywords]):
+    if set(tokens) & set(categorical_keywords):
         if verbose and guess_type != stype.categorical:
             print(
-                f"[rule 0]: {prefix}Inferred {col_name} from {guess_type} as categorical")
+                f"[rule 0]: {prefix} Inferred {col_name} from {guess_type} as categorical")
 
         return stype.categorical
 
@@ -145,7 +175,7 @@ def custom_rule_1_infer(
             # minimum average frequence is 100.
             if verbose:
                 print(
-                    f"[rule 1]: {prefix}Inferred {col_name} from {guess_type} as categorical")
+                    f"[rule 1]: {prefix} Inferred {col_name} from {guess_type} as categorical")
             return stype.categorical
         return guess_type
     else:

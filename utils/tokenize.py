@@ -8,7 +8,7 @@ from torch_frame import stype
 from torch_frame.utils import infer_df_stype
 from typing import Dict, Optional, Tuple, List
 
-from utils.util import get_keyword_model
+from utils.resource import get_keyword_model, free_keyword_model
 from dataclasses import dataclass
 from tqdm import tqdm
 
@@ -41,6 +41,11 @@ def tokenize_database(
     table_dict = {}
     prefix_dict = {}
 
+    if cache_path_dir:
+        # check exist dir, not create a new dir
+        if not os.path.exists(cache_path_dir):
+            os.makedirs(cache_path_dir)
+             
     # prefix -> table_name -> col_name
     for table_name in db.table_dict.keys():
         cols = db.table_dict[table_name].df.columns
@@ -107,7 +112,11 @@ def tokenize_database(
 
         pkys_attributes_doc = []
         # remove the pky column
-        other_columns = df.columns.drop(pkey_col).tolist()
+        if pkey_col:
+            other_columns = df.columns.drop(pkey_col).tolist()
+        else:
+            other_columns = df.columns.tolist()
+            
         for row in df[other_columns].values:
             row = row[~pd.isna(row)].tolist()
             try:
@@ -121,7 +130,8 @@ def tokenize_database(
             np.save(file_path, np.array(pkys_attributes_doc, dtype='object'))
 
         table_dict[table_name] = pkys_attributes_doc
-
+    
+    free_keyword_model()
     return TokenizedDatabase(table_dict=table_dict, prefix_dict=prefix_dict)
 
 
@@ -156,7 +166,7 @@ def __tokenize_text_column(
     # convert the sentences to keyword set
     batch_size = 2048
     sentence_to_kws = {}
-    for i in range(0, len(sentence_set), batch_size):
+    for i in tqdm(range(0, len(sentence_set), batch_size),leave=False):
         batch = sentence_set[i:i+batch_size]
         kws = kw_model.extract_keywords(batch)
         sentence_to_kws.update(dict(zip(batch, kws)))
@@ -195,6 +205,9 @@ def __tokenize_numerical_column(
     series = df[col_name]
     binned = pd.Series(index=series.index, dtype='object')
     binned[~not_nan_mask] = np.NaN
+    
+    # if the number is float and max is smaller than 1.0
+    # we just
 
     # Step 1. determine the bin number
     if n > 1_000:
@@ -227,7 +240,7 @@ def __tokenize_numerical_column(
                           labels=False, retbins=True, include_lowest=True)
     bin_labels = [
         f"{bin_edges[i]:.0f}-{bin_edges[i+1]:.0f}" if bin_edges[i].is_integer() and bin_edges[i+1].is_integer()
-        else f"{bin_edges[i]:.2f}-{bin_edges[i+1]:.2f}"
+        else f"{bin_edges[i]:.5f}-{bin_edges[i+1]:.5f}"
         for i in range(len(bin_edges) - 1)
     ]
 
