@@ -44,7 +44,9 @@ def infer_type_in_db(
             verbose)
         
         # add a rule, if it is primary key or foreign key, just categorical data
-        col_type_in_table[table.pkey_col] = stype.categorical
+        if table.pkey_col:
+            col_type_in_table[table.pkey_col] = stype.categorical
+            
         for fk in table.fkey_col_to_pkey_table.keys():
             col_type_in_table[fk] = stype.categorical
         
