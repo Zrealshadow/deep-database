@@ -5,7 +5,7 @@ import wordninja
 import numpy as np
 import pandas as pd
 
-from relbench.base import Database
+from relbench.base import Database, Table
 from torch_frame import stype
 from torch_frame.utils import infer_df_stype
 from typing import Dict, Optional, Tuple, List
@@ -32,27 +32,37 @@ def infer_type_in_db(
 
     for table_name, table in db.table_dict.items():
 
-        
-        df = table.df
-        df = df.sample(min(10_000, len(df)))
-        inferred_col_to_stype = infer_df_stype(df)
-
-        col_type_in_table = basic_infer_stype(
-            df,
-            inferred_col_to_stype,
+        col_type_in_table = inter_type_in_table(
+            table,
             table_name,
-            verbose)
-        
-        # add a rule, if it is primary key or foreign key, just categorical data
-        if table.pkey_col:
-            col_type_in_table[table.pkey_col] = stype.categorical
-            
-        for fk in table.fkey_col_to_pkey_table.keys():
-            col_type_in_table[fk] = stype.categorical
-        
+            verbose
+        )
         inferred_col_to_stype_dict[table_name] = col_type_in_table
-        
+
     return inferred_col_to_stype_dict
+
+
+def infer_type_in_table(
+    table: Table,
+    table_name: str = "",
+    verbose: bool = False,
+) -> Dict[str, stype]:
+    df = table.df
+    df = df.sample(min(10_000, len(df)))
+    inferred_col_to_stype = infer_df_stype(df)
+    col_type_in_table = basic_infer_stype(
+        df,
+        inferred_col_to_stype,
+        table_name,
+        verbose
+    )
+    # add a rule, if it is primary key or foreign key, just categorical data
+    if table.pkey_col:
+        col_type_in_table[table.pkey_col] = stype.categorical
+
+    for fk in table.fkey_col_to_pkey_table.keys():
+        col_type_in_table[fk] = stype.categorical
+    return col_type_in_table
 
 
 # rule 0
@@ -65,13 +75,12 @@ numerical_keywords = [
 
 categorical_keywords = [
     'type', 'category', 'class', 'label', 'status', 'code', 'id', 'guid',
-    'region', 'zone', 'flag', 'is_', 'has_', 'mode', 'duration','url', 'pid'
+    'region', 'zone', 'flag', 'is_', 'has_', 'mode', 'duration', 'url', 'pid'
 ]
 
 text_keywords = [
     'description', 'comments', 'content', 'name', 'review', 'message', 'note', 'query', 'summary'
 ]
-
 
 
 def tokenize_identifier(identifier):
@@ -84,7 +93,7 @@ def tokenize_identifier(identifier):
         # Fallback to CamelCase or plain
         tokens = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)', identifier)
         # Use wordninja to further split tokens if needed
-        
+
         final_tokens = []
         for token in tokens:
             final_tokens.extend(wordninja.split(token))
@@ -122,11 +131,11 @@ def custom_rule_infer(
     """
     tokens = [i.lower() for i in tokenize_identifier(col_name)]
     if set(tokens) & set(text_keywords):
-        
+
         if verbose and guess_type != stype.text_embedded:
             print(
                 f"[rule 0]: {prefix} Inferred {col_name} from {guess_type} as text_embedded")
-        
+
         return stype.text_embedded
 
     # rule 0: to numerical stype
@@ -182,5 +191,3 @@ def custom_rule_1_infer(
         return guess_type
     else:
         return guess_type
-
-

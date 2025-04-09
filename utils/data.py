@@ -1,13 +1,196 @@
 import os
 import pooch
-import shutil
-
 import pandas as pd
-from pathlib import Path
+import numpy as np
+from dataclasses import dataclass
 
-from relbench.base import Database, Dataset, Table
+
+from relbench.base import Database, Dataset, Table, BaseTask
 from relbench.utils import clean_datetime, unzip_processor
 from relbench.utils import decompress_gz_file
+from relbench.tasks import get_task
+from relbench.datasets import get_dataset
+
+import torch_frame
+from torch_frame import stype
+from torch_frame.config import (
+    ImageEmbedderConfig,
+    TextEmbedderConfig,
+    TextTokenizerConfig,
+)
+
+
+from utils.util import load_col_types, save_col_types
+
+from typing import Tuple, Dict, Any, Union, Optional
+
+
+class DatabaseFactory(object):
+    """
+    A factory class for creating databases.
+    """
+    DBList = [
+        "event",
+        "stack",
+        "avito",
+        "trial",
+    ]
+
+    TEXT_COMPRESS_COLNAME = "text_compres"
+
+    @staticmethod
+    def get_db(
+            db_name: str,
+            cache_dir: str = None,
+            with_text_compress: bool = False) -> Database:
+        """
+        Get a database by name.
+        :param db_name: The name of the database.
+        :return: The database object.
+        """
+        assert db_name in DatabaseFactory.DBList, f"Database {db_name} not found."
+
+        dataset = None
+        if db_name == "event":
+            dataset = get_dataset("rel-event", download=True)
+        elif db_name == "stack":
+            dataset = StackDataset(cache_dir=cache_dir)
+        elif db_name == "avito":
+            dataset = get_dataset("rel-avito", download=True)
+        elif db_name == "trial":
+            dataset = get_dataset("rel-trial", download=True)
+        else:
+            raise ValueError(f"Unknown database name: {db_name}")
+
+        db = dataset.get_db()
+        if db_name == "event":
+            preprocess_event_database(db)
+
+        if with_text_compress:
+            for _, table in db.table_dict.items():
+                table.df[DatabaseFactory.TEXT_COMPRESS_COLNAME] = np.nan
+
+        return db
+
+    @staticmethod
+    def get_task(
+            db_name: str,
+            task_name: str
+    ) -> BaseTask:
+        if db_name == "event":
+            db_name = "rel-event"
+        elif db_name == "stack":
+            db_name = "rel-stack"
+        elif db_name == "avito":
+            db_name = "rel-avito"
+        elif db_name == "trial":
+            db_name = "rel-trial"
+        else:
+            raise ValueError(f"Unknown database name: {db_name}")
+        task = get_task(db_name, task_name)
+        return task
+
+
+@dataclass
+class TableData(object):
+
+    train_df: pd.DataFrame
+    val_df: pd.DataFrame
+    test_df: pd.DataFrame
+    col_to_stype: Dict[str, stype]
+    target_col: str
+
+    def __post_init__(self):
+        self.is_materialize = False
+
+    def materilize(
+        self,
+        col_to_sep: Optional[dict[str,  Optional[str]]] = None,
+        col_to_text_embedder_cfg: Optional[dict[str,
+                                                TextEmbedderConfig]] = None,
+        col_to_text_tokenizer_cfg: Optional[dict[str,
+                                                 TextTokenizerConfig]] = None,
+        col_to_image_embedder_cfg: Optional[dict[str,
+                                                 ImageEmbedderConfig]] = None,
+        col_to_time_format: Optional[dict[str, Optional[str]]] = None,
+    ):
+        if self.is_materialize:
+            return
+
+        self.train_dataset = torch_frame.data.Dataset(
+            df=self.train_df,
+            col_to_stype=self.col_to_stype,
+            target_col=self.target_col,
+            col_to_sep=col_to_sep,
+            col_to_text_embedder_cfg=col_to_text_embedder_cfg,
+            col_to_text_tokenizer_cfg=col_to_text_tokenizer_cfg,
+            col_to_image_embedder_cfg=col_to_image_embedder_cfg,
+            col_to_time_format=col_to_time_format,
+        ).materialize()
+
+        self._val_tf = self.train_dataset.convert_to_tensor_frame(self.val_df)
+        self._test_tf = self.train_dataset.convert_to_tensor_frame(
+            self.test_df)
+
+        self.is_materialize = True
+
+    def save_to_dir(
+        self,
+        dir_path: str
+    ):
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path, exist_ok=True)
+
+        train_df_path = os.path.join(dir_path, "train.csv")
+        val_df_path = os.path.join(dir_path, "val.csv")
+        test_df_path = os.path.join(dir_path, "test.csv")
+        self.train_df.to_csv(train_df_path, index=False)
+        self.val_df.to_csv(val_df_path, index=False)
+        self.test_df.to_csv(test_df_path, index=False)
+        save_col_types(dir_path, self.col_to_stype)
+        with open(os.path.join(dir_path, "target_col.txt"), "w") as f:
+            f.write(self.target_col)
+
+    @staticmethod
+    def load_from_dir(
+        dir_path: str,
+    ):
+
+        train_df_path = os.path.join(dir_path, "train.csv")
+        val_df_path = os.path.join(dir_path, "val.csv")
+        test_df_path = os.path.join(dir_path, "test.csv")
+        train_df = pd.read_csv(train_df_path, index_col=False)
+        val_df = pd.read_csv(val_df_path, index_col=False)
+        test_df = pd.read_csv(test_df_path, index_col=False)
+        col_to_stype = load_col_types(dir_path)
+        with open(os.path.join(dir_path, "target_col.txt"), "r") as f:
+            target_col = f.read().strip()
+
+        return TableData(
+            train_df=train_df,
+            val_df=val_df,
+            test_df=test_df,
+            col_to_stype=col_to_stype,
+            target_col=target_col
+        )
+
+    @property
+    def train_tf(self):
+        if not self.is_materialize:
+            self.materilize()
+        return self.train_dataset.tensor_frame
+
+    @property
+    def val_tf(self):
+        if not self.is_materialize:
+            self.materilize()
+        return self._val_tf
+
+    @property
+    def test_tf(self):
+        if not self.is_materialize:
+            self.materilize()
+        return self._test_tf
 
 
 class StackDataset(Dataset):
@@ -216,23 +399,25 @@ def preprocess_event_database(db: Database):
     event_interest_df['id'] = event_interest_df.index
 
     # -> event,
-    
+
     # collect the event_id which occurs in event_interest and event_attendees.
     event_interest_event_id = set(event_interest_df['event'].unique())
-    event_attendees_event_id = set(event_attendees_flattened_df['event'].unique())
+    event_attendees_event_id = set(
+        event_attendees_flattened_df['event'].unique())
     involved_event_id = event_interest_event_id | event_attendees_event_id
-    
+
     event_df = db.table_dict["events"].df
     event_df = event_df[event_df['event_id'].isin(involved_event_id)]
-    
+
     # reindex the event_id
     event_df.reset_index(drop=True, inplace=True)
-    event_id2index = {event_id: index for index, event_id in enumerate(event_df['event_id'])}
+    event_id2index = {event_id: index for index,
+                      event_id in enumerate(event_df['event_id'])}
     event_df["event_id"].replace(event_id2index, inplace=True)
     # map the event_id in event_interest and event_attendees
     event_interest_df["event"].replace(event_id2index, inplace=True)
     event_attendees_flattened_df["event"].replace(event_id2index, inplace=True)
-    
+
     # reset the table
     db.table_dict["event_attendees"] = Table(
         df=event_attendees_flattened_df,
@@ -264,7 +449,7 @@ def preprocess_event_database(db: Database):
     )
 
     db.table_dict["events"] = Table(
-        df = event_df,
+        df=event_df,
         fkey_col_to_pkey_table={
             "user_id": "users"
         },

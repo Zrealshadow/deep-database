@@ -12,8 +12,7 @@ from torch_geometric.utils import sort_edge_index
 
 from relbench.base import Database, Dataset
 
-from relbench.modeling.utils import remove_pkey_fkey, to_unix_time
-
+from utils.util import remove_pkey_fkey, to_unix_time
 from torch_frame.data import Dataset as TFDataset
 from torch_frame.config import TextEmbedderConfig
 from torch_frame import stype
@@ -195,6 +194,8 @@ def build_pyg_hetero_graph(
     cache_dir: Optional[str] = None,
     verbose: bool = False,
 ) ->Tuple[HeteroData, Dict[str, Dict[str, Dict[StatType, Any]]]]:
+    """ Build heterogeneous graph from the database
+    """
     if cache_dir is not None:
         os.makedirs(cache_dir, exist_ok=True)
     
@@ -285,3 +286,7 @@ def build_pyg_hetero_graph(
         
     data.validate()
     return data, col_stats_dict
+
+
+
+
