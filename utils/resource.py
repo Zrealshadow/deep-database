@@ -64,7 +64,7 @@ class GloveTextEmbedding:
 
 
 def get_text_embedder_cfg(
-    model_name: str,
+    model_name: str = "sentence-transformers/average_word_embeddings_glove.6B.300d",
     device: Optional[torch.device] = None,
     batch_size: Optional[int] = 512
 ) -> TextEmbedderConfig:

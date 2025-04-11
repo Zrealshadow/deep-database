@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import argparse
 import pandas as pd
@@ -13,21 +14,23 @@ from pathlib import Path
 
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from utils.preprocess import infer_type_in_table
-from utils.util import remove_pkey_fkey
 from utils.data import DatabaseFactory, TableData
-
-
-
+from utils.util import remove_pkey_fkey
+from utils.preprocess import infer_type_in_table
+from utils.resource import get_text_embedder_cfg
 
 parser = argparse.ArgumentParser(description="Process user attendance task.")
-    
-parser.add_argument("--dbname", type=str, default="event", help="Name of the database.")
-parser.add_argument("--task_name", type=str, default="user-attendance", help="Name of the task.")
-parser.add_argument("--db_cache_dir", type=str, default=None, help="Path to DB cache directory.")
-parser.add_argument("--sample_size", type=int, default=-1, help="Sample size for processing. -1 means all.")
-parser.add_argument("--table_output_dir", type=str, required=True, help="Directory to output tables.")
+
+parser.add_argument("--dbname", type=str, default="event",
+                    help="Name of the database.")
+parser.add_argument("--task_name", type=str,
+                    default="user-attendance", help="Name of the task.")
+parser.add_argument("--db_cache_dir", type=str, default=None,
+                    help="Path to DB cache directory.")
+parser.add_argument("--sample_size", type=int, default=-1,
+                    help="Sample size for processing. -1 means all.")
+parser.add_argument("--table_output_dir", type=str,
+                    required=True, help="Directory to output tables.")
 args = parser.parse_args()
 
 
@@ -109,13 +112,19 @@ data = TableData(
     val_df=dfs["val"],
     test_df=dfs["test"],
     col_to_stype=table_col_types,
-    target_col = task.target_col,
+    target_col=task.target_col,
+    task_type=task.task_type,
 )
 
 
 dirname = dbname + "-" + task_name
 path = os.path.join(table_output_dir, dirname)
+print(f"==> Table in task {task_name} in database {dbname} is saved to {path}")
+
+text_embedder_cfg = get_text_embedder_cfg()
+data.materilize(
+    col_to_text_embedder_cfg=text_embedder_cfg,
+)
 data.save_to_dir(
     path
 )
-

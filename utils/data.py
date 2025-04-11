@@ -5,9 +5,8 @@ import numpy as np
 from dataclasses import dataclass
 
 
-from relbench.base import Database, Dataset, Table, BaseTask
+from relbench.base import Database, Dataset, Table, BaseTask, TaskType
 from relbench.utils import clean_datetime, unzip_processor
-from relbench.utils import decompress_gz_file
 from relbench.tasks import get_task
 from relbench.datasets import get_dataset
 
@@ -91,6 +90,13 @@ class DatabaseFactory(object):
         return task
 
 
+TextEmbedderCFG = Optional[TextEmbedderConfig]
+TextTokenizerCFG = Union[dict[str, TextTokenizerConfig],
+                         TextTokenizerConfig, None]
+ImageEmbedderCFG = Union[dict[str, ImageEmbedderConfig],
+                         ImageEmbedderConfig, None]
+
+
 @dataclass
 class TableData(object):
 
@@ -99,6 +105,7 @@ class TableData(object):
     test_df: pd.DataFrame
     col_to_stype: Dict[str, stype]
     target_col: str
+    task_type: TaskType
 
     def __post_init__(self):
         self.is_materialize = False
@@ -106,18 +113,15 @@ class TableData(object):
     def materilize(
         self,
         col_to_sep: Optional[dict[str,  Optional[str]]] = None,
-        col_to_text_embedder_cfg: Optional[dict[str,
-                                                TextEmbedderConfig]] = None,
-        col_to_text_tokenizer_cfg: Optional[dict[str,
-                                                 TextTokenizerConfig]] = None,
-        col_to_image_embedder_cfg: Optional[dict[str,
-                                                 ImageEmbedderConfig]] = None,
-        col_to_time_format: Optional[dict[str, Optional[str]]] = None,
+        col_to_text_embedder_cfg: Optional[TextEmbedderConfig] = None,
+        col_to_text_tokenizer_cfg: TextEmbedderCFG = None,
+        col_to_image_embedder_cfg: TextTokenizerCFG = None,
+        col_to_time_format: ImageEmbedderCFG = None,
     ):
         if self.is_materialize:
             return
 
-        self.train_dataset = torch_frame.data.Dataset(
+        train_dataset = torch_frame.data.Dataset(
             df=self.train_df,
             col_to_stype=self.col_to_stype,
             target_col=self.target_col,
@@ -128,8 +132,11 @@ class TableData(object):
             col_to_time_format=col_to_time_format,
         ).materialize()
 
-        self._val_tf = self.train_dataset.convert_to_tensor_frame(self.val_df)
-        self._test_tf = self.train_dataset.convert_to_tensor_frame(
+        self._train_tf = train_dataset.tensor_frame
+        self._col_stats = train_dataset.col_stats
+        self._val_tf = train_dataset.convert_to_tensor_frame(
+            self.val_df)
+        self._test_tf = train_dataset.convert_to_tensor_frame(
             self.test_df)
 
         self.is_materialize = True
@@ -148,8 +155,20 @@ class TableData(object):
         self.val_df.to_csv(val_df_path, index=False)
         self.test_df.to_csv(test_df_path, index=False)
         save_col_types(dir_path, self.col_to_stype)
+
         with open(os.path.join(dir_path, "target_col.txt"), "w") as f:
-            f.write(self.target_col)
+            f.write(self.target_col+"\n")
+            f.write(self.task_type.name+"\n")
+
+        # check if is materialize
+        if self.is_materialize:
+            # save the tensorframe
+            train_tf_path = os.path.join(dir_path, "train_tf.pt")
+            val_tf_path = os.path.join(dir_path, "val_tf.pt")
+            test_tf_path = os.path.join(dir_path, "test_tf.pt")
+            torch_frame.save(self.train_tf, self.col_stats, train_tf_path)
+            torch_frame.save(self.val_tf, None, path=val_tf_path)
+            torch_frame.save(self.test_tf, None, path=test_tf_path)
 
     @staticmethod
     def load_from_dir(
@@ -164,33 +183,77 @@ class TableData(object):
         test_df = pd.read_csv(test_df_path, index_col=False)
         col_to_stype = load_col_types(dir_path)
         with open(os.path.join(dir_path, "target_col.txt"), "r") as f:
-            target_col = f.read().strip()
+            target_col = f.readline().strip()
+            task_type = TaskType[f.readline().strip()]
 
-        return TableData(
+        table_data = TableData(
             train_df=train_df,
             val_df=val_df,
             test_df=test_df,
             col_to_stype=col_to_stype,
-            target_col=target_col
+            target_col=target_col,
+            task_type=task_type,
         )
 
+        # check if there is train_tf.pt or others
+        train_tf_path = os.path.join(dir_path, "train_tf.pt")
+        val_tf_path = os.path.join(dir_path, "val_tf.pt")
+        test_tf_path = os.path.join(dir_path, "test_tf.pt")
+        if os.path.exists(train_tf_path):
+            assert os.path.exists(val_tf_path)
+            assert os.path.exists(test_tf_path)
+
+            table_data.is_materialize = True
+            # update the train_tf, val_tf, test_tf, col_stats
+            table_data._train_tf, table_data._col_stats = torch_frame.load(
+                path=train_tf_path)
+            table_data._val_tf, _ = torch_frame.load(path=val_tf_path)
+            table_data._test_tf, _ = torch_frame.load(path=test_tf_path)
+            print(f" ==> load material dataset from {dir_path}")
+        else:
+            table_data.is_materialize = False
+            print(f" ==> load raw dataset from {dir_path}, need material first")
+        return table_data
+    
     @property
     def train_tf(self):
         if not self.is_materialize:
-            self.materilize()
-        return self.train_dataset.tensor_frame
+            raise ValueError(
+                "The tensor frame is not materialized. Please call materilize() first."
+            )
+        return self._train_tf
 
     @property
     def val_tf(self):
         if not self.is_materialize:
-            self.materilize()
+            raise ValueError(
+                "The tensor frame is not materialized. Please call materilize() first."
+            )
         return self._val_tf
 
     @property
     def test_tf(self):
         if not self.is_materialize:
-            self.materilize()
+            raise ValueError(
+                "The tensor frame is not materialized. Please call materilize() first."
+            )
         return self._test_tf
+
+    @property
+    def col_stats(self):
+        if not self.is_materialize:
+            raise ValueError(
+                "The tensor frame is not materialized. Please call materilize() first."
+            )
+        return self._col_stats
+
+    @property
+    def col_names_dict(self):
+        if not self.is_materialize:
+            raise ValueError(
+                "The tensor frame is not materialized. Please call materilize() first."
+            )
+        return self.train_tf.col_names_dict
 
 
 class StackDataset(Dataset):
