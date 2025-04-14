@@ -5,15 +5,17 @@ from torch_geometric.nn import GraphConv, LayerNorm, Linear, HeteroConv
 from torch_geometric.typing import NodeType
 
 from relbench.modeling.nn import HeteroTemporalEncoder
-
+from torch_frame.data.stats import StatType
 from model.base import FeatureEncodingModule
+
+from typing import Dict
 
 
 class HeteroGCN(torch.nn.Module):
     def __init__(
         self,
         data: HeteroData,
-        node_to_col_stats: dict,
+        node_to_col_stats: Dict[str, Dict[str, Dict[StatType, torch.nn.Tensor]]],
         channels: int,
         out_channels: int,
         num_layers: int,

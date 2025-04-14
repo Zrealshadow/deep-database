@@ -3,15 +3,17 @@ import math
 from torch_geometric.data import HeteroData
 from torch_geometric.nn import LayerNorm, Linear, HeteroConv, GATConv, BatchNorm
 from torch_geometric.typing import NodeType
-
+from torch_frame.data.stats import StatType
 from model.base import FeatureEncodingModule
+
+from typing import Dict
 
 
 class HeteroGAT(torch.nn.Module):
     def __init__(
         self,
         data: HeteroData,
-        node_to_col_stats: dict,
+        node_to_col_stats: Dict[str, Dict[str, Dict[StatType, torch.nn.Tensor]]],
         channels: int,
         out_channels: int,
         num_layers: int,
