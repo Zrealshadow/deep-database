@@ -1,5 +1,4 @@
-# declare the model
-from typing import Any, Dict, List, Optional
+
 
 import math
 import torch
@@ -8,13 +7,16 @@ from torch import Tensor
 from torch.nn import Embedding, ModuleDict
 from torch_frame.data.stats import StatType
 from torch_geometric.data import HeteroData
-from torch_geometric.nn import MLP
+from torch_geometric.nn import MLP, MessagePassing, HeteroConv
 from torch_frame.nn.models.resnet import FCResidualBlock
-from torch_geometric.typing import NodeType
+from torch_geometric.typing import NodeType, EdgeType
 from torch_frame.nn.encoder import StypeWiseFeatureEncoder
+from torch_geometric.nn import LayerNorm
 # from relbench.modeling.nn import HeteroEncoder, HeteroGraphSAGE, HeteroTemporalEncoder
-
 from model.graphsage import HeteroGraphSAGE
+
+
+from typing import Any, Dict, List, Optional, Type
 
 
 default_stype_encoder_cls_kwargs: Dict[torch_frame.stype, Any] = {
@@ -100,6 +102,65 @@ class FeatureEncodingPart(torch.nn.Module):
             x_dict[node_type] = x
         return x_dict
 
+
+class FeatureEncodingModule(torch.nn.Module):
+    '''convert the raw feature to the feature embedding.
+    '''
+
+    def __init__(
+        self,
+        data: HeteroData,
+        node_to_col_stats: Dict[str, Dict[str, Dict[StatType, Tensor]]],
+        channels: int
+    ):
+        super().__init__()
+        self.encoders = torch.nn.ModuleDict()
+        # node_type : StypeWiseFeatureEncoder
+
+        node_to_col_names_dict = {
+            node_type: data[node_type].tf.col_names_dict
+            for node_type in data.node_types
+        }
+        # node_type:  {stype: [col_name]}
+
+        default_stype_encoder_cls_kwargs: Dict[torch_frame.stype, Any] = {
+            torch_frame.categorical: (torch_frame.nn.EmbeddingEncoder, {}),
+            torch_frame.numerical: (torch_frame.nn.LinearEncoder, {}),
+            torch_frame.multicategorical: (
+                torch_frame.nn.MultiCategoricalEmbeddingEncoder,
+                {},
+            ),
+            torch_frame.embedding: (torch_frame.nn.LinearEmbeddingEncoder, {}),
+            torch_frame.timestamp: (torch_frame.nn.TimestampEncoder, {}),
+        }
+
+        for node_type in node_to_col_names_dict.keys():
+            stype_encoder_dict = {
+                stype: default_stype_encoder_cls_kwargs[stype][0](
+                    **default_stype_encoder_cls_kwargs[stype][1]
+                )
+                for stype in node_to_col_names_dict[node_type].keys()
+            }
+            self.encoders.update({node_type: StypeWiseFeatureEncoder(
+                out_channels=channels,
+                col_stats=node_to_col_stats[node_type],
+                col_names_dict=node_to_col_names_dict[node_type],
+                stype_encoder_dict=stype_encoder_dict
+            )})
+
+    def reset_parameters(self):
+        for encoder in self.encoders.values():
+            encoder.reset_parameters()
+
+    def forward(
+        self,
+        tf_dict: Dict[NodeType, torch_frame.TensorFrame],
+    ) -> Dict[NodeType, Tensor]:
+        x_dict = {}
+        for node_type, tf in tf_dict.items():
+            x, _ = self.encoders[node_type](tf)
+            x_dict[node_type] = x
+        return x_dict
 
 class NodeRepresentationPart(torch.nn.Module):
     '''generate node/tuple representation from feature encoding.
@@ -302,3 +363,6 @@ class CompositeModel(torch.nn.Module):
         }
 
         return x_dict
+
+
+
