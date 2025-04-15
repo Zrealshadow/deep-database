@@ -13,7 +13,7 @@ class HeteroGAT(torch.nn.Module):
     def __init__(
         self,
         data: HeteroData,
-        node_to_col_stats: Dict[str, Dict[str, Dict[StatType, torch.nn.Tensor]]],
+        node_to_col_stats: Dict[str, Dict[str, Dict[StatType, torch.Tensor]]],
         channels: int,
         out_channels: int,
         num_layers: int,
