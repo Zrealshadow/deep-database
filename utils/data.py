@@ -35,7 +35,7 @@ class DatabaseFactory(object):
         "trial",
     ]
 
-    TEXT_COMPRESS_COLNAME = "text_compres"
+    TEXT_COMPRESS_COLNAME = "text_compress"
 
     @staticmethod
     def get_db(
