@@ -64,6 +64,14 @@ class DatabaseFactory(object):
         db = dataset.get_db()
         if db_name == "event":
             preprocess_event_database(db)
+        elif db_name == "avito":
+            # case by case:
+            # there are some tables in this dataset are not reindex
+            for _, table in db.table_dict.items():
+                n = len(table.df)
+                max_index = table.df.index.max()
+                if n != max_index + 1:
+                    table.df.reset_index(drop=True, inplace=True)
 
         if with_text_compress:
             for _, table in db.table_dict.items():
@@ -212,9 +220,10 @@ class TableData(object):
             print(f" ==> load material dataset from {dir_path}")
         else:
             table_data.is_materialize = False
-            print(f" ==> load raw dataset from {dir_path}, need material first")
+            print(
+                f" ==> load raw dataset from {dir_path}, need material first")
         return table_data
-    
+
     @property
     def train_tf(self):
         if not self.is_materialize:
