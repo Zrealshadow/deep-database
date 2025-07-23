@@ -7,15 +7,14 @@ from torch import Tensor
 from torch.nn import Embedding, ModuleDict
 from torch_frame.data.stats import StatType
 from torch_geometric.data import HeteroData
-from torch_geometric.nn import MLP, MessagePassing, HeteroConv
+from torch_geometric.nn import MLP
 from torch_frame.nn.models.resnet import FCResidualBlock
 from torch_geometric.typing import NodeType, EdgeType
 from torch_frame.nn.encoder import StypeWiseFeatureEncoder
-from torch_geometric.nn import LayerNorm
 # from relbench.modeling.nn import HeteroEncoder, HeteroGraphSAGE, HeteroTemporalEncoder
 from model.graphsage import HeteroGraphSAGE
 
-
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
 
@@ -41,6 +40,16 @@ def construct_stype_encoder_dict(
         for stype in stype_encoder_cls_kwargs.keys()
     }
     return stype_encoder_dict
+
+
+class HeteroPretrainGNNEncoder(ABC):
+    @abstractmethod
+    def get_node_embedding(
+        self,
+        batch: HeteroData,
+        entity_table: NodeType
+    ) -> Dict[NodeType, Tensor]:
+        pass
 
 
 class FeatureEncodingPart(torch.nn.Module):
@@ -162,10 +171,10 @@ class FeatureEncodingModule(torch.nn.Module):
             x_dict[node_type] = x
         return x_dict
 
+
 class NodeRepresentationPart(torch.nn.Module):
     '''generate node/tuple representation from feature encoding.
     '''
-
     def __init__(
         self,
         data: HeteroData,
@@ -224,8 +233,7 @@ class NodeRepresentationPart(torch.nn.Module):
         return out_dict
 
 
-class CompositeModel(torch.nn.Module):
-
+class CompositeModel(torch.nn.Module, HeteroPretrainGNNEncoder):
     def __init__(
         self,
         data: HeteroData,
@@ -363,6 +371,3 @@ class CompositeModel(torch.nn.Module):
         }
 
         return x_dict
-
-
-

@@ -6,12 +6,12 @@ from torch_geometric.typing import NodeType
 
 from relbench.modeling.nn import HeteroTemporalEncoder
 from torch_frame.data.stats import StatType
-from model.base import FeatureEncodingModule
+from model.base import FeatureEncodingModule, HeteroPretrainGNNEncoder
 
 from typing import Dict
 
 
-class HeteroGCN(torch.nn.Module):
+class HeteroGCN(torch.nn.Module, HeteroPretrainGNNEncoder):
     def __init__(
         self,
         data: HeteroData,
@@ -72,7 +72,7 @@ class HeteroGCN(torch.nn.Module):
     def forward(
         self,
         batch: HeteroData,
-        entity_table: NodeType
+        entity_table: NodeType,
     ) -> torch.Tensor:
         seed_time = batch[entity_table].seed_time
         B = batch[entity_table].seed_time.size(0)
@@ -98,3 +98,33 @@ class HeteroGCN(torch.nn.Module):
                 x) for key, x in x_dict.items()}
         # [B, out_channels]
         return self.lin(x_dict[entity_table][:B])
+
+    def get_node_embedding(
+        self,
+        batch: HeteroData,
+        entity_table: NodeType
+    ) -> torch.Tensor:
+        """Get node embedding for the given batch and entity table.
+        """
+        x_dict = self.feature_encoder(batch.tf_dict)
+        rel_time_dict = self.temporal_encoder(
+            batch[entity_table].seed_time, batch.time_dict, batch.batch_dict
+        )
+
+        for node_type, rel_time in rel_time_dict.items():
+            x_dict[node_type] = x_dict[node_type] + rel_time.unsqueeze(1)
+            # rel_time [B, 1 , channels]
+
+        # [B, attr_num, channels]
+        # flatten
+        for node_type, x in x_dict.items():
+            x_dict[node_type] = x.view(x.size(0), math.prod(x.shape[1:]))
+
+        for _, (conv, norm_dict) in enumerate(zip(self.convs, self.norms)):
+            x_dict = conv(x_dict, batch.edge_index_dict)
+            x_dict = {key: norm_dict[key](x) for key, x in x_dict.items()}
+            x_dict = {key: x.relu() for key, x in x_dict.items()}
+            x_dict = {key: self.dropout_dict[key](
+                x) for key, x in x_dict.items()}
+
+        return x_dict

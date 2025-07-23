@@ -3,7 +3,7 @@
 import torch
 import random
 
-from model.base import CompositeModel
+from model.base import HeteroPretrainGNNEncoder
 from torch_geometric.data import HeteroData
 from torch_geometric.typing import NodeType
 from torch_frame.data import TensorFrame
@@ -23,7 +23,7 @@ class HeteroGraphCL(torch.nn.Module):
         self,
         data: HeteroData,
         channel: int,
-        encoder: CompositeModel,
+        encoder: HeteroPretrainGNNEncoder,
     ):
 
         super().__init__()
