@@ -69,3 +69,21 @@ for TASK_NAME in "${STACK_TASK_NAMES[@]}"; do
     echo  "-------------Finished task: $TASK_NAME------------------"
     echo
 done
+
+
+
+# RateBeer
+BEER_TASK_NAMES=("user-active", "beer-positive", "place-positive")
+DBNAME="ratebeer"
+for TASK_NAME in "${STACK_TASK_NAMES[@]}"; do
+    echo "--------------Running task: $TASK_NAME in Database $DBNAME ------------------"
+    python ./cmd/graph_baseline.py \
+    --tf_cache_dir ./data/ratebeer-tensor-frame \
+    --data_cache_dir /home/lingze/.cache/relbench/ratebeer \
+    --db_name $DBNAME \
+    --task_name $TASK_NAME \
+    --model $MODEL\
+    --no_need_test 
+    echo  "-------------Finished task: $TASK_NAME------------------"
+    echo
+done
