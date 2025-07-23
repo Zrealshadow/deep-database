@@ -14,7 +14,7 @@ from typing import Dict
 from utils.data import DatabaseFactory
 from utils.builder import HomoGraph, make_homograph_from_db
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:6' if torch.cuda.is_available() else 'cpu')
 
 
 parser = argparse.ArgumentParser()
@@ -59,10 +59,27 @@ early_stop_threshold = args.early_stop_threshold
 max_round_epoch = args.max_round_epoch
 
 
-db = DatabaseFactory.get_db(
-    db_name, cache_dir=data_cache_dir, with_text_compress=True)
-task = DatabaseFactory.get_task(db_name, task_name)
+# db = DatabaseFactory.get_db(
+#     db_name, cache_dir=data_cache_dir, with_text_compress=True)
+# task = DatabaseFactory.get_task(db_name, task_name)
 
+db = DatabaseFactory.get_db(
+    db_name=db_name,
+    cache_dir=data_cache_dir,
+)
+
+
+dataset = DatabaseFactory.get_dataset(
+    db_name=db_name,
+    cache_dir=data_cache_dir,
+)
+
+
+task = DatabaseFactory.get_task(
+    db_name=db_name,
+    task_name=task_name,
+    dataset=dataset,
+)
 
 homoGraph = make_homograph_from_db(db, verbose=True)
 

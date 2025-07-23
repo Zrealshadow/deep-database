@@ -21,7 +21,7 @@ from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_k
 from utils.resource import get_text_embedder_cfg
 from utils.data import TableData
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
 
 parser = argparse.ArgumentParser(description="Model configuration parser")
@@ -58,7 +58,7 @@ parser.add_argument("--max_round_epoch", type=int,
 args = parser.parse_args()
 
 
-table_data = TableData.load_from_dir(args.data_dir)\
+table_data = TableData.load_from_dir(args.data_dir)
     
 if not table_data.is_materialize:
     text_cfg = get_text_embedder_cfg(

@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+from utils.resource import get_text_embedder_cfg
+from utils.preprocess import infer_type_in_table
+from utils.util import remove_pkey_fkey
+from utils.data import DatabaseFactory, TableData
 import os
 import argparse
 import pandas as pd
@@ -14,10 +18,6 @@ from pathlib import Path
 
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from utils.data import DatabaseFactory, TableData
-from utils.util import remove_pkey_fkey
-from utils.preprocess import infer_type_in_table
-from utils.resource import get_text_embedder_cfg
 
 parser = argparse.ArgumentParser(description="Process user attendance task.")
 
@@ -40,14 +40,23 @@ db_cache_dir = args.db_cache_dir
 sample_size = args.sample_size
 table_output_dir = args.table_output_dir
 
+
 db = DatabaseFactory.get_db(
     db_name=dbname,
     cache_dir=db_cache_dir,
 )
 
+
+dataset = DatabaseFactory.get_dataset(
+    db_name=dbname,
+    cache_dir=db_cache_dir,
+)
+
+
 task = DatabaseFactory.get_task(
     db_name=dbname,
     task_name=task_name,
+    dataset=dataset,
 )
 
 entity_table = db.table_dict[task.entity_table]

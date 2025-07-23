@@ -23,7 +23,7 @@ from model import HeteroGCN
 from model.dgi import HeteroDeepGraphInfomax
 from model.graphcl import HeteroGraphCL
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:5' if torch.cuda.is_available() else 'cpu')
 
 parser = argparse.ArgumentParser()
 
@@ -51,7 +51,7 @@ parser.add_argument('--model', type=str, default="GCN")
 parser.add_argument('--method', type=str, default="dgi")
 
 # Training parameters
-parser.add_argument('--lr', type=float, default=0.01)
+parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--num_epochs', type=int, default=300)
 parser.add_argument('--early_stop_threshold', type=int, default=3)
 parser.add_argument('--max_round_epoch', type=int, default=50)
@@ -89,6 +89,7 @@ max_round_epoch = args.max_round_epoch
 db = DatabaseFactory.get_db(
     db_name, cache_dir=data_cache_dir, with_text_compress=True
 )
+
 col_type_dict = load_col_types(
     cache_path=cache_dir, file_name="col_type_dict.pkl"
 )
