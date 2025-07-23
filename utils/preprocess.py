@@ -32,7 +32,7 @@ def infer_type_in_db(
 
     for table_name, table in db.table_dict.items():
 
-        col_type_in_table = inter_type_in_table(
+        col_type_in_table = infer_type_in_table(
             table,
             table_name,
             verbose

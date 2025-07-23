@@ -200,7 +200,8 @@ def __tokenize_numerical_column(
     """ for numerical data, we try to cluster and bin it convert it to categroical data.
     """
 
-    n = (~df[col_name].isna()).sum()
+    # n = (~df[col_name].isna()).sum()
+    n = df[~df[col_name].isna()][col_name].nunique()
     not_nan_mask = df[col_name].notna()
     series = df[col_name]
     binned = pd.Series(index=series.index, dtype='object')
