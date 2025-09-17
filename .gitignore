@@ -183,3 +183,8 @@ cython_debug/
 *.npy
 *.pth
 *.json
+
+# draw figure directory
+draw/
+scripts/
+trace/
