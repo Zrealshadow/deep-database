@@ -45,11 +45,11 @@ This codebase mainly depend on
 
 ## Structure
 
-`model` contains the model and algorithm implementations
+`/model` contains the model and algorithm implementations
 
-`utils` contains all related utility functions, including data structure definitions, data loading, graph building and prediction task definition.
+`/utils` contains all related utility functions, including data structure definitions, data loading, graph building and prediction task definition.
 
-`cmd` contains python scripts for training and inference of methods.
+`/cmd` contains python scripts for training and inference of methods.
 - `generate_table_data.py` to generate flatten tabular data from relational database
 - `dnn_baseline_table_data.py` execute tabular learning baseline methods, includeing `MLP`, `ResNet`,`FTTrans`
 - `graph_baseline.py` execute graph-based baseline methods, including `R-GCN`, `R-GAT`, `HGT`
@@ -62,7 +62,7 @@ This codebase mainly depend on
 Each cmd scripts has it own arguments, you can run `python <script_name>.py --help` to see the details of arguments.
 
 
-`**_scripts` directories contains preprocessing scripts and retrieval building scripts in RAM for each database. Also, it contains some experiment snippets and some experiment results.
+`/**_scripts` directories contains preprocessing scripts and retrieval building scripts in RAM for each database. Also, it contains some experiment snippets and some experiment results.
 
 
 some integrated experiment shell scripts:
