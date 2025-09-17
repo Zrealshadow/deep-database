@@ -88,6 +88,7 @@ text_keywords = [
     'description', 'comments', 'content', 'name', 'review', 'message', 'note', 'query', 'summary'
 ]
 
+GENERATED_COLUMN_PATTERN = re.compile(r'\(.*\)')
 
 def tokenize_identifier(identifier):
     # Try to split snake_case and kebab-case first
@@ -113,8 +114,12 @@ def basic_infer_stype(
     verbose: bool = False,
 ) -> Dict[str, stype]:
     for col_name in df.columns:
-        if col_name not in col_to_stype:
+
+        if col_name not in col_to_stype or GENERATED_COLUMN_PATTERN.search(col_name):
+            # for generated columns, col_name include ()
+            # like NUM_UNIQUE(qualifying.WEEKDAY(***)), we keep the original type
             continue
+        
         guess_type = col_to_stype[col_name]
 
         guess_type = custom_rule_infer(
