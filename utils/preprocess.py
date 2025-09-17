@@ -47,6 +47,7 @@ def infer_type_in_table(
     table_name: str = "",
     verbose: bool = False,
 ) -> Dict[str, stype]:
+    # add a rule, if it is primary key or foreign key, just categorical data
     df = table.df
     df = df.sample(min(10_000, len(df)))
     inferred_col_to_stype = infer_df_stype(df)
@@ -56,12 +57,17 @@ def infer_type_in_table(
         table_name,
         verbose
     )
-    # add a rule, if it is primary key or foreign key, just categorical data
+    
     if table.pkey_col:
         col_type_in_table[table.pkey_col] = stype.categorical
 
     for fk in table.fkey_col_to_pkey_table.keys():
         col_type_in_table[fk] = stype.categorical
+    
+    if table.time_col:
+        col_type_in_table[table.time_col] = stype.timestamp
+
+    
     return col_type_in_table
 
 
