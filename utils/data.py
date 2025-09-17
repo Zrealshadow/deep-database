@@ -33,20 +33,31 @@ class DatabaseFactory(object):
         "stack",
         "avito",
         "trial",
-        "ratebeer"
+        "ratebeer",
+        "f1",
+        "amazon"
     ]
 
     TEXT_COMPRESS_COLNAME = "text_compress"
+    # a column to store the compressed text embeddings
 
     @staticmethod
     def get_db(
-            db_name: str,
-            cache_dir: Optional[str] = None,
-            path: Optional[str] = None,
-            with_text_compress: bool = False) -> Database:
+        db_name: str,
+        cache_dir: Optional[str] = None,
+        path: Optional[str] = None,
+        with_text_compress: bool = False,
+        upto_test_timestamp: bool = True,
+    ) -> Database:
         """
         Get a database by name.
         :param db_name: The name of the database.
+        :param cache_dir: The directory to cache the database.
+        :param path: The local path to the database
+        :param with_text_compress: Whether to add a column to store the compressed text embeddings.
+            compressed text is the preprocessing to concatenate all columns with text type within a table.
+        :param upto_test_timestamp: Whether to filter the data up to the test timestamp.
+            If false, we will use the whole time data for database (including test dataset).
         :return: The database object.
         """
         assert db_name in DatabaseFactory.DBList, f"Database {db_name} not found."
@@ -57,7 +68,7 @@ class DatabaseFactory(object):
             path=path,
         )
 
-        db = dataset.get_db()
+        db = dataset.get_db(upto_test_timestamp=upto_test_timestamp)
         if db_name == "event":
             preprocess_event_database(db)
         elif db_name == "avito":
@@ -81,6 +92,14 @@ class DatabaseFactory(object):
         cache_dir: Optional[str] = None,
         path: Optional[str] = None,
     ) -> Dataset:
+        """Get the dataset by name.
+        :param db_name: The name of the database.
+        :param cache_dir: The directory to cache the dataset.
+        :param path: The local path to the dataset, used for RateBeer dataset.(
+            first get the dataset need path from local path.
+            After the dataset is cached, we can load it from cache directly.
+        )
+        """
         dataset = None
         if db_name == "event":
             dataset = get_dataset("rel-event", download=True)
@@ -98,6 +117,10 @@ class DatabaseFactory(object):
                 path,
                 cache_dir=cache_dir
             )
+        elif db_name == "f1":
+            dataset = get_dataset("rel-f1", download=True)
+        elif db_name == "amazon":
+            dataset = get_dataset("rel-amazon", download=True)
         else:
             raise ValueError(f"Unknown database name: {db_name}")
         return dataset
@@ -116,6 +139,10 @@ class DatabaseFactory(object):
             db_name = "rel-avito"
         elif db_name == "trial":
             db_name = "rel-trial"
+        elif db_name == "f1":
+            db_name = "rel-f1"
+        elif db_name == "amazon":
+            db_name = "rel-amazon"
         elif db_name == "ratebeer":
             if dataset is None:
                 raise ValueError(
