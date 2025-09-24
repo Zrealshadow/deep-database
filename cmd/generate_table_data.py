@@ -12,6 +12,7 @@ import torch_frame
 from relbench.base import TaskType, Table
 from torch_frame import stype
 import featuretools as ft
+import time
 
 from typing import Dict, Any
 
@@ -38,210 +39,269 @@ parser.add_argument("--table_output_dir", type=str,
 parser.add_argument("--dfs", action='store_true', default=False)
 parser.add_argument("--max_depth", type=int, default=2,
                     help="Max depth for deep feature synthesis.")
-parser.add_argument("--max_features", type=int, default=200,
+parser.add_argument("--max_features", type=int, default=1000,
                     help="Max number of features to generate.")
-parser.add_argument("--n_timedelta", type=int, default=1,
+parser.add_argument("--n_timedelta", type=int, default=-1,
                     help="Number of days for time delta window.")
+parser.add_argument("--time_budget", type=int, default=-1,
+                    help="Time budget in minutes for processing. -1 means unlimited.")
+parser.add_argument("--n_jobs", type=int, default=1,
+                    help="Number of parallel jobs for processing. Default is 1.")
 # a flag, if add the args in output dir name
 parser.add_argument("--with_args", action='store_true', default=False)
 
-args = parser.parse_args()
 
 
-dbname = args.dbname
-task_name = args.task_name
-db_cache_dir = args.db_cache_dir
-sample_size = args.sample_size
-table_output_dir = args.table_output_dir
 
-use_dfs = args.dfs
-dfs_max_depth = args.max_depth
-dfs_max_features = args.max_features
-dfs_number_timedelta = args.n_timedelta
-dfs_with_args = args.with_args
-
-db = DatabaseFactory.get_db(
-    db_name=dbname,
-    cache_dir=db_cache_dir,
-)
+if __name__ == "__main__":
+    args = parser.parse_args()
 
 
-dataset = DatabaseFactory.get_dataset(
-    db_name=dbname,
-    cache_dir=db_cache_dir,
-)
+    dbname = args.dbname
+    task_name = args.task_name
+    db_cache_dir = args.db_cache_dir
+    sample_size = args.sample_size
+    table_output_dir = args.table_output_dir
 
+    use_dfs = args.dfs
+    dfs_max_depth = args.max_depth
+    dfs_max_features = args.max_features
+    dfs_number_timedelta = args.n_timedelta 
+    dfs_time_budget = args.time_budget
+    dfs_n_jobs = args.n_jobs
+    dfs_with_args = args.with_args
 
-task = DatabaseFactory.get_task(
-    db_name=dbname,
-    task_name=task_name,
-    dataset=dataset,
-)
-
-entity_table = db.table_dict[task.entity_table]
-entity_df = entity_table.df
-
-
-train_table = task.get_table("train")
-val_table = task.get_table("val")
-test_table = task.get_table("test", mask_input_cols=False)
-
-
-# --------------------------- sample_training data
-if sample_size > 0:
-    sampled_idx = np.random.permutation(len(train_table.df))[:sample_size]
-    train_table.df = train_table.df.iloc[sampled_idx]
-
-
-# ------------------------ preprocess the tabular data
-dfs: Dict[str, pd.DataFrame] = {}
-
-
-dataframes = {}
-relationships = []
-if use_dfs:
-    print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
-
-    # initialize the EntitySet for featuretools dfs.
-    for table_name, table in db.table_dict.items():
-        dataframes[table_name] = (table.df, table.pkey_col) \
-            if not table.time_col else (table.df, table.pkey_col, table.time_col)
-
-        for fkey_col, pkey_table in table.fkey_col_to_pkey_table.items():
-            pkey_table_pkey_col = db.table_dict[pkey_table].pkey_col
-            relationships.append(
-                (pkey_table, pkey_table_pkey_col, table_name, fkey_col)
-            )
-# construct entity set
-
-es = ft.EntitySet(
-    id=dbname,
-    dataframes=dataframes,
-    relationships=relationships,
-)
-
-# set for last time index
-es.add_last_time_indexes()
-time_window = dfs_number_timedelta * \
-    task.timedelta if dfs_number_timedelta else None
-
-# print the dfs important args
-print(f"==> DFS args: max_depth={dfs_max_depth},\
-        max_features={dfs_max_features}, \
-        time_window={time_window}")
-
-# ---------------- generate the feature matrix for each split
-feature_matrix_n = None  # number of features in feature matrix in dfs
-for split, table in [
-    ("train", train_table),
-    ("val", val_table),
-    ("test", test_table),
-]:
-    left_entity = list(table.fkey_col_to_pkey_table.keys())[0]
-
-    if not use_dfs:
-        entity_df = entity_df.astype(
-            {entity_table.pkey_col: table.df[left_entity].dtype})
-        dfs[split] = table.df.merge(
-            entity_df,
-            how="left",
-            left_on=left_entity,
-            right_on=entity_table.pkey_col,
-        )
-        continue
-
-    # use dfs to generate feature matrix
-
-    # construct the cutoff time and instance
-    cutoff_times = table.df.copy()
-    cutoff_times['time'] = table.df[task.time_col]
-
-    feature_matrix, feature_instances = ft.dfs(
-        entityset=es,
-        target_dataframe_name=task.entity_table,
-        cutoff_time=cutoff_times,
-        max_depth=dfs_max_depth,
-        max_features=dfs_max_features,
-        training_window=time_window,
-        verbose=True,
+    db = DatabaseFactory.get_db(
+        db_name=dbname,
+        cache_dir=db_cache_dir,
     )
 
-    if not feature_matrix_n:
-        feature_matrix_n = len(feature_matrix.columns)
+
+    dataset = DatabaseFactory.get_dataset(
+        db_name=dbname,
+        cache_dir=db_cache_dir,
+    )
+
+
+    task = DatabaseFactory.get_task(
+        db_name=dbname,
+        task_name=task_name,
+        dataset=dataset,
+    )
+
+    entity_table = db.table_dict[task.entity_table]
+    entity_df = entity_table.df
+
+
+    train_table = task.get_table("train")
+    val_table = task.get_table("val")
+    test_table = task.get_table("test", mask_input_cols=False)
+
+
+    # --------------------------- sample_training data
+    if sample_size > 0:
+        sampled_idx = np.random.permutation(len(train_table.df))[:sample_size]
+        train_table.df = train_table.df.iloc[sampled_idx]
+
+
+    # ------------------------ preprocess the tabular data
+    dfs: Dict[str, pd.DataFrame] = {}
+
+
+    # construct entity set
+    total_processing_time = 0  # track total processing time across all splits
+    process_start_time = time.time()  # overall processing start time
+    build_es_start_time = time.time()
+    
+    dataframes = {}
+    relationships = []
+    if use_dfs:
+        print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
+
+        # initialize the EntitySet for featuretools dfs.
+        for table_name, table in db.table_dict.items():
+            dataframes[table_name] = (table.df, table.pkey_col) \
+                if not table.time_col else (table.df, table.pkey_col, table.time_col)
+
+            for fkey_col, pkey_table in table.fkey_col_to_pkey_table.items():
+                pkey_table_pkey_col = db.table_dict[pkey_table].pkey_col
+       
+                # need to check the relation contains nulls
+                # if Nan value is included will leads to Int64Dtype() -> int64 fail
+                if db.table_dict[pkey_table].df[pkey_table_pkey_col].hasnans or \
+                    db.table_dict[table_name].df[fkey_col].hasnans:
+                    print(f"There is null in relationship values: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}")  
+                    continue
+                relationships.append(
+                    (pkey_table, pkey_table_pkey_col, table_name, fkey_col)
+                )
+            
+
+    es = ft.EntitySet(
+        id=dbname,
+        dataframes=dataframes,
+        relationships=relationships,
+    )
+
+    # set for last time index
+    es.add_last_time_indexes()
+    time_window = dfs_number_timedelta * \
+        task.timedelta if dfs_number_timedelta > 0 else None
+    build_es_end_time = time.time()
+    build_es_duration = build_es_end_time - build_es_start_time
+    total_processing_time += build_es_duration
+    print(f"==> EntitySet built in {build_es_duration:.2f} seconds")
+    
+    # print the dfs important args
+    print(f"==> DFS args: max_depth={dfs_max_depth}, \
+            max_features={dfs_max_features}, \
+            time_window={time_window}, \
+            n_jobs={dfs_n_jobs}, \
+            time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} minutes'}")
+
+    # ---------------- generate the feature matrix for each split
+    feature_matrix_n = None  # number of features in feature matrix in dfs
+
+    for split, table in [
+        ("train", train_table),
+        ("val", val_table),
+        ("test", test_table),
+    ]:
+        # left_entity = list(table.fkey_col_to_pkey_table.keys())[0]
+        left_entity = task.entity_col
+
+        if not use_dfs:
+            entity_df = entity_df.astype(
+                {entity_table.pkey_col: table.df[left_entity].dtype})
+            dfs[split] = table.df.merge(
+                entity_df,
+                how="left",
+                left_on=left_entity,
+                right_on=entity_table.pkey_col,
+            )
+            continue
+
+        # use dfs to generate feature matrix
+
+        # construct the cutoff time and instance
+        cutoff_times = table.df.copy()
+        # TODO: after refine and standardize the dataset and task part, don't need this filter
+        
+        # specifically remove "index" column in "event" db "user-ignore"
+        involved_cols = [task.time_col, left_entity, task.target_col]
+        cutoff_times = cutoff_times[involved_cols]
+        # keep the column name is same as the entity pkey column
+        cutoff_times = cutoff_times.rename(
+            columns={left_entity: entity_table.pkey_col}
+        )
+        cutoff_times['time'] = table.df[task.time_col]
+        
+        split_start_time = time.time()
+        print(f"==> Starting DFS for {split} split...")
+
+        dfs_kwargs = {
+            'entityset': es,
+            'target_dataframe_name': task.entity_table,
+            'cutoff_time': cutoff_times,
+            'max_depth': dfs_max_depth,
+            'max_features': dfs_max_features,
+            'training_window': time_window,
+            'n_jobs': dfs_n_jobs,
+            'verbose': True,
+            # need to make it as argparse
+            'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
+        }
+
+
+        feature_matrix, feature_instances = ft.dfs(**dfs_kwargs)
+
+        split_end_time = time.time()
+        split_duration = split_end_time - split_start_time
+        total_processing_time += split_duration
+        print(f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
+
+        if not feature_matrix_n:
+            feature_matrix_n = len(feature_matrix.columns)
+        else:
+            assert feature_matrix_n == len(feature_matrix.columns), \
+                f"Feature matrix in {split} has different number of features {len(feature_matrix.columns)} from previous {feature_matrix_n}"
+
+        # change the categorical dtype in feature_matrix to object
+        # WARNING: the featuretools will automatically assign the dtype for input dataframe.
+        # Some categorical dtype will raise issue for type inference especially through sampling
+
+        for col in feature_matrix.columns:
+            if str(feature_matrix[col].dtype) == "category":
+                feature_matrix[col] = feature_matrix[col].astype("object")
+
+        dfs[split] = feature_matrix.reset_index()
+        # convert entity_col from index to column
+
+    process_end_time = time.time()
+    overall_duration = process_end_time - process_start_time
+    print(f"==> Overall processing completed in {overall_duration:.2f} seconds ({overall_duration/60:.2f} minutes)")
+
+
+    # ------------------ Construct Table for type inference
+
+    object_table = Table(
+        df=dfs["train"],
+        fkey_col_to_pkey_table=train_table.fkey_col_to_pkey_table,
+        pkey_col=train_table.pkey_col,
+        time_col=train_table.time_col,
+    )
+
+
+    # ------------------- configure the column types
+    table_col_types = infer_type_in_table(
+        object_table,
+        " ",
+        verbose=True
+    )
+
+    remove_pkey_fkey(
+        table_col_types,
+        object_table,
+    )
+
+
+    if task.task_type == TaskType.BINARY_CLASSIFICATION:
+        table_col_types[task.target_col] = stype.categorical
+    elif task.task_type == TaskType.REGRESSION:
+        table_col_types[task.target_col] = stype.numerical
+    elif task.task_type == TaskType.MULTILABEL_CLASSIFICATION:
+        table_col_types[task.target_col] = stype.embedding
     else:
-        assert feature_matrix_n == len(feature_matrix.columns), \
-            f"Feature matrix in {split} has different number of features {len(feature_matrix.columns)} from previous {feature_matrix_n}"
+        raise ValueError(f"Unsupported task type called {task.task_type}")
 
-    # change the categorical dtype in feature_matrix to object
-    # WARNING: the featuretools will automatically assign the dtype for input dataframe.
-    # Some categorical dtype will raise issue for type inference especially through sampling
-
-    for col in feature_matrix.columns:
-        if str(feature_matrix[col].dtype) == "category":
-            feature_matrix[col] = feature_matrix[col].astype("object")
-
-    dfs[split] = feature_matrix.reset_index()
-    # convert entity_col from index to column
-
-# ------------------ Construct Table for type inference
-
-object_table = Table(
-    df=dfs["train"],
-    fkey_col_to_pkey_table=train_table.fkey_col_to_pkey_table,
-    pkey_col=train_table.pkey_col,
-    time_col=train_table.time_col,
-)
+    # assign the time column in col_types_dict
+    if task.time_col:
+        table_col_types[task.time_col] = stype.timestamp
 
 
-# ------------------- configure the column types
-table_col_types = infer_type_in_table(
-    object_table,
-    " ",
-    verbose=True
-)
-
-remove_pkey_fkey(
-    table_col_types,
-    object_table,
-)
+    data = TableData(
+        train_df=dfs["train"],
+        val_df=dfs["val"],
+        test_df=dfs["test"],
+        col_to_stype=table_col_types,
+        target_col=task.target_col,
+        task_type=task.task_type,
+    )
 
 
-if task.task_type == TaskType.BINARY_CLASSIFICATION:
-    table_col_types[task.target_col] = stype.categorical
-elif task.task_type == TaskType.REGRESSION:
-    table_col_types[task.target_col] = stype.numerical
-elif task.task_type == TaskType.MULTILABEL_CLASSIFICATION:
-    table_col_types[task.target_col] = stype.embedding
-else:
-    raise ValueError(f"Unsupported task type called {task.task_type}")
+    dirname = dbname + "-" + task_name
+    if use_dfs and dfs_with_args:
+        dirname += f"-dfs-depth{dfs_max_depth}-feat{dfs_max_features}-tw{dfs_number_timedelta}"
+    path = os.path.join(table_output_dir, dirname)
 
-# assign the time column in col_types_dict
-if task.time_col:
-    table_col_types[task.time_col] = stype.timestamp
+    text_embedder_cfg = get_text_embedder_cfg()
+    data.materilize(
+        col_to_text_embedder_cfg=text_embedder_cfg,
+    )
 
-
-data = TableData(
-    train_df=dfs["train"],
-    val_df=dfs["val"],
-    test_df=dfs["test"],
-    col_to_stype=table_col_types,
-    target_col=task.target_col,
-    task_type=task.task_type,
-)
-
-
-dirname = dbname + "-" + task_name
-if use_dfs and dfs_with_args:
-    dirname += f"-dfs-depth{dfs_max_depth}-feat{dfs_max_features}-tw{dfs_number_timedelta}"
-path = os.path.join(table_output_dir, dirname)
-
-print(f"==> Table in task {task_name} in database {dbname} is saved to {path}")
-
-text_embedder_cfg = get_text_embedder_cfg()
-data.materilize(
-    col_to_text_embedder_cfg=text_embedder_cfg,
-)
-
-data.save_to_dir(
-    path
-)
+    data.save_to_dir(
+        path
+    )
+    
+    print(f"==> Table in task {task_name} in database {dbname} is saved to {path}")
+    
