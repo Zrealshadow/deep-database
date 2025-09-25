@@ -10,6 +10,9 @@ from relbench.utils import clean_datetime, unzip_processor
 from relbench.tasks import get_task
 from relbench.datasets import get_dataset
 
+
+from relbench.tasks import stack, event, f1, amazon, avito, trial
+
 import torch_frame
 from torch_frame import stype
 from torch_frame.config import (
@@ -22,6 +25,7 @@ from torch_frame.config import (
 from utils.util import load_col_types, save_col_types
 from utils.task import ActiveUserPredictionTask, BeerPositiveRatePredictionTask, PlacePositivePredictionTask
 from typing import Tuple, Dict, Any, Union, Optional
+
 
 
 class DatabaseFactory(object):
@@ -104,7 +108,7 @@ class DatabaseFactory(object):
         if db_name == "event":
             dataset = get_dataset("rel-event", download=True)
         elif db_name == "stack":
-            dataset = StackDataset(cache_dir=cache_dir)
+            dataset = StackDataset(cache_dir=cache_dir) 
         elif db_name == "avito":
             dataset = get_dataset("rel-avito", download=True)
         elif db_name == "trial":
@@ -129,52 +133,74 @@ class DatabaseFactory(object):
     def get_task(
             db_name: str,
             task_name: str,
-            dataset: Optional[Dataset] = None,
+            dataset: Dataset,
     ) -> BaseTask:
+        cache_dir = os.path.join(dataset.cache_dir, "tasks", task_name)
+        kwargs = {
+            "dataset": dataset,
+            "cache_dir": cache_dir,
+        }
+        
         if db_name == "event":
-            db_name = "rel-event"
+            if task_name == "user-repeat":
+                task_type = event.UserRepeatTask
+            elif task_name == "user-ignore":
+                task_type = event.UserIgnoreTask
+            elif task_name == "user-attendance":
+                task_type = event.UserAttendanceTask
+            else:
+                raise ValueError(f"Unknown task name: {task_name} for Event dataset.")
         elif db_name == "stack":
-            db_name = "rel-stack"
+            if task_name == "user-engagement":
+                task_type = stack.UserEngagementTask
+            elif task_name == "user-badge":
+                task_type = stack.UserBadgeTask
+            elif task_name == "post-vote":
+                task_type = stack.PostVotesTask
+            else:
+                raise ValueError(f"Unknown task name: {task_name} for Stack dataset.")
         elif db_name == "avito":
-            db_name = "rel-avito"
+            if task_name == "user-clicks":
+                task_type = avito.UserClicksTask
+            elif task_name == "ad-ctr":
+                task_type = avito.AdCTRTask
+            else:
+                raise ValueError(f"Unknown task name: {task_name} for Avito dataset.")  
         elif db_name == "trial":
-            db_name = "rel-trial"
+            if task_name == "study-outcome":
+                task_type = trial.StudyOutcomeTask
+            elif task_name == "site-success":
+                task_type = trial.SiteSuccessTask
+            elif task_name == "study-adverse":
+                task_type = trial.StudyAdverseTask
+            else:
+                raise ValueError(f"Unknown task name: {task_name} for Trial dataset.")
         elif db_name == "f1":
-            db_name = "rel-f1"
+            if task_name == "driver-dnf":
+                task_type = f1.DriverDNFTask
+            elif task_name == "driver-top3":
+                task_type = f1.DriverTop3Task
+            else:
+                raise ValueError(f"Unknown task name: {task_name} for F1 dataset.")
         elif db_name == "amazon":
-            db_name = "rel-amazon"
+            pass
+            # TODO:
         elif db_name == "ratebeer":
-            if dataset is None:
-                raise ValueError(
-                    "Dataset must be provided for RateBeer dataset.")
-            # assign specific task
             cache_dir = os.path.join(dataset.cache_dir, "tasks", task_name)
             if task_name == "user-active":
-                task = ActiveUserPredictionTask(
-                    dataset=dataset,
-                    cache_dir=cache_dir,
-                )
-                return task
+                task_type = ActiveUserPredictionTask
             elif task_name == "beer-positive":
-                task = BeerPositiveRatePredictionTask(
-                    dataset=dataset,
-                    cache_dir=cache_dir,
-                )
-                return task
+                task_type = BeerPositiveRatePredictionTask
             elif task_name == "place-positive":
-                task = PlacePositivePredictionTask(
-                    dataset=dataset,
-                    cache_dir=cache_dir,
-                )
-                return task
+                task_type = PlacePositivePredictionTask
             else:
                 raise ValueError(
                     f"Unknown task name: {task_name} for RateBeer dataset.")
 
         else:
             raise ValueError(f"Unknown database name: {db_name}")
-        task = get_task(db_name, task_name)
-        return task
+        
+        return task_type(**kwargs)
 
 
 TextEmbedderCFG = Optional[TextEmbedderConfig]
@@ -614,6 +640,7 @@ class RateBeerDataset(Dataset):
 
     DB_URL = "https://www.dropbox.com/scl/fi/exwygxep7vdvq55uiq28r/db.zip?rlkey=o7q0r8nw758p4wxx1wka9ubuj&st=rg3gvkxg&dl=1"
 
+    
     def __init__(self, path: str, cache_dir: Optional[str] = None):
         super().__init__(cache_dir=cache_dir)
         self.dir_path = path
