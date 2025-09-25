@@ -33,7 +33,7 @@ parser.add_argument("--db_cache_dir", type=str, default=None,
 parser.add_argument("--sample_size", type=int, default=-1,
                     help="Sample size for processing. -1 means all.")
 parser.add_argument("--table_output_dir", type=str,
-                    required=True, help="Directory to output tables.")
+                    default=None, help="Directory to output tables.")
 
 # activate dfs
 parser.add_argument("--dfs", action='store_true', default=False)
@@ -48,14 +48,11 @@ parser.add_argument("--time_budget", type=int, default=-1,
 parser.add_argument("--n_jobs", type=int, default=1,
                     help="Number of parallel jobs for processing. Default is 1.")
 # a flag, if add the args in output dir name
-parser.add_argument("--with_args", action='store_true', default=False)
-
-
+parser.add_argument("--cfg", action='store_true', default=False)
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-
 
     dbname = args.dbname
     task_name = args.task_name
@@ -66,22 +63,20 @@ if __name__ == "__main__":
     use_dfs = args.dfs
     dfs_max_depth = args.max_depth
     dfs_max_features = args.max_features
-    dfs_number_timedelta = args.n_timedelta 
+    dfs_number_timedelta = args.n_timedelta
     dfs_time_budget = args.time_budget
     dfs_n_jobs = args.n_jobs
-    dfs_with_args = args.with_args
+    dfs_with_args = args.cfg
 
     db = DatabaseFactory.get_db(
         db_name=dbname,
         cache_dir=db_cache_dir,
     )
 
-
     dataset = DatabaseFactory.get_dataset(
         db_name=dbname,
         cache_dir=db_cache_dir,
     )
-
 
     task = DatabaseFactory.get_task(
         db_name=dbname,
@@ -89,32 +84,59 @@ if __name__ == "__main__":
         dataset=dataset,
     )
 
+    # ------------TODO: code support "avito" dataset ---------------
+    # because there are many null in foreign key columns, which raise error in featuretools dfs
+    if (dbname == "avito" or dbname == "ratebeer") and use_dfs:
+        # WARNING: isolated drop nan is dangerous,
+        # for example in avito, drop some "AdsInfo",
+        # leads to modification to other table which contains fkey to "AdsInfo"
+        # to keep pky-fkey integrity, however there is no logic to do that now.
+        # Here is a temporary solution for avito dataset for dfs only
+        for table_name, table in db.table_dict.items():
+            fkey_cols = list(table.fkey_col_to_pkey_table.keys())
+            df_ = table.df.dropna(subset=fkey_cols, how='any')
+            dropped_instance_num = table.df.shape[0] - df_.shape[0]
+            table.df = df_
+            if dropped_instance_num > 0:
+                print(f"Table {table_name} drops {dropped_instance_num}")
+
+            # not allowed to reindex
+
+        # for no-pky table, add a column as pkey
+        for table_name, table in db.table_dict.items():
+            if not table.pkey_col:
+                pkey_name = table_name + "_id"
+                table.df[pkey_name] = range(len(table.df))
+                table.pkey_col = pkey_name
+                print(
+                    f"Table {table_name} has no pkey, add column {pkey_name} as pkey.")
+
+    # ------------- move this part of logic into the data class for preprocessing.
+
     entity_table = db.table_dict[task.entity_table]
     entity_df = entity_table.df
-
 
     train_table = task.get_table("train")
     val_table = task.get_table("val")
     test_table = task.get_table("test", mask_input_cols=False)
-
 
     # --------------------------- sample_training data
     if sample_size > 0:
         sampled_idx = np.random.permutation(len(train_table.df))[:sample_size]
         train_table.df = train_table.df.iloc[sampled_idx]
 
-
     # ------------------------ preprocess the tabular data
     dfs: Dict[str, pd.DataFrame] = {}
-
 
     # construct entity set
     total_processing_time = 0  # track total processing time across all splits
     process_start_time = time.time()  # overall processing start time
     build_es_start_time = time.time()
-    
+
     dataframes = {}
     relationships = []
+    es = None
+    dfs_kwargs: Dict[str, Any] = {}
     if use_dfs:
         print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
 
@@ -125,39 +147,53 @@ if __name__ == "__main__":
 
             for fkey_col, pkey_table in table.fkey_col_to_pkey_table.items():
                 pkey_table_pkey_col = db.table_dict[pkey_table].pkey_col
-       
+
                 # need to check the relation contains nulls
                 # if Nan value is included will leads to Int64Dtype() -> int64 fail
-                if db.table_dict[pkey_table].df[pkey_table_pkey_col].hasnans or \
-                    db.table_dict[table_name].df[fkey_col].hasnans:
-                    print(f"There is null in relationship values: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}")  
+                # =================== TODO:code supports "event" dataset =================
+                if dbname == "event" and (db.table_dict[pkey_table].df[pkey_table_pkey_col].hasnans or
+                                          db.table_dict[table_name].df[fkey_col].hasnans):
+                    print(
+                        f"There is null in relationship values: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}")
                     continue
+                # ====[Special case] need incorporates the logic into Dataset class =============
+
                 relationships.append(
                     (pkey_table, pkey_table_pkey_col, table_name, fkey_col)
                 )
-            
 
-    es = ft.EntitySet(
-        id=dbname,
-        dataframes=dataframes,
-        relationships=relationships,
-    )
+        es = ft.EntitySet(
+            id=dbname,
+            dataframes=dataframes,
+            relationships=relationships,
+        )
 
-    # set for last time index
-    es.add_last_time_indexes()
-    time_window = dfs_number_timedelta * \
-        task.timedelta if dfs_number_timedelta > 0 else None
-    build_es_end_time = time.time()
-    build_es_duration = build_es_end_time - build_es_start_time
-    total_processing_time += build_es_duration
-    print(f"==> EntitySet built in {build_es_duration:.2f} seconds")
-    
-    # print the dfs important args
-    print(f"==> DFS args: max_depth={dfs_max_depth}, \
-            max_features={dfs_max_features}, \
-            time_window={time_window}, \
-            n_jobs={dfs_n_jobs}, \
-            time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} minutes'}")
+        # set for last time index
+        es.add_last_time_indexes()
+        time_window = dfs_number_timedelta * \
+            task.timedelta if dfs_number_timedelta > 0 else None
+
+        build_es_end_time = time.time()
+        build_es_duration = build_es_end_time - build_es_start_time
+        total_processing_time += build_es_duration
+        print(f"==> EntitySet built in {build_es_duration:.2f} seconds")
+
+        dfs_kwargs = {
+            'entityset': es,
+            'target_dataframe_name': task.entity_table,
+            'max_depth': dfs_max_depth,
+            'max_features': dfs_max_features,
+            'training_window': time_window,
+            'n_jobs': dfs_n_jobs,
+            'verbose': True,
+            'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
+        }
+        # print the dfs important args
+        print(f"==> DFS args: max_depth={dfs_max_depth}, \
+                max_features={dfs_max_features}, \
+                time_window={time_window}, \
+                n_jobs={dfs_n_jobs}, \
+                time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} minutes'}")
 
     # ---------------- generate the feature matrix for each split
     feature_matrix_n = None  # number of features in feature matrix in dfs
@@ -185,8 +221,9 @@ if __name__ == "__main__":
 
         # construct the cutoff time and instance
         cutoff_times = table.df.copy()
+
         # TODO: after refine and standardize the dataset and task part, don't need this filter
-        
+
         # specifically remove "index" column in "event" db "user-ignore"
         involved_cols = [task.time_col, left_entity, task.target_col]
         cutoff_times = cutoff_times[involved_cols]
@@ -195,30 +232,31 @@ if __name__ == "__main__":
             columns={left_entity: entity_table.pkey_col}
         )
         cutoff_times['time'] = table.df[task.time_col]
-        
+
         split_start_time = time.time()
         print(f"==> Starting DFS for {split} split...")
 
-        dfs_kwargs = {
-            'entityset': es,
-            'target_dataframe_name': task.entity_table,
-            'cutoff_time': cutoff_times,
-            'max_depth': dfs_max_depth,
-            'max_features': dfs_max_features,
-            'training_window': time_window,
-            'n_jobs': dfs_n_jobs,
-            'verbose': True,
-            # need to make it as argparse
-            'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
-        }
+        dfs_kwargs['cutoff_time'] = cutoff_times
 
+        # dfs_kwargs = {
+        #     'entityset': es,
+        #     'target_dataframe_name': task.entity_table,
+        #     'cutoff_time': cutoff_times,
+        #     'max_depth': dfs_max_depth,
+        #     'max_features': dfs_max_features,
+        #     'training_window': time_window,
+        #     'n_jobs': dfs_n_jobs,
+        #     'verbose': True,
+        #     # need to make it as argparse
+        # }
 
         feature_matrix, feature_instances = ft.dfs(**dfs_kwargs)
 
         split_end_time = time.time()
         split_duration = split_end_time - split_start_time
         total_processing_time += split_duration
-        print(f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
+        print(
+            f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
 
         if not feature_matrix_n:
             feature_matrix_n = len(feature_matrix.columns)
@@ -229,7 +267,6 @@ if __name__ == "__main__":
         # change the categorical dtype in feature_matrix to object
         # WARNING: the featuretools will automatically assign the dtype for input dataframe.
         # Some categorical dtype will raise issue for type inference especially through sampling
-
         for col in feature_matrix.columns:
             if str(feature_matrix[col].dtype) == "category":
                 feature_matrix[col] = feature_matrix[col].astype("object")
@@ -239,8 +276,8 @@ if __name__ == "__main__":
 
     process_end_time = time.time()
     overall_duration = process_end_time - process_start_time
-    print(f"==> Overall processing completed in {overall_duration:.2f} seconds ({overall_duration/60:.2f} minutes)")
-
+    print(
+        f"==> Overall processing completed in {overall_duration:.2f} seconds ({overall_duration/60:.2f} minutes)")
 
     # ------------------ Construct Table for type inference
 
@@ -250,7 +287,6 @@ if __name__ == "__main__":
         pkey_col=train_table.pkey_col,
         time_col=train_table.time_col,
     )
-
 
     # ------------------- configure the column types
     table_col_types = infer_type_in_table(
@@ -263,7 +299,6 @@ if __name__ == "__main__":
         table_col_types,
         object_table,
     )
-
 
     if task.task_type == TaskType.BINARY_CLASSIFICATION:
         table_col_types[task.target_col] = stype.categorical
@@ -278,7 +313,6 @@ if __name__ == "__main__":
     if task.time_col:
         table_col_types[task.time_col] = stype.timestamp
 
-
     data = TableData(
         train_df=dfs["train"],
         val_df=dfs["val"],
@@ -288,20 +322,22 @@ if __name__ == "__main__":
         task_type=task.task_type,
     )
 
-
     dirname = dbname + "-" + task_name
+
     if use_dfs and dfs_with_args:
         dirname += f"-dfs-depth{dfs_max_depth}-feat{dfs_max_features}-tw{dfs_number_timedelta}"
-    path = os.path.join(table_output_dir, dirname)
 
-    text_embedder_cfg = get_text_embedder_cfg()
-    data.materilize(
-        col_to_text_embedder_cfg=text_embedder_cfg,
-    )
+    if table_output_dir:
+        path = os.path.join(table_output_dir, dirname)
 
-    data.save_to_dir(
-        path
-    )
-    
-    print(f"==> Table in task {task_name} in database {dbname} is saved to {path}")
-    
+        text_embedder_cfg = get_text_embedder_cfg()
+        data.materilize(
+            col_to_text_embedder_cfg=text_embedder_cfg,
+        )
+
+        data.save_to_dir(
+            path
+        )
+
+        print(
+            f"==> Table in task {task_name} in database {dbname} is saved to {path}")
