@@ -1,0 +1,242 @@
+"""
+Database and Task Schema Definitions for LLM-based Table Selection
+
+This module provides data structures for representing database schemas and prediction tasks
+in a format suitable for LLM prompts.
+"""
+
+from typing import Dict, List, Optional
+from dataclasses import dataclass
+from relbench.base import TaskType, Database, BaseTask, Table
+
+
+@dataclass
+class TableSchema:
+    """Represents a database table schema"""
+    name: str
+    columns: List[str]
+    primary_key: Optional[str]
+    foreign_keys: Dict[str, str]  # column_name -> referenced_table
+    time_column: Optional[str]
+    sample_size: Optional[int] = None
+
+    @classmethod
+    def from_relbench_table(cls, table: Table, table_name: str) -> 'TableSchema':
+        """Create TableSchema from a RBench Table object"""
+        # Extract column names
+        columns = list(table.df.columns)
+
+        # Get primary key
+        primary_key = table.pkey_col
+
+        # Get foreign keys mapping
+        foreign_keys = table.fkey_col_to_pkey_table.copy()
+
+        # Get time column
+        time_column = table.time_col
+
+        # Get sample size
+        sample_size = len(table.df)
+
+        return cls(
+            name=table_name,
+            columns=columns,
+            primary_key=primary_key,
+            foreign_keys=foreign_keys,
+            time_column=time_column,
+            sample_size=sample_size,
+        )
+
+    @property
+    def description(self) -> str:
+        """Generate a dynamic description based on table characteristics"""
+        return self._generate_table_description()
+
+    def _generate_table_description(self) -> str:
+        """Generate a clear, simple description for LLM input"""
+        parts = []
+
+        # Column information
+        column_list = ', '.join(self.columns)
+        parts.append(f"columns: [{column_list}]")
+
+        # Basic stats
+        parts.append(f"{self.sample_size or 0} rows")
+
+        # Key information
+        if self.primary_key:
+            parts.append(f"primary key: {self.primary_key}")
+
+        if self.foreign_keys:
+            fk_list = ', '.join(
+                [f"{fk}->{ref}" for fk, ref in self.foreign_keys.items()])
+            parts.append(f"foreign keys: {fk_list}")
+
+        if self.time_column:
+            parts.append(f"time column: {self.time_column}")
+
+        return f"{self.name} table - {'; '.join(parts)}"
+
+
+@dataclass
+class DatabaseSchema:
+    """Represents a complete database schema"""
+    name: str
+    tables: Dict[str, TableSchema]
+    _cached_description: Optional[str] = None
+
+    @classmethod
+    def from_relbench_database(cls, db: Database, db_name: str = "database") -> 'DatabaseSchema':
+        """Create DatabaseSchema from a RBench Database object"""
+        tables = {}
+
+        for table_name, table in db.table_dict.items():
+            table_schema = TableSchema.from_relbench_table(table, table_name)
+            tables[table_name] = table_schema
+
+        return cls(
+            name=db_name,
+            tables=tables
+        )
+
+    @property
+    def description(self) -> str:
+        """Generate a cached dynamic description of the database schema"""
+        if self._cached_description is None:
+            self._cached_description = self._generate_description()
+        return self._cached_description
+
+    def _generate_description(self) -> str:
+        """Generate a clear, simple database description for LLM input"""
+        parts = []
+
+        # Basic stats
+        total_tables = len(self.tables)
+        total_columns = sum(len(t.columns) for t in self.tables.values())
+        parts.append(f"{total_tables} tables, {total_columns} columns")
+
+        # Relationships
+        relationships = self.extract_relationships()
+        if relationships:
+            parts.append(f"{len(relationships)} relationships")
+
+        # Temporal tables
+        temporal_count = sum(1 for t in self.tables.values() if t.time_column)
+        if temporal_count > 0:
+            parts.append(f"{temporal_count} temporal tables")
+
+        # Data size
+        if any(t.sample_size for t in self.tables.values()):
+            total_rows = sum(
+                t.sample_size for t in self.tables.values() if t.sample_size)
+            parts.append(f"{total_rows:,} rows")
+
+        overview = f"{self.name} database - {', '.join(parts)}"
+
+        # Add each table's description
+        table_descriptions = []
+        for table_schema in self.tables.values():
+            table_descriptions.append(table_schema.description)
+
+        relationships = self.extract_relationships()
+        # materialize relationships
+        rel_descriptions = [f"{rel['from']} -> {rel['to']} (FK: {rel['fk']}, PK: {rel['pk']})"
+                            for rel in relationships]
+        return (f"{overview}\n\n"+ 
+            "======================Tables:=====================\n" + '\n'.join(table_descriptions) + "\n\n ===============Relationships===============\n" + '\n'.join(rel_descriptions)
+        )
+    def extract_relationships(self) -> List[Dict[str, str]]:
+        """Extract relationships between tables in the schema"""
+        relationships = []
+
+        for table_name, table in self.tables.items():
+            for fkey_col, referenced_table in table.foreign_keys.items():
+                if referenced_table in self.tables:
+                    ref_table = self.tables[referenced_table]
+                    relationship = {
+                        "from": table_name,
+                        "to": referenced_table,
+                        "fk": fkey_col,
+                        "pk": ref_table.primary_key
+                    }
+                    relationships.append(relationship)
+
+        return relationships
+
+
+@dataclass
+class PredictionTaskProfile:
+    """Represents a prediction task profile"""
+    name: str
+    task_type: TaskType
+    target_entity: str
+    target_column: str
+    entity_table: str
+    docs: Optional[str] = None
+    time_column: Optional[str] = None
+    timedelta: Optional[str] = None
+
+    @classmethod
+    def from_relbench_task(cls, task: BaseTask, task_name: str) -> 'PredictionTaskProfile':
+        """Create PredictionTaskProfile from a RBench BaseTask object"""
+        # Get task type directly from relbench
+        task_type = task.task_type
+
+        # Extract task attributes
+        name = task_name
+        docs = getattr(task, '__doc__', None)
+        # replace '\n' with space in docs
+        if docs:       
+            docs = docs.replace('\n', ' ')
+            
+        target_column = getattr(task, 'target_col', None)
+        time_column = getattr(task, 'time_col', None)
+        entity_table = getattr(task, 'entity_table', None)
+        target_entity = getattr(task, 'entity_col', None)
+
+        # Extract timedelta if available
+        timedelta_str = None
+        if hasattr(task, 'timedelta'):
+            timedelta_str = str(task.timedelta)
+
+        return cls(
+            name=name,
+            task_type=task_type,
+            target_entity=target_entity or "unknown",
+            target_column=target_column or "target",
+            entity_table=entity_table or "main",
+            docs=docs,
+            time_column=time_column,
+            timedelta=timedelta_str
+        )
+
+    @property
+    def description(self) -> str:
+        """Return the task description"""
+        return self._generate_task_description()
+
+    def _generate_task_description(self) -> str:
+        """Generate a descriptive text for a prediction task"""
+        descriptions = []
+
+        descriptions.append(f"task type:{self.task_type}")
+        if self.docs:
+            descriptions.append(self.docs.strip())
+
+
+        # Add target info
+        target_info = []
+        if self.target_column:
+            target_info.append(f"predicting <{self.target_column}>")
+
+        if self.entity_table:
+            target_info.append(f"for entities in <{self.entity_table}> table")
+
+        # Add temporal info if available
+        if self.timedelta:
+            target_info.append(f"with prediction horizon of <{self.timedelta}>")
+
+        target_info = ', '.join(target_info)
+        descriptions.append(target_info)
+        
+        return "\n".join(descriptions).capitalize()
