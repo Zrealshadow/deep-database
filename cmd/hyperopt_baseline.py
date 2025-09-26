@@ -70,6 +70,7 @@ def get_search_space(trial, model_name):
     # Model-specific search spaces
     if model_name == "resnet":
         model_specific = {
+            "out_channels": trial.suggest_categorical("out_channels", [1, 2, 4, 8]),
             "dropout_prob": trial.suggest_float("dropout_prob", 0.1, 0.5, step=0.1),
             "normalization": trial.suggest_categorical("normalization", ["layer_norm", "batch_norm", "none"]),
         }
@@ -110,7 +111,7 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
     model_name = model_name.lower()
     if model_name == "resnet":
         base_args.update({
-            "out_channels": 1,  # ResNet uses fixed out_channels=1
+            "out_channels": search_space["out_channels"],  # ResNet searches out_channels
             "dropout_prob": search_space["dropout_prob"],
             "normalization": search_space["normalization"],
         })
