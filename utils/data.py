@@ -114,9 +114,8 @@ class DatabaseFactory(object):
         elif db_name == "trial":
             dataset = get_dataset("rel-trial", download=True)
         elif db_name == "ratebeer":
-            # if path is None:
-            #     raise ValueError(
-            #         "Local Path must be provided for RateBeer dataset.")
+            # add default cache_dir
+            cache_dir = os.path.join("~", ".cache", "relbench", "ratebeer") if cache_dir is None else cache_dir
             dataset = RateBeerDataset(
                 path,
                 cache_dir=cache_dir
@@ -590,10 +589,16 @@ def preprocess_event_database(db: Database):
     event_df.reset_index(drop=True, inplace=True)
     event_id2index = {event_id: index for index,
                       event_id in enumerate(event_df['event_id'])}
-    event_df["event_id"].replace(event_id2index, inplace=True)
-    # map the event_id in event_interest and event_attendees
-    event_interest_df["event"].replace(event_id2index, inplace=True)
-    event_attendees_flattened_df["event"].replace(event_id2index, inplace=True)
+    
+    
+    event_df.replace({"event_id": event_id2index}, inplace=True)
+    event_interest_df.replace({"event": event_id2index}, inplace=True)
+    event_attendees_flattened_df.replace({"event": event_id2index}, inplace=True)
+    
+    # event_df["event_id"].replace(event_id2index, inplace=True)
+    # # map the event_id in event_interest and event_attendees
+    # event_interest_df["event"].replace(event_id2index, inplace=True)
+    # event_attendees_flattened_df["event"].replace(event_id2index, inplace=True)
 
     # reset the table
     db.table_dict["event_attendees"] = Table(
