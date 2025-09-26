@@ -354,10 +354,10 @@ if __name__ == "__main__":
 USAGE EXAMPLES:
 
 # ResNet hyperparameter optimization
-python cmd/model_hyperopt.py --data_dir /path/to/your/data --model ResNet --n_trials 100 --study_name "resnet_study"
+python hyperopt_baseline.py --data_dir /home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr --model ResNet --n_trials 100 --study_name "resnet_study"
 
 # FTTransformer hyperparameter optimization  
-python cmd/model_hyperopt.py --data_dir /path/to/your/data --model FTTransformer --n_trials 100 --study_name "fttrans_study"
+python hyperopt_baseline.py --data_dir /home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr --model FTTransformer --n_trials 100 --study_name "fttrans_study"
 
 
 RESULTS:
