@@ -186,7 +186,7 @@ cython_debug/
 
 # draw figure directory
 draw/
-scripts/
+tmp_scripts/
 trace/
 fig/
 tmp/
