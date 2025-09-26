@@ -6,6 +6,8 @@ import numpy as np
 import torch
 from zero_cost_ms.data_loader import libsvm_dataloader
 from zero_cost_ms.main import RunModelSelection
+from utils.data import TableData
+import torch_frame
 
 
 def seed_everything(seed=2201):
@@ -115,6 +117,9 @@ def parse_arguments():
                         help='path to store exp outputs')
     parser.add_argument('--num_points', default=12, type=int, help='num GPus')
 
+    parser.add_argument("--data_dir", type=str, required=False,
+                        help="Path to the data directory.")
+
     sampler_args(parser)
 
     mlp_args(parser)
@@ -153,7 +158,23 @@ def save_res(k_models, all_models):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    train_loader, val_loader, test_loader, class_num = generate_data_loader(args)
+    args.data_dir = "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr"
+    # train_loader, val_loader, test_loader, class_num = generate_data_loader(args)
+
+    table_data = TableData.load_from_dir(args.data_dir)
+
+    batch_size = 256
+    data_loaders = {
+        idx: torch_frame.data.DataLoader(
+            getattr(table_data, f"{idx}_tf"),
+            batch_size=batch_size,
+            shuffle=idx == "train",
+            pin_memory=True,
+        )
+        for idx in ["train", "val", "test"]
+    }
+    train_loader = data_loaders["train"]
+
     search_space = "mlp"
     rms = RunModelSelection(search_space, args)
     k_models, all_models, _, _ = rms.filtering_phase(1000, 100, train_loader)
