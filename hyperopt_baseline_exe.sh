@@ -45,7 +45,7 @@ DATA_DIR_LIST=(
 )
 
 # Number of trials for hyperparameter optimization
-N_TRIALS=50
+N_TRIALS=100
 
 echo "Starting Hyperopt Baseline Experiments..."
 echo "========================================"
@@ -69,18 +69,18 @@ for MODEL in "${MODELS[@]}"; do
         STUDY_NAME="${MODEL}_${DATA_DIR}_${TIMESTAMP}"
         
         echo "Study name: $STUDY_NAME"
-        echo "Data directory: ./data/flatten-table/$DATA_DIR"
+        echo "Data directory: /home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR"
         echo "----------------------------------------"
         
         # Run the hyperparameter optimization and capture output
         echo "----------------------------------------" >> "$RESULTS_FILE"
         echo "EXPERIMENT: $MODEL on $DATA_DIR" >> "$RESULTS_FILE"
         echo "Study: $STUDY_NAME" >> "$RESULTS_FILE"
-        echo "Data: ./data/flatten-table/$DATA_DIR" >> "$RESULTS_FILE"
+        echo "Data: /home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR" >> "$RESULTS_FILE"
         echo "----------------------------------------" >> "$RESULTS_FILE"
-        
+
         python ./cmd/hyperopt_baseline.py \
-            --data_dir "./data/flatten-table/$DATA_DIR" \
+            --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR" \
             --model "$MODEL" \
             --n_trials "$N_TRIALS" \
             --study_name "$STUDY_NAME" \
