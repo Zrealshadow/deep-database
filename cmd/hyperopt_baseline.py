@@ -57,8 +57,8 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
     return pred_logits.numpy(), pred_list.numpy(), y_list
 
 
-def get_search_space(trial, model_name):
-    """Get hyperparameter search space based on model type"""
+def get_search_space(trial, model_name, is_regression):
+    """Get hyperparameter search space based on model type and task type"""
     model_name = model_name.lower()
     
     # Common search space for all models
@@ -70,15 +70,13 @@ def get_search_space(trial, model_name):
     # Model-specific search spaces
     if model_name == "resnet":
         model_specific = {
-            "out_channels": trial.suggest_categorical("out_channels", [1, 2, 4, 8]),
             "dropout_prob": trial.suggest_float("dropout_prob", 0.1, 0.5, step=0.1),
             "normalization": trial.suggest_categorical("normalization", ["layer_norm", "batch_norm", "none"]),
         }
     elif model_name in ["fttransformer", "fttrans"]:
-        # FTTransformer architecture parameters: channels, num_layers, out_channels
-        model_specific = {
-            "out_channels": trial.suggest_categorical("out_channels", [1, 2, 4, 8]),
-        }
+        # FTTransformer only uses channels and num_layers (architecture parameters)
+        # out_channels is determined by the task, not searched
+        model_specific = {}
     else:
         raise ValueError(f"Unknown model: {model_name}. Supported models: ResNet, FTTransformer")
     
@@ -96,7 +94,7 @@ def get_model_class(model_name):
         raise ValueError(f"Unknown model: {model_name}. Supported models: ResNet, FTTransformer")
 
 
-def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
+def get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_regression):
     """Get model arguments based on search space and model type"""
     # Base arguments for all models
     base_args = {
@@ -111,15 +109,20 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
     model_name = model_name.lower()
     if model_name == "resnet":
         base_args.update({
-            "out_channels": search_space["out_channels"],  # ResNet searches out_channels
             "dropout_prob": search_space["dropout_prob"],
             "normalization": search_space["normalization"],
         })
     elif model_name in ["fttransformer", "fttrans"]:
-        # FTTransformer architecture parameters: channels, num_layers, out_channels
-        base_args.update({
-            "out_channels": search_space["out_channels"],
-        })
+        # FTTransformer only uses channels and num_layers
+        pass
+    
+    # Set out_channels based on task type (not searched)
+    if is_regression:
+        base_args["out_channels"] = 1  # Regression: single output
+    else:
+        # Classification: out_channels = number of classes
+        # This should be determined from the dataset, not searched
+        base_args["out_channels"] = 1  # For binary classification, or get from dataset
     
     return base_args
 
@@ -127,8 +130,8 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
 def objective(trial, table_data, is_regression, evaluate_matric_func, higher_is_better, model_name):
     """Optuna objective function for hyperparameter optimization"""
 
-    # Get search space based on model type
-    search_space = get_search_space(trial, model_name)
+    # Get search space based on model type and task type
+    search_space = get_search_space(trial, model_name, is_regression)
 
     # Fixed training parameters (not searched)
     batch_size = 256
@@ -145,7 +148,7 @@ def objective(trial, table_data, is_regression, evaluate_matric_func, higher_is_
 
         # Get model class and arguments using modular functions
         model_class = get_model_class(model_name)
-        model_args = get_model_args(search_space, model_name, table_data, stype_encoder_dict)
+        model_args = get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_regression)
         
         # Create model instance
         net = model_class(**model_args)
@@ -300,6 +303,7 @@ def main():
     )
 
     # Print search space based on model
+    # Display search space based on model and task type
     if args.model.lower() == "resnet":
         print(f"Search space: channels=[64,128,256,512], "
               f"num_layers=[2,6], "
@@ -307,10 +311,7 @@ def main():
               f"normalization=[layer_norm,batch_norm,none]")
     elif args.model.lower() in ["fttransformer", "fttrans"]:
         print(f"Search space: channels=[64,128,256,512], "
-              f"num_layers=[2,6], "
-              f"num_heads=[2,4,8,16], "
-              f"ffn_hidden_dim=[128,256,512,1024], "
-              f"dropout=[0.1,0.5]")
+              f"num_layers=[2,6]")
     else:
         print(f"Unknown model: {args.model}")
 
