@@ -74,9 +74,10 @@ def get_search_space(trial, model_name):
             "normalization": trial.suggest_categorical("normalization", ["layer_norm", "batch_norm", "none"]),
         }
     elif model_name in ["fttransformer", "fttrans"]:
-        # FTTransformer only uses channels and num_layers (architecture parameters)
-        # No additional parameters needed - only search what's available
-        model_specific = {}
+        # FTTransformer architecture parameters: channels, num_layers, out_channels
+        model_specific = {
+            "out_channels": trial.suggest_categorical("out_channels", [1, 2, 4, 8]),
+        }
     else:
         raise ValueError(f"Unknown model: {model_name}. Supported models: ResNet, FTTransformer")
     
@@ -99,7 +100,6 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
     # Base arguments for all models
     base_args = {
         "channels": search_space["channels"],
-        "out_channels": 1,
         "num_layers": search_space["num_layers"],
         "col_names_dict": table_data.col_names_dict,
         "stype_encoder_dict": stype_encoder_dict,
@@ -110,13 +110,15 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict):
     model_name = model_name.lower()
     if model_name == "resnet":
         base_args.update({
+            "out_channels": 1,  # ResNet uses fixed out_channels=1
             "dropout_prob": search_space["dropout_prob"],
             "normalization": search_space["normalization"],
         })
     elif model_name in ["fttransformer", "fttrans"]:
-        # FTTransformer only uses basic parameters: channels, num_layers, out_channels, col_names_dict, stype_encoder_dict, col_stats
-        # No additional parameters needed - only search what's available
-        pass
+        # FTTransformer architecture parameters: channels, num_layers, out_channels
+        base_args.update({
+            "out_channels": search_space["out_channels"],
+        })
     
     return base_args
 
