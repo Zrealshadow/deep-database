@@ -39,8 +39,6 @@ DATA_DIR_LIST=(
     "event-user-repeat"
     "avito-user-visits"
     "ratebeer-place-positive"
-    "stack-post-votes"
-    "stack-user-engagement"
     "trial-study-adverse"
 )
 
