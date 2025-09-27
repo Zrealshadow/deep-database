@@ -239,7 +239,10 @@ def objective(trial, table_data, is_regression, evaluate_matric_func, higher_is_
         return test_metric
 
     except Exception as e:
-        print(f"Trial failed with error: {e}")
+        print(f"Trial failed with error: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return float('inf') if not higher_is_better else float('-inf')
 
 
