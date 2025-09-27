@@ -238,6 +238,9 @@ def objective(trial, table_data, is_regression, evaluate_matric_func, higher_is_
 
         return test_metric
 
+    except optuna.exceptions.TrialPruned:
+        # This is normal pruning behavior, not an error
+        raise  # Re-raise to let Optuna handle it properly
     except Exception as e:
         print(f"Trial failed with error: {str(e)}")
         print(f"Error type: {type(e).__name__}")
