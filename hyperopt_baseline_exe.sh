@@ -31,7 +31,6 @@ DATA_DIR_LIST=(
     "event-user-ignore"
     "ratebeer-beer-positive"
     "ratebeer-user-active"
-    "stack-user-badge"
     "trial-site-success"
     "trial-study-outcome"
     "avito-user-clicks"
