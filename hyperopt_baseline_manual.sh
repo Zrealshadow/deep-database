@@ -1,63 +1,41 @@
-# Individual commands for each experiment - run manually
-# Uncomment and run each command one by one
+#!/bin/bash
+export PYTHONPATH=$(pwd)
+set -e
 
-echo "=============== MANUAL COMMANDS ===============" >> "$RESULTS_FILE"
-echo "Uncomment and run these commands one by one:" >> "$RESULTS_FILE"
-echo "" >> "$RESULTS_FILE"
+mkdir -p results/hyperopt
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+RESULTS_FILE="results/hyperopt/hyperopt_results_${TIMESTAMP}.txt"
 
-# ResNet Commands
-echo "# ResNet Commands" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_avito-ad-ctr_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-ignore\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_event-user-ignore_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-beer-positive\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_ratebeer-beer-positive_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-user-active\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_ratebeer-user-active_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/stack-user-badge\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_stack-user-badge_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-site-success\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_trial-site-success_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-outcome\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_trial-study-outcome_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-clicks\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_avito-user-clicks_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-attendance\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_event-user-attendance_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-repeat\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_event-user-repeat_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-visits\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_avito-user-visits_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-place-positive\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_ratebeer-place-positive_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-adverse\" --model \"ResNet\" --n_trials $N_TRIALS --study_name \"ResNet_trial-study-adverse_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "" >> "$RESULTS_FILE"
+echo "Hyperopt Baseline Results - $(date)" >"$RESULTS_FILE"
+echo "===============================================" >>"$RESULTS_FILE"
+echo "Trials per experiment: 100" >>"$RESULTS_FILE"
+echo "===============================================" >>"$RESULTS_FILE"
+echo "" >>"$RESULTS_FILE"
 
-# FTTransformer Commands
-echo "# FTTransformer Commands" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_avito-ad-ctr_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-ignore\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_event-user-ignore_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-beer-positive\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_ratebeer-beer-positive_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-user-active\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_ratebeer-user-active_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/stack-user-badge\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_stack-user-badge_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-site-success\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_trial-site-success_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-outcome\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_trial-study-outcome_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-clicks\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_avito-user-clicks_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-attendance\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_event-user-attendance_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-repeat\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_event-user-repeat_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-visits\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_avito-user-visits_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-place-positive\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_ratebeer-place-positive_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "# python ./cmd/hyperopt_baseline.py --data_dir \"/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-adverse\" --model \"FTTransformer\" --n_trials $N_TRIALS --study_name \"FTTransformer_trial-study-adverse_${TIMESTAMP}\" >> \"$RESULTS_FILE\" 2>&1" >> "$RESULTS_FILE"
-echo "" >> "$RESULTS_FILE"
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr" --model ResNet --n_trials 100 --study_name "ResNet_avito-ad-ctr_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-ignore" --model ResNet --n_trials 100 --study_name "ResNet_event-user-ignore_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-beer-positive" --model ResNet --n_trials 100 --study_name "ResNet_ratebeer-beer-positive_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-user-active" --model ResNet --n_trials 100 --study_name "ResNet_ratebeer-user-active_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/stack-user-badge" --model ResNet --n_trials 100 --study_name "ResNet_stack-user-badge_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-site-success" --model ResNet --n_trials 100 --study_name "ResNet_trial-site-success_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-outcome" --model ResNet --n_trials 100 --study_name "ResNet_trial-study-outcome_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-clicks" --model ResNet --n_trials 100 --study_name "ResNet_avito-user-clicks_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-attendance" --model ResNet --n_trials 100 --study_name "ResNet_event-user-attendance_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-repeat" --model ResNet --n_trials 100 --study_name "ResNet_event-user-repeat_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-visits" --model ResNet --n_trials 100 --study_name "ResNet_avito-user-visits_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-place-positive" --model ResNet --n_trials 100 --study_name "ResNet_ratebeer-place-positive_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-adverse" --model ResNet --n_trials 100 --study_name "ResNet_trial-study-adverse_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
 
-echo "========================================"
-echo "Script completed! Check the results file for commands."
-echo "Uncomment and run each command manually."
-echo "========================================"
-
-echo "========================================"
-echo "All hyperparameter optimization experiments completed!"
-echo "All results saved to: $RESULTS_FILE"
-echo "Note: Database files were cleaned up to save space"
-echo "========================================"
-
-echo "========================================" >> "$RESULTS_FILE"
-echo "EXPERIMENT SUMMARY" >> "$RESULTS_FILE"
-echo "========================================" >> "$RESULTS_FILE"
-echo "Completed at: $(date)" >> "$RESULTS_FILE"
-echo "Models tested: ${MODELS[*]}" >> "$RESULTS_FILE"
-echo "Data directories: ${#DATA_DIR_LIST[@]}" >> "$RESULTS_FILE"
-echo "Trials per experiment: $N_TRIALS" >> "$RESULTS_FILE"
-echo "Total experiments: $((${#MODELS[@]} * ${#DATA_DIR_LIST[@]}))" >> "$RESULTS_FILE"
-echo "========================================" >> "$RESULTS_FILE"
-
-echo "All results saved to: $RESULTS_FILE"
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr" --model FTTransformer --n_trials 100 --study_name "FTTransformer_avito-ad-ctr_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-ignore" --model FTTransformer --n_trials 100 --study_name "FTTransformer_event-user-ignore_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-beer-positive" --model FTTransformer --n_trials 100 --study_name "FTTransformer_ratebeer-beer-positive_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-user-active" --model FTTransformer --n_trials 100 --study_name "FTTransformer_ratebeer-user-active_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/stack-user-badge" --model FTTransformer --n_trials 100 --study_name "FTTransformer_stack-user-badge_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-site-success" --model FTTransformer --n_trials 100 --study_name "FTTransformer_trial-site-success_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-outcome" --model FTTransformer --n_trials 100 --study_name "FTTransformer_trial-study-outcome_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-clicks" --model FTTransformer --n_trials 100 --study_name "FTTransformer_avito-user-clicks_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-attendance" --model FTTransformer --n_trials 100 --study_name "FTTransformer_event-user-attendance_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-repeat" --model FTTransformer --n_trials 100 --study_name "FTTransformer_event-user-repeat_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-user-visits" --model FTTransformer --n_trials 100 --study_name "FTTransformer_avito-user-visits_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/ratebeer-place-positive" --model FTTransformer --n_trials 100 --study_name "FTTransformer_ratebeer-place-positive_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
+python ./cmd/hyperopt_baseline.py --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/trial-study-adverse" --model FTTransformer --n_trials 100 --study_name "FTTransformer_trial-study-adverse_${TIMESTAMP}" >>"$RESULTS_FILE" 2>&1
