@@ -82,6 +82,7 @@ class DatabaseFactory(object):
                 n = len(table.df)
                 max_index = table.df.index.max()
                 if n != max_index + 1:
+                    print("reindex table:", table)
                     table.df.reset_index(drop=True, inplace=True)
 
         if with_text_compress:
