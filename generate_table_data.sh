@@ -34,4 +34,8 @@ python ./cmd/generate_table_data.py --dbname ratebeer --task_name place-positive
 python ./cmd/generate_table_data.py --dbname ratebeer --task_name beer-positive --db_cache_dir $BEERT_CACHE_DIR --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR
 
 
+echo "Running F1 tasks ..."
+python ./cmd/generate_table_data.py --dbname f1 --task_name driver-dnf --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR
+python ./cmd/generate_table_data.py --dbname f1 --task_name driver-top3 --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR    
+
 echo "✅ All tasks completed!"
