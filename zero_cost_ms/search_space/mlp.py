@@ -1,9 +1,15 @@
+from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
+from typing import Any, Dict, List
+from torch_frame.data.stats import StatType
+from torch_frame.nn.encoder import StypeWiseFeatureEncoder
+import torch_frame
 import itertools
 import random
 from copy import deepcopy
 from typing import Generator
 import torch
 import torch.nn as nn
+
 
 DEFAULT_LAYER_CHOICES_20 = [8, 16, 24, 32,  # 8
                             48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 256,  # 16
@@ -51,6 +57,73 @@ class Embedding(nn.Module):
         emb = self.embedding(x['id'])  # B*F*E
         return emb * x['value'].unsqueeze(2)  # B*F*E
 
+
+class StypeFeatureEmbedding(nn.Module):
+    def __init__(self,
+                 channels: int,
+                 col_stats: Dict[str, dict[StatType, Any]],
+                 col_names_dict: dict[torch_frame.stype, List[str]]
+    ):
+        """
+        Args:
+            channels: each feature will be encoded into a vector of size channels
+            
+            col_stats: A dictionary that maps column name into stats.
+            col_name_dict: A dictionary that maps stype to a list of column names.
+            these two argugments are defined in tabularTable dataset.
+        
+        Example:
+            table_data = TableData.load_from_dir("")
+            # check table_data is materialized first
+            if not table_data.is_materialize:
+                text_cfg = get_text_embedder_cfg(
+                    device = "cpu"
+                )
+                table_data.materilize(
+                    col_to_text_embedder_cfg=text_cfg,
+                )
+           
+            # declare the model
+            net = StypeFeatureEmbedding(
+                channels=128,
+                col_stats=table_data.col_stats,
+                col_names_dict=table_data.col_names_dict,
+            )
+            
+            data_loader = torch_frame.data.DataLoader(
+                table_data.test_tf,
+                batch_size = 256,
+            )
+            
+            batch = next(iter(data_loader))
+            
+            x = net(batch)
+            # shape of x is B*F*C, 256 * num_features * 128
+        """
+        
+        super().__init__()
+        stype_encoder_dict = construct_stype_encoder_dict(
+            default_stype_encoder_cls_kwargs,
+        )
+        
+        
+        self.encoder = StypeWiseFeatureEncoder(
+            out_channels=channels,
+            col_stats=col_stats,
+            col_names_dict=col_names_dict,
+            stype_encoder_dict=stype_encoder_dict
+        )
+
+    def forward(self, x: torch_frame.TensorFrame):
+        """
+        Args:
+            x: TensorFrame B*F
+        Returns:
+            torch.Tensor: B*F*C
+        """
+        x, _ = self.encoder(x)
+        return x
+    
 
 class MLP(nn.Module):
 
@@ -100,7 +173,8 @@ class MLP(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 if method == 'lecun':
-                    nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='linear')
+                    nn.init.kaiming_normal_(
+                        m.weight, mode='fan_in', nonlinearity='linear')
                 elif method == 'xavier':
                     nn.init.xavier_uniform_(m.weight)
                 elif method == 'he':
@@ -131,7 +205,8 @@ class DNNModel(torch.nn.Module):
         self.nemb = nemb
         self.embedding = None
         self.mlp_ninput = nfield * nemb
-        self.mlp = MLP(self.mlp_ninput, hidden_layer_list, dropout_rate, noutput, use_bn)
+        self.mlp = MLP(self.mlp_ninput, hidden_layer_list,
+                       dropout_rate, noutput, use_bn)
         # self.sigmoid = nn.Sigmoid()
 
         # for weight-sharing
@@ -202,7 +277,8 @@ class DNNModel(torch.nn.Module):
         x_emb = x_emb.view(-1, self.mlp_ninput)
 
         # Loop till the second last layer of the MLP
-        for idx, layer in enumerate(self.mlp.mlp[:-1]):  # Exclude the last Linear layer
+        # Exclude the last Linear layer
+        for idx, layer in enumerate(self.mlp.mlp[:-1]):
             # 1. subnet_mask: idx // 4 is to map computation later => mlp later
             # 2. unsqueeze(1): convert to 2 dimension,
             #    and then the mask is broadcasted across the row, correspond to one neuron,
@@ -211,7 +287,8 @@ class DNNModel(torch.nn.Module):
                 weight = layer.weight * self.subnet_mask[idx // 4].unsqueeze(1)
                 x_emb = torch.nn.functional.linear(x_emb, weight, layer.bias)
             else:
-                x_emb = layer(x_emb)  # apply activation, dropout, batchnorm, etc.
+                # apply activation, dropout, batchnorm, etc.
+                x_emb = layer(x_emb)
 
         # Handle the output layer
         output_layer = self.mlp.mlp[-1]
@@ -342,7 +419,8 @@ class MlpSpace:
         child_layer_list = deepcopy(parent_arch.hidden_layer_list)
 
         # 1. choose layer index
-        chosen_hidden_layer_index = random.choice(list(range(len(child_layer_list))))
+        chosen_hidden_layer_index = random.choice(
+            list(range(len(child_layer_list))))
 
         # 2. choose size of the layer index, increase the randomness
         while True:
@@ -365,7 +443,8 @@ class MlpSpace:
             # 2. choose size of the layer index, increase the randomness
             while True:
                 cur_layer_size = child_layer_list[chosen_hidden_layer_index]
-                mutated_layer_size = random.choice(self.model_cfg.layer_choices)
+                mutated_layer_size = random.choice(
+                    self.model_cfg.layer_choices)
                 if mutated_layer_size != cur_layer_size:
                     child_layer_list[chosen_hidden_layer_index] = mutated_layer_size
                     new_model = MlpMicroCfg(child_layer_list)
