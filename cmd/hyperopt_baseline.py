@@ -228,15 +228,8 @@ def objective(trial, table_data, is_regression, evaluate_matric_func, higher_is_
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
 
-        # Load best model and evaluate on test set
-        if best_model_state is not None:
-            net.load_state_dict(best_model_state)
-
-        test_logits, _, test_pred_hat = test(
-            net, data_loaders["test"], is_regression=is_regression)
-        test_metric = evaluate_matric_func(test_pred_hat, test_logits)
-
-        return test_metric
+        # Return validation performance for hyperparameter optimization
+        return best_val_metric
 
     except optuna.exceptions.TrialPruned:
         # This is normal pruning behavior, not an error
