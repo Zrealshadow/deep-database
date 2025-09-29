@@ -27,19 +27,23 @@ MODELS=("ResNet" "FTTransformer")
 
 # Define data directories
 DATA_DIR_LIST=(
-    "avito-ad-ctr"
-    "event-user-ignore"
-    "ratebeer-beer-positive"
-    "ratebeer-user-active"
-    "trial-site-success"
-    "trial-study-outcome"
-    "avito-user-clicks"
-    "event-user-attendance"
-    "event-user-repeat"
-    "avito-user-visits"
-    "ratebeer-place-positive"
-    "trial-study-adverse"
+  avito-ad-ctr
+  avito-ad-ctr-dfs-depth3-feat1000-tw-1
+  avito-user-clicks
+  event-user-attendance
+  event-user-ignore
+  event-user-repeat
+  f1-driver-dnf
+  f1-driver-top3
+  ratebeer-beer-positive
+  ratebeer-place-positive
+  ratebeer-place-positive-dfs-depth3-feat1000-tw-1
+  ratebeer-user-active
+  trial-site-success
+  trial-study-adverse
+  trial-study-outcome
 )
+
 
 # Number of trials for hyperparameter optimization
 N_TRIALS=100
