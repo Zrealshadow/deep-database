@@ -270,6 +270,38 @@ def main():
     print(f"Best epoch: {best_epoch}")
     print(f"Best validation {evaluate_matric_func.__name__}: {best_val_metric:.6f}")
     print(f"Final test {evaluate_matric_func.__name__}: {test_metric:.6f}")
+    
+    # Save the best model
+    from pathlib import Path
+    
+    # Create models directory if it doesn't exist
+    model_dir = Path("models")
+    model_dir.mkdir(exist_ok=True)
+    
+    # Generate model filename based on dataset and model config
+    dataset_name = Path(args.data_dir).name
+    model_filename = f"{args.model}_{dataset_name}_ch{args.channels}_l{args.num_layers}"
+    if args.model.lower() in ["mlp", "resnet"]:
+        model_filename += f"_drop{args.dropout_prob}_norm{args.normalization}"
+    model_filename += f"_val{best_val_metric:.6f}.pth"
+    
+    model_path = model_dir / model_filename
+    
+    # Save model state and metadata
+    model_data = {
+        'model_state_dict': best_model_state,
+        'model_args': get_model_args(args, table_data, stype_encoder_dict, is_regression),
+        'best_epoch': best_epoch,
+        'best_val_metric': best_val_metric,
+        'final_test_metric': test_metric,
+        'dataset_name': dataset_name,
+        'task_type': 'regression' if is_regression else 'classification',
+        'evaluation_metric': evaluate_matric_func.__name__
+    }
+    
+    torch.save(model_data, model_path)
+    print(f"\nModel saved to: {model_path}")
+
     print("\nArchitecture used:")
     print(f"  Model: {args.model}")
     print(f"  Channels: {args.channels}")
