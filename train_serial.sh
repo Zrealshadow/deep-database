@@ -5,6 +5,10 @@ echo "=========================================="
 echo "开始串行训练所有模型"
 echo "=========================================="
 
+# 设置Python路径
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+echo "设置PYTHONPATH: $(pwd)"
+
 mkdir -p logs
 mkdir -p models
 
