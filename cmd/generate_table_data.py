@@ -12,6 +12,12 @@ import torch_frame
 from relbench.base import TaskType, Table
 from torch_frame import stype
 import featuretools as ft
+from featuretools.selection import (
+    remove_highly_correlated_features,
+    remove_highly_null_features,
+    remove_single_value_features,
+)
+
 import time
 
 from typing import Dict, Any
@@ -37,6 +43,8 @@ parser.add_argument("--table_output_dir", type=str,
 
 # activate dfs
 parser.add_argument("--dfs", action='store_true', default=False)
+parser.add_argument("--selection", action='store_true', default=False,
+                    help="Activate feature selection after dfs.")
 parser.add_argument("--max_depth", type=int, default=2,
                     help="Max depth for deep feature synthesis.")
 parser.add_argument("--max_features", type=int, default=1000,
@@ -67,6 +75,8 @@ if __name__ == "__main__":
     dfs_time_budget = args.time_budget
     dfs_n_jobs = args.n_jobs
     dfs_with_args = args.cfg
+
+    selection_cfg = args.selection
 
     db = DatabaseFactory.get_db(
         db_name=dbname,
@@ -102,6 +112,7 @@ if __name__ == "__main__":
 
             # not allowed to reindex
 
+        
         # for no-pky table, add a column as pkey
         for table_name, table in db.table_dict.items():
             if not table.pkey_col:
@@ -110,7 +121,7 @@ if __name__ == "__main__":
                 table.pkey_col = pkey_name
                 print(
                     f"Table {table_name} has no pkey, add column {pkey_name} as pkey.")
-
+    
     # ------------- move this part of logic into the data class for preprocessing.
 
     entity_table = db.table_dict[task.entity_table]
@@ -129,7 +140,6 @@ if __name__ == "__main__":
     dfs: Dict[str, pd.DataFrame] = {}
 
     # construct entity set
-    total_processing_time = 0  # track total processing time across all splits
     process_start_time = time.time()  # overall processing start time
     build_es_start_time = time.time()
 
@@ -137,6 +147,8 @@ if __name__ == "__main__":
     relationships = []
     es = None
     dfs_kwargs: Dict[str, Any] = {}
+    
+    selected_columns = []
     if use_dfs:
         print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
 
@@ -175,7 +187,6 @@ if __name__ == "__main__":
 
         build_es_end_time = time.time()
         build_es_duration = build_es_end_time - build_es_start_time
-        total_processing_time += build_es_duration
         print(f"==> EntitySet built in {build_es_duration:.2f} seconds")
 
         dfs_kwargs = {
@@ -203,7 +214,6 @@ if __name__ == "__main__":
         ("val", val_table),
         ("test", test_table),
     ]:
-        # left_entity = list(table.fkey_col_to_pkey_table.keys())[0]
         left_entity = task.entity_col
 
         if not use_dfs:
@@ -238,32 +248,40 @@ if __name__ == "__main__":
 
         dfs_kwargs['cutoff_time'] = cutoff_times
 
-        # dfs_kwargs = {
-        #     'entityset': es,
-        #     'target_dataframe_name': task.entity_table,
-        #     'cutoff_time': cutoff_times,
-        #     'max_depth': dfs_max_depth,
-        #     'max_features': dfs_max_features,
-        #     'training_window': time_window,
-        #     'n_jobs': dfs_n_jobs,
-        #     'verbose': True,
-        #     # need to make it as argparse
-        # }
-
         feature_matrix, feature_instances = ft.dfs(**dfs_kwargs)
 
         split_end_time = time.time()
         split_duration = split_end_time - split_start_time
-        total_processing_time += split_duration
         print(
             f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
-
+        
+        
+        # assertion that generated features in training is equal to val/test
         if not feature_matrix_n:
             feature_matrix_n = len(feature_matrix.columns)
         else:
             assert feature_matrix_n == len(feature_matrix.columns), \
                 f"Feature matrix in {split} has different number of features {len(feature_matrix.columns)} from previous {feature_matrix_n}"
 
+        
+        if split == "train":
+            if not selection_cfg:
+                selected_columns = feature_matrix.columns.tolist()
+            else:
+                print(f"==> Using feature selection to select features ...")
+                start_time = time.time()
+                fm = remove_highly_null_features(feature_matrix)
+                fm = remove_single_value_features(fm)
+                fm = remove_highly_correlated_features(fm)
+                selected_columns = fm.columns.tolist()
+                end_time = time.time()
+                duration = end_time - start_time
+                print(f"==> Feature selection completed in {duration:.2f} seconds")
+                print(f"==> Selected {len(selected_columns)}/{len(feature_matrix.columns)} features after selection")
+        
+        feature_matrix = feature_matrix[selected_columns]
+        
+        
         # change the categorical dtype in feature_matrix to object
         # WARNING: the featuretools will automatically assign the dtype for input dataframe.
         # Some categorical dtype will raise issue for type inference especially through sampling
@@ -280,7 +298,6 @@ if __name__ == "__main__":
         f"==> Overall processing completed in {overall_duration:.2f} seconds ({overall_duration/60:.2f} minutes)")
 
     # ------------------ Construct Table for type inference
-
     object_table = Table(
         df=dfs["train"],
         fkey_col_to_pkey_table=train_table.fkey_col_to_pkey_table,

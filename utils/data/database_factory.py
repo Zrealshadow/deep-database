@@ -1,6 +1,8 @@
 import os
+import warnings
 from typing import Optional
 import numpy as np
+
 
 from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
@@ -66,8 +68,16 @@ class DatabaseFactory(object):
                 n = len(table.df)
                 max_index = table.df.index.max()
                 if n != max_index + 1:
-                    print("reindex table:", table)
+                    warnings.warn(f"Reindex table: {table}")
                     table.df.reset_index(drop=True, inplace=True)
+
+            pass
+            # TODO: I manually reindex and cache the database in my local home folder.
+            # Currently, above branch won't be executed for me.
+            # however, for other user, it will stil lead to promblem
+
+            # we need to reimplement a Wrapper for Event and Avito
+            # to preprocess again this dataset above the Class from relbench
 
         if with_text_compress:
             for _, table in db.table_dict.items():
@@ -156,6 +166,8 @@ class DatabaseFactory(object):
                 task_type = avito.UserClicksTask
             elif task_name == "ad-ctr":
                 task_type = avito.AdCTRTask
+            elif task_name == "user-visits":
+                task_type = avito.UserVisitsTask
             else:
                 raise ValueError(
                     f"Unknown task name: {task_name} for Avito dataset.")
