@@ -191,7 +191,7 @@ def _register_stack():
     from .database_factory import DatabaseFactory
     from relbench.tasks import stack
 
-    def _load_stack_dataset(cache_dir: Optional[str] = None, path: Optional[str] = None) -> Dataset:
+    def _load_stack_dataset(cache_dir: Optional[str] = None) -> Dataset:
         """Load the Stack dataset."""
         cache_root_dir = os.path.join("~", ".cache", "relbench")
         cache_root_dir = os.path.expanduser(cache_root_dir)

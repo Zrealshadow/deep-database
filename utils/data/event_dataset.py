@@ -1,5 +1,8 @@
+from typing import Optional
 import pandas as pd
-from relbench.base import Database, Table
+from relbench.base import Database, Table, Dataset
+from relbench.datasets.event import EventDataset as RDBenchEventDataset
+import os
 
 
 def preprocess_event_database(db: Database):
@@ -48,10 +51,10 @@ def preprocess_event_database(db: Database):
     event_id2index = {event_id: index for index,
                       event_id in enumerate(event_df['event_id'])}
 
-
     event_df.replace({"event_id": event_id2index}, inplace=True)
     event_interest_df.replace({"event": event_id2index}, inplace=True)
-    event_attendees_flattened_df.replace({"event": event_id2index}, inplace=True)
+    event_attendees_flattened_df.replace(
+        {"event": event_id2index}, inplace=True)
 
     # event_df["event_id"].replace(event_id2index, inplace=True)
     # # map the event_id in event_interest and event_attendees
@@ -95,3 +98,52 @@ def preprocess_event_database(db: Database):
         },
         pkey_col="event_id"
     )
+
+
+class EventDataset(RDBenchEventDataset):
+    """Event Dataset with preprocessing."""
+
+    def make_db(self) -> Database:
+        """Create the Database object with preprocessing."""
+
+        # TODO add logic to fetch the raw data
+        #
+        # ===================================
+
+        db = super().make_db()
+        return db
+
+    def get_db(self, upto_test_timestamp=True) -> Database:
+        """Reimplement get_db from basic Dataset"""
+        """TODO: it's a special case due to historical correctness issuse
+            We should move the preprocess logic to make_db part.
+            For correctness, we keep current implementation.
+            
+            After paper submission, need to refactor this part.
+        """
+        db = super().get_db()
+        preprocess_event_database(db)
+        return db
+
+
+def _register_event_tasks():
+    from .database_factory import DatabaseFactory
+    from relbench.tasks import event
+
+    def _load_event_dataset(cache_dir: Optional[str] = None) -> Dataset:
+        """Load the Event dataset."""
+        cache_root_dir = os.path.join("~", ".cache", "relbench", "rel-event")
+        cache_root_dir = os.path.expanduser(cache_root_dir)
+        cache_dir = cache_dir if cache_dir else cache_root_dir
+        return EventDataset(cache_dir=cache_dir)
+
+    DatabaseFactory.register_dataset("event", _load_event_dataset, None)
+
+    # Register tasks
+    DatabaseFactory.register_task("event", "user-repeat", event.UserRepeatTask)
+    DatabaseFactory.register_task("event", "user-ignore", event.UserIgnoreTask)
+    DatabaseFactory.register_task(
+        "event", "user-attendance", event.UserAttendanceTask)
+
+
+_register_event_tasks()

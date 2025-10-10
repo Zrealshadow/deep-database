@@ -164,17 +164,6 @@ class DatabaseFactory(object):
 # Register default datasets from relbench
 # ============================================================================
 
-def _load_event_dataset(cache_dir: Optional[str] = None) -> Dataset:
-    """Load the Event dataset."""
-    return get_dataset("rel-event", download=True)
-
-
-def _preprocess_event_database(db: Database) -> None:
-    """Preprocess the Event database."""
-    from .event_dataset import preprocess_event_database
-    preprocess_event_database(db)
-
-
 def _load_avito_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the Avito dataset."""
     return get_dataset("rel-avito", download=True)
@@ -207,17 +196,12 @@ def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
 
 
 # Register datasets
-DatabaseFactory.register_dataset("event", _load_event_dataset, _preprocess_event_database)
 DatabaseFactory.register_dataset("avito", _load_avito_dataset, _preprocess_avito_database)
 DatabaseFactory.register_dataset("trial", _load_trial_dataset)
 DatabaseFactory.register_dataset("f1", _load_f1_dataset)
 DatabaseFactory.register_dataset("amazon", _load_amazon_dataset)
 
 # Register tasks
-# Event tasks
-DatabaseFactory.register_task("event", "user-repeat", event.UserRepeatTask)
-DatabaseFactory.register_task("event", "user-ignore", event.UserIgnoreTask)
-DatabaseFactory.register_task("event", "user-attendance", event.UserAttendanceTask)
 
 # Avito tasks
 DatabaseFactory.register_task("avito", "user-clicks", avito.UserClicksTask)
