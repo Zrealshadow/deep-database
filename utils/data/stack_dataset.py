@@ -1,6 +1,7 @@
 import os
 import pooch
 import pandas as pd
+from typing import Optional
 
 from relbench.base import Database, Dataset, Table
 from relbench.utils import clean_datetime, unzip_processor
@@ -179,3 +180,35 @@ class StackDataset(Dataset):
         )
 
         return Database(tables)
+
+
+# ============================================================================
+# Self-registration with DatabaseFactory
+# ============================================================================
+
+def _register_stack():
+    """Register Stack dataset and tasks with DatabaseFactory."""
+    from .database_factory import DatabaseFactory
+    from relbench.tasks import stack
+
+    def _load_stack_dataset(cache_dir: Optional[str] = None, path: Optional[str] = None) -> Dataset:
+        """Load the Stack dataset."""
+        cache_root_dir = os.path.join("~", ".cache", "relbench")
+        cache_root_dir = os.path.expanduser(cache_root_dir)
+        cache_dir = cache_dir if cache_dir else os.path.join(
+            cache_root_dir, "stack")
+        # print("Stack dataset cache dir:", cache_dir)
+        return StackDataset(cache_dir=cache_dir)
+
+    # Register dataset
+    DatabaseFactory.register_dataset("stack", _load_stack_dataset)
+
+    # Register tasks
+    DatabaseFactory.register_task(
+        "stack", "user-engagement", stack.UserEngagementTask)
+    DatabaseFactory.register_task("stack", "user-badge", stack.UserBadgeTask)
+    DatabaseFactory.register_task("stack", "post-vote", stack.PostVotesTask)
+
+
+# Auto-register when this module is imported
+_register_stack()

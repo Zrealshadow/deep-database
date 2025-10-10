@@ -1,41 +1,77 @@
 import os
 import warnings
-from typing import Optional
+from typing import Optional, Callable, Dict, Any
 import numpy as np
 
 
 from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
-from relbench.tasks import stack, event, f1, amazon, avito, trial
-
-from utils.task import ActiveUserPredictionTask, BeerPositiveRatePredictionTask, PlacePositivePredictionTask
-from .stack_dataset import StackDataset
-from .ratebeer_dataset import RateBeerDataset
-from .event_dataset import preprocess_event_database
+from relbench.tasks import event, avito, trial, f1, amazon, stack
 
 
 class DatabaseFactory(object):
     """
-    A factory class for creating databases.
+    A factory class for creating databases using a registration pattern.
+
+    Datasets and tasks can be registered using the class methods:
+    - register_dataset(db_name, loader_func, preprocessor_func=None)
+    - register_task(db_name, task_name, task_class)
     """
-    DBList = [
-        "event",
-        "stack",
-        "avito",
-        "trial",
-        "ratebeer",
-        "f1",
-        "amazon"
-    ]
+
+    # Global registries
+    _dataset_registry: Dict[str, Dict[str, Any]] = {}
+    _task_registry: Dict[str, Dict[str, type]] = {}
 
     TEXT_COMPRESS_COLNAME = "text_compress"
     # a column to store the compressed text embeddings
 
-    @staticmethod
+    @classmethod
+    def register_dataset(
+        cls,
+        db_name: str,
+        loader_func: Callable,
+        preprocessor_func: Optional[Callable] = None
+    ) -> None:
+        """
+        Register a dataset loader and optional preprocessor.
+
+        :param db_name: The name of the database.
+        :param loader_func: A callable that takes (cache_dir, path) and returns a Dataset.
+        :param preprocessor_func: Optional callable that takes (db: Database) and preprocesses it.
+        """
+        cls._dataset_registry[db_name] = {
+            "loader": loader_func,
+            "preprocessor": preprocessor_func
+        }
+
+    @classmethod
+    def register_task(cls, db_name: str, task_name: str, task_class: type) -> None:
+        """
+        Register a task class for a specific database.
+
+        :param db_name: The name of the database.
+        :param task_name: The name of the task.
+        :param task_class: The task class (subclass of BaseTask).
+        """
+        if db_name not in cls._task_registry:
+            cls._task_registry[db_name] = {}
+        cls._task_registry[db_name][task_name] = task_class
+    
+    @classmethod
+    def get_registered_databases(cls) -> list:
+        """Get list of all registered database names."""
+        return list(cls._dataset_registry.keys())
+
+    @classmethod
+    def get_registered_tasks(cls, db_name: str) -> list:
+        """Get list of all registered tasks for a database."""
+        return list(cls._task_registry.get(db_name, {}).keys())
+
+    @classmethod
     def get_db(
+        cls,
         db_name: str,
         cache_dir: Optional[str] = None,
-        path: Optional[str] = None,
         with_text_compress: bool = False,
         upto_test_timestamp: bool = True,
     ) -> Database:
@@ -50,161 +86,158 @@ class DatabaseFactory(object):
             If false, we will use the whole time data for database (including test dataset).
         :return: The database object.
         """
-        assert db_name in DatabaseFactory.DBList, f"Database {db_name} not found."
+        if db_name not in cls._dataset_registry:
+            raise ValueError(
+                f"Database {db_name} not found. "
+                f"Available databases: {cls.get_registered_databases()}"
+            )
 
-        dataset = DatabaseFactory.get_dataset(
+        dataset = cls.get_dataset(
             db_name=db_name,
             cache_dir=cache_dir,
-            path=path,
         )
 
         db = dataset.get_db(upto_test_timestamp=upto_test_timestamp)
-        if db_name == "event":
-            preprocess_event_database(db)
-        elif db_name == "avito":
-            # case by case:
-            # there are some tables in this dataset are not reindex
-            for _, table in db.table_dict.items():
-                n = len(table.df)
-                max_index = table.df.index.max()
-                if n != max_index + 1:
-                    warnings.warn(f"Reindex table: {table}")
-                    table.df.reset_index(drop=True, inplace=True)
 
-            pass
-            # TODO: I manually reindex and cache the database in my local home folder.
-            # Currently, above branch won't be executed for me.
-            # however, for other user, it will stil lead to promblem
-
-            # we need to reimplement a Wrapper for Event and Avito
-            # to preprocess again this dataset above the Class from relbench
+        # Apply dataset-specific preprocessor if registered
+        dataset_config = cls._dataset_registry[db_name]
+        if dataset_config["preprocessor"] is not None:
+            dataset_config["preprocessor"](db)
 
         if with_text_compress:
             for _, table in db.table_dict.items():
-                table.df[DatabaseFactory.TEXT_COMPRESS_COLNAME] = np.nan
+                table.df[cls.TEXT_COMPRESS_COLNAME] = np.nan
 
         return db
 
-    @staticmethod
+    @classmethod
     def get_dataset(
+        cls,
         db_name: str,
         cache_dir: Optional[str] = None,
-        path: Optional[str] = None,
     ) -> Dataset:
         """Get the dataset by name.
         :param db_name: The name of the database.
         :param cache_dir: The directory to cache the dataset.
-        :param path: The local path to the dataset, used for RateBeer dataset.(
-            first get the dataset need path from local path.
-            After the dataset is cached, we can load it from cache directly.
-        )
         """
-        cache_root_dir = os.path.join("~", ".cache", "relbench")
-        cache_root_dir = os.path.expanduser(cache_root_dir)
-        dataset = None
-        if db_name == "event":
-            dataset = get_dataset("rel-event", download=True)
-        elif db_name == "stack":
-            cache_dir = cache_dir if cache_dir else \
-                os.path.join(cache_root_dir, "stack")
-            print("Stack dataset cache dir:", cache_dir)
-            dataset = StackDataset(cache_dir=cache_dir)
-        elif db_name == "avito":
-            dataset = get_dataset("rel-avito", download=True)
-        elif db_name == "trial":
-            dataset = get_dataset("rel-trial", download=True)
-        elif db_name == "ratebeer":
-            # add default cache_dir
-            cache_dir = cache_dir if cache_dir else \
-                os.path.join(cache_root_dir, "ratebeer")
-            dataset = RateBeerDataset(
-                path,
-                cache_dir=cache_dir
+        if db_name not in cls._dataset_registry:
+            raise ValueError(
+                f"Unknown database name: {db_name}. "
+                f"Available databases: {cls.get_registered_databases()}"
             )
-        elif db_name == "f1":
-            dataset = get_dataset("rel-f1", download=True)
-        elif db_name == "amazon":
-            dataset = get_dataset("rel-amazon", download=True)
-        else:
-            raise ValueError(f"Unknown database name: {db_name}")
-        return dataset
 
-    @staticmethod
+        loader_func = cls._dataset_registry[db_name]["loader"]
+        return loader_func(cache_dir=cache_dir)
+
+    @classmethod
     def get_task(
+            cls,
             db_name: str,
             task_name: str,
             dataset: Dataset,
     ) -> BaseTask:
+        """Get a task by database name and task name.
+        :param db_name: The name of the database.
+        :param task_name: The name of the task.
+        :param dataset: The dataset object.
+        :return: The task object.
+        """
+        if db_name not in cls._task_registry:
+            raise ValueError(
+                f"Unknown database name: {db_name}. "
+                f"Available databases: {list(cls._task_registry.keys())}"
+            )
+
+        if task_name not in cls._task_registry[db_name]:
+            available_tasks = cls.get_registered_tasks(db_name)
+            raise ValueError(
+                f"Unknown task name: {task_name} for {db_name} dataset. "
+                f"Available tasks: {available_tasks}"
+            )
+
+        task_class = cls._task_registry[db_name][task_name]
         cache_dir = os.path.join(dataset.cache_dir, "tasks", task_name)
-        kwargs = {
-            "dataset": dataset,
-            "cache_dir": cache_dir,
-        }
+        return task_class(dataset=dataset, cache_dir=cache_dir)
 
-        if db_name == "event":
-            if task_name == "user-repeat":
-                task_type = event.UserRepeatTask
-            elif task_name == "user-ignore":
-                task_type = event.UserIgnoreTask
-            elif task_name == "user-attendance":
-                task_type = event.UserAttendanceTask
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for Event dataset.")
-        elif db_name == "stack":
-            if task_name == "user-engagement":
-                task_type = stack.UserEngagementTask
-            elif task_name == "user-badge":
-                task_type = stack.UserBadgeTask
-            elif task_name == "post-vote":
-                task_type = stack.PostVotesTask
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for Stack dataset.")
-        elif db_name == "avito":
-            if task_name == "user-clicks":
-                task_type = avito.UserClicksTask
-            elif task_name == "ad-ctr":
-                task_type = avito.AdCTRTask
-            elif task_name == "user-visits":
-                task_type = avito.UserVisitsTask
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for Avito dataset.")
-        elif db_name == "trial":
-            if task_name == "study-outcome":
-                task_type = trial.StudyOutcomeTask
-            elif task_name == "site-success":
-                task_type = trial.SiteSuccessTask
-            elif task_name == "study-adverse":
-                task_type = trial.StudyAdverseTask
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for Trial dataset.")
-        elif db_name == "f1":
-            if task_name == "driver-dnf":
-                task_type = f1.DriverDNFTask
-            elif task_name == "driver-top3":
-                task_type = f1.DriverTop3Task
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for F1 dataset.")
-        elif db_name == "amazon":
-            pass
-            # TODO:
-        elif db_name == "ratebeer":
-            cache_dir = os.path.join(dataset.cache_dir, "tasks", task_name)
-            if task_name == "user-active":
-                task_type = ActiveUserPredictionTask
-            elif task_name == "beer-positive":
-                task_type = BeerPositiveRatePredictionTask
-            elif task_name == "place-positive":
-                task_type = PlacePositivePredictionTask
-            else:
-                raise ValueError(
-                    f"Unknown task name: {task_name} for RateBeer dataset.")
 
-        else:
-            raise ValueError(f"Unknown database name: {db_name}")
+# ============================================================================
+# Register default datasets from relbench
+# ============================================================================
 
-        return task_type(**kwargs)
+def _load_event_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the Event dataset."""
+    return get_dataset("rel-event", download=True)
+
+
+def _preprocess_event_database(db: Database) -> None:
+    """Preprocess the Event database."""
+    from .event_dataset import preprocess_event_database
+    preprocess_event_database(db)
+
+
+def _load_avito_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the Avito dataset."""
+    return get_dataset("rel-avito", download=True)
+
+
+def _preprocess_avito_database(db: Database) -> None:
+    """Preprocess the Avito database."""
+    # Reindex tables that are not properly indexed
+    for _, table in db.table_dict.items():
+        n = len(table.df)
+        max_index = table.df.index.max()
+        if n != max_index + 1:
+            warnings.warn(f"Reindex table: {table}")
+            table.df.reset_index(drop=True, inplace=True)
+
+
+def _load_trial_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the Trial dataset."""
+    return get_dataset("rel-trial", download=True)
+
+
+def _load_f1_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the F1 dataset."""
+    return get_dataset("rel-f1", download=True)
+
+
+def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the Amazon dataset."""
+    return get_dataset("rel-amazon", download=True)
+
+
+# Register datasets
+DatabaseFactory.register_dataset("event", _load_event_dataset, _preprocess_event_database)
+DatabaseFactory.register_dataset("avito", _load_avito_dataset, _preprocess_avito_database)
+DatabaseFactory.register_dataset("trial", _load_trial_dataset)
+DatabaseFactory.register_dataset("f1", _load_f1_dataset)
+DatabaseFactory.register_dataset("amazon", _load_amazon_dataset)
+
+# Register tasks
+# Event tasks
+DatabaseFactory.register_task("event", "user-repeat", event.UserRepeatTask)
+DatabaseFactory.register_task("event", "user-ignore", event.UserIgnoreTask)
+DatabaseFactory.register_task("event", "user-attendance", event.UserAttendanceTask)
+
+# Avito tasks
+DatabaseFactory.register_task("avito", "user-clicks", avito.UserClicksTask)
+DatabaseFactory.register_task("avito", "ad-ctr", avito.AdCTRTask)
+DatabaseFactory.register_task("avito", "user-visits", avito.UserVisitsTask)
+
+# Trial tasks
+DatabaseFactory.register_task("trial", "study-outcome", trial.StudyOutcomeTask)
+DatabaseFactory.register_task("trial", "site-success", trial.SiteSuccessTask)
+DatabaseFactory.register_task("trial", "study-adverse", trial.StudyAdverseTask)
+
+# F1 tasks
+DatabaseFactory.register_task("f1", "driver-dnf", f1.DriverDNFTask)
+DatabaseFactory.register_task("f1", "driver-top3", f1.DriverTop3Task)
+
+
+# ============================================================================
+# Import custom dataset modules to trigger their self-registration
+# ============================================================================
+# When each module is imported, it will automatically register itself
+# with the DatabaseFactory using the registration pattern.
+from . import stack_dataset  # noqa: F401, E402
+from . import ratebeer_dataset

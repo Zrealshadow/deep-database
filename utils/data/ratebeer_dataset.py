@@ -155,3 +155,32 @@ class RateBeerDataset(Dataset):
 
         print("\nAll tables loaded successfully!")
         return Database(tables)
+
+
+# ============================================================================
+# Self-registration with DatabaseFactory
+# ============================================================================
+
+def _register_ratebeer():
+    """Register RateBeer dataset and tasks with DatabaseFactory."""
+    from .database_factory import DatabaseFactory
+    from utils.task import ActiveUserPredictionTask, BeerPositiveRatePredictionTask, PlacePositivePredictionTask
+
+    def _load_ratebeer_dataset(cache_dir: Optional[str] = None, path: Optional[str] = None) -> Dataset:
+        """Load the RateBeer dataset."""
+        cache_root_dir = os.path.join("~", ".cache", "relbench")
+        cache_root_dir = os.path.expanduser(cache_root_dir)
+        cache_dir = cache_dir if cache_dir else os.path.join(cache_root_dir, "ratebeer")
+        return RateBeerDataset(path, cache_dir=cache_dir)
+
+    # Register dataset
+    DatabaseFactory.register_dataset("ratebeer", _load_ratebeer_dataset)
+
+    # Register tasks
+    DatabaseFactory.register_task("ratebeer", "user-active", ActiveUserPredictionTask)
+    DatabaseFactory.register_task("ratebeer", "beer-positive", BeerPositiveRatePredictionTask)
+    DatabaseFactory.register_task("ratebeer", "place-positive", PlacePositivePredictionTask)
+
+
+# Auto-register when this module is imported
+_register_ratebeer()
