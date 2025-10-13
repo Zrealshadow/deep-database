@@ -56,7 +56,7 @@ class DatabaseFactory(object):
         if db_name not in cls._task_registry:
             cls._task_registry[db_name] = {}
         cls._task_registry[db_name][task_name] = task_class
-    
+
     @classmethod
     def get_registered_databases(cls) -> list:
         """Get list of all registered database names."""
@@ -196,7 +196,8 @@ def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
 
 
 # Register datasets
-DatabaseFactory.register_dataset("avito", _load_avito_dataset, _preprocess_avito_database)
+DatabaseFactory.register_dataset(
+    "avito", _load_avito_dataset, _preprocess_avito_database)
 DatabaseFactory.register_dataset("trial", _load_trial_dataset)
 DatabaseFactory.register_dataset("f1", _load_f1_dataset)
 DatabaseFactory.register_dataset("amazon", _load_amazon_dataset)
@@ -217,11 +218,9 @@ DatabaseFactory.register_task("trial", "study-adverse", trial.StudyAdverseTask)
 DatabaseFactory.register_task("f1", "driver-dnf", f1.DriverDNFTask)
 DatabaseFactory.register_task("f1", "driver-top3", f1.DriverTop3Task)
 
+# Amazon tasks
+DatabaseFactory.register_task("amazon", "user-churn", amazon.UserChurnTask)
+DatabaseFactory.register_task("amazon", "item-churn", amazon.ItemChurnTask)
+DatabaseFactory.register_task("amazon", "user-ltv", amazon.UserLTVTask)
+DatabaseFactory.register_task("amazon", "item-ltv", amazon.ItemLTVTask)
 
-# ============================================================================
-# Import custom dataset modules to trigger their self-registration
-# ============================================================================
-# When each module is imported, it will automatically register itself
-# with the DatabaseFactory using the registration pattern.
-from . import stack_dataset  # noqa: F401, E402
-from . import ratebeer_dataset

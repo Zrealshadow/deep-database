@@ -25,6 +25,9 @@ from typing import Dict, Any
 import sys
 from pathlib import Path
 
+# set np random seed
+np.random.seed(2025)
+
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -81,11 +84,13 @@ if __name__ == "__main__":
     db = DatabaseFactory.get_db(
         db_name=dbname,
         cache_dir=db_cache_dir,
+        upto_test_timestamp=False,
     )
 
     dataset = DatabaseFactory.get_dataset(
         db_name=dbname,
         cache_dir=db_cache_dir,
+
     )
 
     task = DatabaseFactory.get_task(
@@ -96,7 +101,7 @@ if __name__ == "__main__":
 
     # ------------TODO: code support "avito" dataset ---------------
     # because there are many null in foreign key columns, which raise error in featuretools dfs
-    if (dbname == "avito" or dbname == "ratebeer") and use_dfs:
+    if (dbname == "avito" or dbname == "ratebeer" or dbname == "amazon") and use_dfs:
         # WARNING: isolated drop nan is dangerous,
         # for example in avito, drop some "AdsInfo",
         # leads to modification to other table which contains fkey to "AdsInfo"
@@ -112,7 +117,6 @@ if __name__ == "__main__":
 
             # not allowed to reindex
 
-        
         # for no-pky table, add a column as pkey
         for table_name, table in db.table_dict.items():
             if not table.pkey_col:
@@ -121,7 +125,12 @@ if __name__ == "__main__":
                 table.pkey_col = pkey_name
                 print(
                     f"Table {table_name} has no pkey, add column {pkey_name} as pkey.")
-    
+
+    if dbname == "amazon":
+        # TODO put it in dataset class
+        db.table_dict['product'].df['category'] = \
+            db.table_dict['product'].df['category'].astype('string')
+
     # ------------- move this part of logic into the data class for preprocessing.
 
     entity_table = db.table_dict[task.entity_table]
@@ -132,9 +141,17 @@ if __name__ == "__main__":
     test_table = task.get_table("test", mask_input_cols=False)
 
     # --------------------------- sample_training data
-    if sample_size > 0:
+    if sample_size > 0 and train_table.df.shape[0] > sample_size:
         sampled_idx = np.random.permutation(len(train_table.df))[:sample_size]
         train_table.df = train_table.df.iloc[sampled_idx]
+
+    if sample_size > 0 and val_table.df.shape[0] > sample_size:
+        sampled_idx = np.random.permutation(len(val_table.df))[:sample_size]
+        val_table.df = val_table.df.iloc[sampled_idx]
+
+    if sample_size > 0 and test_table.df.shape[0] > sample_size:
+        sampled_idx = np.random.permutation(len(test_table.df))[:sample_size]
+        test_table.df = test_table.df.iloc[sampled_idx]
 
     # ------------------------ preprocess the tabular data
     dfs: Dict[str, pd.DataFrame] = {}
@@ -147,7 +164,7 @@ if __name__ == "__main__":
     relationships = []
     es = None
     dfs_kwargs: Dict[str, Any] = {}
-    
+
     selected_columns = []
     if use_dfs:
         print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
@@ -254,8 +271,7 @@ if __name__ == "__main__":
         split_duration = split_end_time - split_start_time
         print(
             f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
-        
-        
+
         # assertion that generated features in training is equal to val/test
         if not feature_matrix_n:
             feature_matrix_n = len(feature_matrix.columns)
@@ -263,7 +279,6 @@ if __name__ == "__main__":
             assert feature_matrix_n == len(feature_matrix.columns), \
                 f"Feature matrix in {split} has different number of features {len(feature_matrix.columns)} from previous {feature_matrix_n}"
 
-        
         if split == "train":
             if not selection_cfg:
                 selected_columns = feature_matrix.columns.tolist()
@@ -276,12 +291,13 @@ if __name__ == "__main__":
                 selected_columns = fm.columns.tolist()
                 end_time = time.time()
                 duration = end_time - start_time
-                print(f"==> Feature selection completed in {duration:.2f} seconds")
-                print(f"==> Selected {len(selected_columns)}/{len(feature_matrix.columns)} features after selection")
-        
+                print(
+                    f"==> Feature selection completed in {duration:.2f} seconds")
+                print(
+                    f"==> Selected {len(selected_columns)}/{len(feature_matrix.columns)} features after selection")
+
         feature_matrix = feature_matrix[selected_columns]
-        
-        
+
         # change the categorical dtype in feature_matrix to object
         # WARNING: the featuretools will automatically assign the dtype for input dataframe.
         # Some categorical dtype will raise issue for type inference especially through sampling
