@@ -9,5 +9,6 @@ __all__ = [
     "ActiveUserPredictionTask",
     "BeerPositiveRatePredictionTask",
     "PlacePositivePredictionTask",
-    "ratebeer_timestamp_decision"
+    "ratebeer_timestamp_decision",
+    "task_extensions"
 ]

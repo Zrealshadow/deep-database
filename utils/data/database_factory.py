@@ -6,7 +6,9 @@ import numpy as np
 
 from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
-from relbench.tasks import event, avito, trial, f1, amazon, stack
+from relbench.tasks import avito, trial, f1, amazon
+
+from utils.task import task_extensions
 
 
 class DatabaseFactory(object):
@@ -223,4 +225,3 @@ DatabaseFactory.register_task("amazon", "user-churn", amazon.UserChurnTask)
 DatabaseFactory.register_task("amazon", "item-churn", amazon.ItemChurnTask)
 DatabaseFactory.register_task("amazon", "user-ltv", amazon.UserLTVTask)
 DatabaseFactory.register_task("amazon", "item-ltv", amazon.ItemLTVTask)
-
