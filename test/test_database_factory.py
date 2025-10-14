@@ -66,6 +66,9 @@ class TestDatabaseFactoryRegistration(unittest.TestCase):
         # Check custom self-registered datasets
         self.assertIn("stack", registered_dbs)
         self.assertIn("ratebeer", registered_dbs)
+        
+        self.assertIn("olist", registered_dbs)
+        
 
         print(f"✅ Registered databases: {registered_dbs}")
 

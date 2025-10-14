@@ -1,5 +1,7 @@
 import os
+import gdown
 import pandas as pd
+import tarfile
 from typing import Optional
 from tqdm import tqdm
 
@@ -10,16 +12,34 @@ class RateBeerDataset(Dataset):
     val_timestamp = pd.Timestamp("2023-06-01")
     test_timestamp = pd.Timestamp("2024-06-01")
 
-    DB_URL = "https://www.dropbox.com/scl/fi/exwygxep7vdvq55uiq28r/db.zip?rlkey=o7q0r8nw758p4wxx1wka9ubuj&st=rg3gvkxg&dl=1"
+    DOWNLOAD_LINK = "https://drive.google.com/file/d/1r3e7T6kA-ImCCkIc029FHiMBj6QT8iF2/view?usp=sharing"
+    # already cleaned
 
-    def __init__(self, path: str, cache_dir: Optional[str] = None):
+    DB_URL = "https://www.dropbox.com/scl/fi/exwygxep7vdvq55uiq28r/db.zip?rlkey=o7q0r8nw758p4wxx1wka9ubuj&st=rg3gvkxg&dl=1"
+    # raw
+
+    md5hash = "4cd20216af99caa18535a10d4731f450"
+
+    def __init__(self, cache_dir: Optional[str] = None):
         super().__init__(cache_dir=cache_dir)
-        self.dir_path = path
 
     def make_db(self) -> Database:
         r"""Process the raw files into a database."""
-        # Create cache directory if it doesn't exist
-        # os.makedirs(CACHE_DIR, exist_ok=True)
+        gdown_cache_root = os.path.join("~", ".cache", "gdown")
+        gdown_cache_root = os.path.expanduser(gdown_cache_root)
+
+        output = "ratebeer.tar.xz"
+        path = gdown.cached_download(
+            RateBeerDataset.DOWNLOAD_LINK,
+            path=os.path.join(gdown_cache_root, output),
+            quiet=False,
+            fuzzy=True,
+            md5=RateBeerDataset.md5hash
+        )
+        with tarfile.open(path, 'r:xz') as tar:
+            tar.extractall(path=os.path.join(gdown_cache_root))
+        print("Extracted files to:", os.path.join(gdown_cache_root))
+        data_dir = os.path.join(gdown_cache_root, "ratebeer")
 
         print("Reading from processed database...")
         tables = {}
@@ -92,7 +112,7 @@ class RateBeerDataset(Dataset):
 
         # Read tables from extracted directory
         for table_name, config in tqdm(table_configs.items(), desc="Loading tables", total=len(table_configs), leave=False):
-            csv_path = os.path.join(self.dir_path, f"{table_name}.csv")
+            csv_path = os.path.join(data_dir, f"{table_name}.csv")
             df = pd.read_csv(csv_path, low_memory=False)
 
             # === Start Modification: Handle potential duplicates in primary keys ===
@@ -166,20 +186,24 @@ def _register_ratebeer():
     from .database_factory import DatabaseFactory
     from utils.task import ActiveUserPredictionTask, BeerPositiveRatePredictionTask, PlacePositivePredictionTask
 
-    def _load_ratebeer_dataset(cache_dir: Optional[str] = None, path: Optional[str] = None) -> Dataset:
+    def _load_ratebeer_dataset(cache_dir: Optional[str] = None) -> Dataset:
         """Load the RateBeer dataset."""
         cache_root_dir = os.path.join("~", ".cache", "relbench")
         cache_root_dir = os.path.expanduser(cache_root_dir)
-        cache_dir = cache_dir if cache_dir else os.path.join(cache_root_dir, "ratebeer")
-        return RateBeerDataset(path, cache_dir=cache_dir)
+        cache_dir = cache_dir if cache_dir else os.path.join(
+            cache_root_dir, "ratebeer")
+        return RateBeerDataset(cache_dir=cache_dir)
 
     # Register dataset
     DatabaseFactory.register_dataset("ratebeer", _load_ratebeer_dataset)
 
     # Register tasks
-    DatabaseFactory.register_task("ratebeer", "user-active", ActiveUserPredictionTask)
-    DatabaseFactory.register_task("ratebeer", "beer-positive", BeerPositiveRatePredictionTask)
-    DatabaseFactory.register_task("ratebeer", "place-positive", PlacePositivePredictionTask)
+    DatabaseFactory.register_task(
+        "ratebeer", "user-active", ActiveUserPredictionTask)
+    DatabaseFactory.register_task(
+        "ratebeer", "beer-positive", BeerPositiveRatePredictionTask)
+    DatabaseFactory.register_task(
+        "ratebeer", "place-positive", PlacePositivePredictionTask)
 
 
 # Auto-register when this module is imported
