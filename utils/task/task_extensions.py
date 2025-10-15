@@ -36,7 +36,6 @@ def default_mask_features(self, db: Database) -> None:
     """
     pass
 
-
 # ============================================================================
 # Apply monkey patches to add methods to all task classes
 # ============================================================================
@@ -49,9 +48,9 @@ def extend_task_classes():
     to all tasks, including library tasks that cannot be modified directly.
 
     Methods added:
-        - mask_features(db): Mask features that may leak target information
+        - mask_database(db): Mask features that may leak target information
     """
-    BaseTask.mask_features = default_mask_features
+    BaseTask.mask_database = default_mask_features
     print("✓ Task extensions applied: BaseTask.mask_features")
 
 

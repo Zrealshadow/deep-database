@@ -126,7 +126,8 @@ class OlistDataset(Dataset):
 def _register_olist():
     """Register the Olist dataset."""
     from .database_factory import DatabaseFactory
-
+    from ..task.olist_tasks import OlistOrderDelayTask
+    
     def _load_olist_dataset(cache_dir: Optional[str] = None) -> OlistDataset:
         cache_root_dir = os.path.join("~", ".cache", "relbench")
         cache_root_dir = os.path.expanduser(cache_root_dir)
@@ -135,6 +136,8 @@ def _register_olist():
         return OlistDataset(cache_dir=cache_dir)
 
     DatabaseFactory.register_dataset("olist", _load_olist_dataset)
-
+    
+    # register tasks
+    DatabaseFactory.register_task("olist", "order-delay", OlistOrderDelayTask)
 
 _register_olist()
