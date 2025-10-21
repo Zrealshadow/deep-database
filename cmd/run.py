@@ -4,6 +4,7 @@ import argparse
 import copy
 from tqdm import tqdm
 import numpy as np
+import time
 from torch_geometric.loader import NeighborLoader
 from torch_geometric.utils import sort_edge_index
 from torch.nn import L1Loss, BCEWithLogitsLoss
@@ -342,8 +343,13 @@ loader = NeighborLoader(
     shuffle=False,
 )
 
+start_time = time.time()
 test_logits, _, test_pred_hat = test(
     net, loader, task.entity_table, is_regression=is_regression)
 test_metric = evaluate_metric_func(test_pred_hat, test_logits)
+end_time = time.time()
+inference_time = end_time - start_time
+
+
 print(
-    f"Test {evaluate_metric_func.__name__} Metric: {test_metric:.6f}")
+    f"Test {evaluate_metric_func.__name__} Metric: {test_metric:.6f}, Inference Time: {inference_time:.2f} seconds")

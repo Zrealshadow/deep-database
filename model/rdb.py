@@ -73,7 +73,7 @@ class RDBModel(torch.nn.Module, HeteroPretrainGNNEncoder):
             }
         )
 
-    def reset_parameter(self):
+    def reset_parameters(self):
         self.gnn.reset_parameters()
         self.head.reset_parameters()
         self.feature_encoder.reset_parameters()
@@ -136,3 +136,7 @@ class RDBModel(torch.nn.Module, HeteroPretrainGNNEncoder):
         )
 
         return x_dict
+
+
+
+

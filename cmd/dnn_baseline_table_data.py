@@ -1,10 +1,14 @@
 
+from utils.data import TableData
+from utils.resource import get_text_embedder_cfg
+from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
 import torch
 import math
 import torch_frame
 import argparse
 import copy
 from tqdm import tqdm
+import time
 
 from torch_frame.nn.models import MLP, ResNet, FTTransformer
 from torch.nn import L1Loss, BCEWithLogitsLoss
@@ -17,9 +21,6 @@ from pathlib import Path
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
-from utils.resource import get_text_embedder_cfg
-from utils.data import TableData
 
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
@@ -59,10 +60,10 @@ args = parser.parse_args()
 
 
 table_data = TableData.load_from_dir(args.data_dir)
-    
+
 if not table_data.is_materialize:
     text_cfg = get_text_embedder_cfg(
-        device = "cpu"
+        device="cpu"
     )
     table_data.materilize(
         col_to_text_embedder_cfg=text_cfg,
@@ -220,9 +221,13 @@ for epoch in range(num_epochs):
             break
 
 
+start_time = time.time()
 net.load_state_dict(best_model_state)
 test_logits, _, test_pred_hat = test(
     net, data_loaders["test"], is_regression=is_regression)
 test_metric = evaluate_matric_func(test_pred_hat, test_logits)
+end_time = time.time()
+inference_time = end_time - start_time
+
 print(
-    f"Test {evaluate_matric_func.__name__} Metric: {test_metric:.6f}")
+    f"Test {evaluate_matric_func.__name__} Metric: {test_metric:.6f}, Inference Time: {inference_time:.2f} seconds")

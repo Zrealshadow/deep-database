@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     # ------------TODO: code support "avito" dataset ---------------
     # because there are many null in foreign key columns, which raise error in featuretools dfs
-    if (dbname == "avito" or dbname == "ratebeer" or dbname == "amazon") and use_dfs:
+    if (dbname in ['ratebeer', 'amazon', 'avito', 'hm']) and use_dfs:
         # WARNING: isolated drop nan is dangerous,
         # for example in avito, drop some "AdsInfo",
         # leads to modification to other table which contains fkey to "AdsInfo"
@@ -213,7 +213,7 @@ if __name__ == "__main__":
             'max_features': dfs_max_features,
             'training_window': time_window,
             'n_jobs': dfs_n_jobs,
-            'verbose': True,
+            # 'verbose': True,
             'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
         }
         # print the dfs important args

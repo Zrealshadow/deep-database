@@ -12,7 +12,7 @@ python ./cmd/pretrain.py \
 # Event
 
 # with all
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-event-tensor-frame \
     --db_name event \
     --task_name user-attendance \
@@ -20,7 +20,7 @@ python ./cmd/run.py \
     --edge_path ./edges/rel-event-edges.npz 
 
 # only - Pre-trained
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-event-tensor-frame \
     --db_name event \
     --task_name user-attendance \
@@ -28,7 +28,7 @@ python ./cmd/run.py \
 
 
 # only - Edges
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-event-tensor-frame \
     --db_name event \
     --task_name user-attendance \
@@ -42,7 +42,7 @@ python ./cmd/run.py \
 
 
 # with all
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-trial-tensor-frame \
     --db_name trial \
     --task_name study-adverse \
@@ -52,7 +52,7 @@ python ./cmd/run.py \
     --max_round_epoch 30
 
 # only - Pre-trained
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-trial-tensor-frame \
     --db_name trial \
     --task_name study-adverse \
@@ -62,7 +62,7 @@ python ./cmd/run.py \
     
 
 # only - Edges
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/rel-trial-tensor-frame \
     --db_name trial \
     --task_name study-adverse \
@@ -72,7 +72,7 @@ python ./cmd/run.py \
 
 
 
-python ./cmd/run.py \
+python -m cmd.run \
     --tf_cache_dir ./data/ratebeer-tensor-frame \
     --data_cache_dir /home/lingze/.cache/relbench/ratebeer \
     --db_name ratebeer \
