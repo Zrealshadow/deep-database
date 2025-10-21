@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 import os
+import time
 
 from torch_frame.data.stats import StatType
 from torch_geometric.data import HeteroData
@@ -21,7 +22,6 @@ from typing import Dict, Optional, List, Tuple, Optional, Union, Any
 
 from dataclasses import dataclass
 from collections import defaultdict, deque
-
 
 
 @dataclass
@@ -94,7 +94,8 @@ def make_homograph_from_db(
             pkey_index = df[fkey_name]
             # Filter out dangling foreign keys (missing value)
             mask = ~pkey_index.isna()
-            fkey_index = pd.Series(np.arange(len(pkey_index)), index = pkey_index.index)
+            fkey_index = pd.Series(
+                np.arange(len(pkey_index)), index=pkey_index.index)
 
             # Filter missing value
             pkey_index = pkey_index[mask].astype(int)
@@ -111,9 +112,10 @@ def make_homograph_from_db(
             # pkey -> fkey edges
             row.extend(pkey_gid)
             col.extend(fkey_gid)
-            
+
             if verbose:
-                print(f"table {table_name} -> table {pkey_table_name} has {len(pkey_gid)} edges")
+                print(
+                    f"table {table_name} -> table {pkey_table_name} has {len(pkey_gid)} edges")
 
     return HomoGraph(row, col, dbindex)
 
@@ -132,9 +134,10 @@ def identify_entity_table(
     table_rows = {table_name: table.df.shape[0]
                   for table_name, table in db.table_dict.items()}
     ave_row = sum(table_rows.values()) / len(table_rows)
-    
+
     # check the foreign key number
-    table_names = [table_name for table_name, row in table_rows.items() if row < ave_row]
+    table_names = [table_name for table_name,
+                   row in table_rows.items() if row < ave_row]
     tables = []
     for table_name in table_names:
         fkey_dict = db.table_dict[table_name].fkey_col_to_pkey_table
@@ -186,19 +189,20 @@ def generate_hop_matrix(
     return TableHopMatrix(graph)
 
 
-
 def build_pyg_hetero_graph(
     db: Database,
     col_type_dict: Dict[str, Dict[str, stype]],
     text_embedder_cfg: Optional[TextEmbedderConfig] = None,
     cache_dir: Optional[str] = None,
     verbose: bool = False,
-) ->Tuple[HeteroData, Dict[str, Dict[str, Dict[StatType, Any]]]]:
+) -> Tuple[HeteroData, Dict[str, Dict[str, Dict[StatType, Any]]]]:
     """ Build heterogeneous graph from the database
     """
+
+    start_cpu_time = time.time()
     if cache_dir is not None:
         os.makedirs(cache_dir, exist_ok=True)
-    
+
     data = HeteroData()
     col_stats_dict = {}
     for table_name, table in db.table_dict.items():
@@ -206,73 +210,78 @@ def build_pyg_hetero_graph(
         # (important for foreignKey value) Ensure the pkey is consecutive
         if table.pkey_col is not None:
             assert (df[table.pkey_col].values == np.arange(len(df))).all()
-        
+
         col_to_stype = col_type_dict[table_name]
-        
+
         # remove pkey, fkey
         remove_pkey_fkey(col_to_stype, table)
-        
+
         if len(col_to_stype) == 0:
-            
+
             if len(table.fkey_col_to_pkey_table.keys()) == 2:
                 # just a relationship table, we can add edge
-                col_name_x , col_name_y = table.fkey_col_to_pkey_table.keys()
+                col_name_x, col_name_y = table.fkey_col_to_pkey_table.keys()
                 table_name_x, table_name_y = table.fkey_col_to_pkey_table.values()
-                
+
                 if verbose:
-                    print(f"-----> Build edge between {table_name_x} and {table_name_y}")
-                
+                    print(
+                        f"-----> Build edge between {table_name_x} and {table_name_y}")
+
                 mask = df[col_name_x].notnull() & df[col_name_y].notnull()
-                index_x = torch.from_numpy(df[col_name_x][mask].astype(int).values)
-                index_y = torch.from_numpy(df[col_name_y][mask].astype(int).values)
-                
+                index_x = torch.from_numpy(
+                    df[col_name_x][mask].astype(int).values)
+                index_y = torch.from_numpy(
+                    df[col_name_y][mask].astype(int).values)
+
                 # fkey -> pkey edges
                 edge_index = torch.stack([index_x, index_y], dim=0)
                 edge_type = (table_name_x, f"edge_{table_name}", table_name_y)
                 data[edge_type].edge_index = sort_edge_index(edge_index)
-                
+
                 # pkey -> fkey edges.
                 # "rev_" is added so that PyG loader recognizes the reverse edges
                 edge_index = torch.stack([index_y, index_x], dim=0)
-                edge_type = (table_name_y, f"rev_edge_{table_name}", table_name_x)
+                edge_type = (
+                    table_name_y, f"rev_edge_{table_name}", table_name_x)
                 data[edge_type].edge_index = sort_edge_index(edge_index)
                 continue
-                
-            else:    
+
+            else:
                 # for example, relationship table which only contains pkey and fkey
                 raise KeyError(f"{table_name} has no column to build graph")
-        
+
         path = (
-                None if cache_dir is None else os.path.join(cache_dir, f"{table_name}.pt")
+            None if cache_dir is None else os.path.join(
+                cache_dir, f"{table_name}.pt")
         )
-        
+
         print(f"-----> Materialize {table_name} Tensor Frame")
         dataset = TFDataset(
-            df = df,
+            df=df,
             col_to_stype=col_to_stype,
             col_to_text_embedder_cfg=text_embedder_cfg,
         ).materialize(path=path)
-        
+
         data[table_name].tf = dataset.tensor_frame
         col_stats_dict[table_name] = dataset.col_stats
-        
+
         # Add time attribute
         if table.time_col is not None:
             data[table_name].time = torch.from_numpy(
                 to_unix_time(df[table.time_col])
             )
-        
+
         # Add edges normal edges
         for fkey_col_name, pkey_table_name in table.fkey_col_to_pkey_table.items():
             pkey_index = df[fkey_col_name]
             # Filter out dangling foreign keys
             mask = ~pkey_index.isna()
             fkey_index = torch.arange(len(pkey_index))
-            
+
             # filter dangling foreign keys:
             pkey_index = torch.from_numpy(pkey_index[mask].astype(int).values)
             fkey_index = fkey_index[torch.from_numpy(mask.values)]
-            
+
             # fkey -> pkey edges
             edge_index = torch.stack([fkey_index, pkey_index], dim=0)
             edge_type = (table_name, f"f2p_{fkey_col_name}", pkey_table_name)
@@ -281,12 +290,13 @@ def build_pyg_hetero_graph(
             # pkey -> fkey edges.
             # "rev_" is added so that PyG loader recognizes the reverse edges
             edge_index = torch.stack([pkey_index, fkey_index], dim=0)
-            edge_type = (pkey_table_name, f"rev_f2p_{fkey_col_name}", table_name)
+            edge_type = (pkey_table_name,
+                         f"rev_f2p_{fkey_col_name}", table_name)
             data[edge_type].edge_index = sort_edge_index(edge_index)
-        
+
     data.validate()
+    end_cpu_time = time.time()
+    cpu_time_cost = end_cpu_time - start_cpu_time
+    print(
+        f"Build pyg hetero graph takes {cpu_time_cost:.6f} seconds")
     return data, col_stats_dict
-
-
-
-

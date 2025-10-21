@@ -6,7 +6,7 @@ import numpy as np
 
 from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
-from relbench.tasks import avito, trial, f1, amazon
+from relbench.tasks import avito, trial, f1, amazon, hm
 
 from utils.task import task_extensions
 
@@ -196,6 +196,10 @@ def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the Amazon dataset."""
     return get_dataset("rel-amazon", download=True)
 
+def _load_hm_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the HM dataset."""
+    return get_dataset("rel-hm", download=True)
+
 
 # Register datasets
 DatabaseFactory.register_dataset(
@@ -203,6 +207,7 @@ DatabaseFactory.register_dataset(
 DatabaseFactory.register_dataset("trial", _load_trial_dataset)
 DatabaseFactory.register_dataset("f1", _load_f1_dataset)
 DatabaseFactory.register_dataset("amazon", _load_amazon_dataset)
+DatabaseFactory.register_dataset("hm", _load_hm_dataset)
 
 # Register tasks
 
@@ -225,3 +230,7 @@ DatabaseFactory.register_task("amazon", "user-churn", amazon.UserChurnTask)
 DatabaseFactory.register_task("amazon", "item-churn", amazon.ItemChurnTask)
 DatabaseFactory.register_task("amazon", "user-ltv", amazon.UserLTVTask)
 DatabaseFactory.register_task("amazon", "item-ltv", amazon.ItemLTVTask)
+
+# HM tasks
+DatabaseFactory.register_task("hm", "user-churn", hm.UserChurnTask)
+DatabaseFactory.register_task("hm", "item-sales", hm.ItemSalesTask)
