@@ -75,8 +75,8 @@ def mlp_trainner_args(parser):
                              'frappe: 10, '
                              'uci_diabetes: 43,'
                              'criteo: 39')
-    parser.add_argument('--nemb', type=int, default=10,
-                        help='embedding size 10')
+    parser.add_argument('--nemb', type=int, default=128,
+                        help='embedding size for StypeFeatureEmbedding (channels), default 128')
 
     # MLP train config
     parser.add_argument('--report_freq', type=int, default=30, help='report frequency')
@@ -111,7 +111,7 @@ def parse_arguments():
     parser.add_argument('--log_name', type=str, default="main_T_100s")
 
     # define base dir, where it stores apis, datasets, logs, etc,
-    parser.add_argument('--device', type=str, default="cpu")
+    parser.add_argument('--device', type=str, default="cuda")
 
     parser.add_argument('--result_dir', default="./internal/ml/model_selection/exp_result/", type=str,
                         help='path to store exp outputs')
@@ -158,10 +158,35 @@ def save_res(k_models, all_models):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    args.data_dir = "/home/lingze/embedding_fusion/data/dfs-flatten-table/avito-ad-ctr"
+    # args.data_dir = "/home/lingze/embedding_fusion/data/dfs-flatten-table/event-user-ignore"
     # train_loader, val_loader, test_loader, class_num = generate_data_loader(args)
 
     table_data = TableData.load_from_dir(args.data_dir)
+
+    if not table_data.is_materialize:
+        from utils.resource import get_text_embedder_cfg
+        text_cfg = get_text_embedder_cfg(device=args.device)
+        table_data.materilize(col_to_text_embedder_cfg=text_cfg)
+
+    # 直接从col_names_dict计算nfield
+    col_names_dict = table_data.col_names_dict
+
+    # 计算总特征数
+    nfield = sum(len(cols) for cols in col_names_dict.values())
+
+    # 设置参数
+    args.nfield = nfield
+    args.nfeat = nfield  # 对于StypeFeatureEmbedding，nfeat=nfield
+    # args.nemb 保持命令行参数的值（默认128）
+
+    print(f"\n自动计算的参数:")
+    print(f"  特征类型分布:")
+    for stype, cols in col_names_dict.items():
+        print(f"    {str(stype):30s}: {len(cols)} features")
+    print(f"  nfield (总特征数): {args.nfield}")
+    print(f"  nfeat: {args.nfeat}")
+    print(f"  nemb (embedding维度): {args.nemb}")
+    print(f"  MLP输入维度: {args.nfield} * {args.nemb} = {args.nfield * args.nemb}")
 
     batch_size = 256
     data_loaders = {
@@ -174,6 +199,7 @@ if __name__ == "__main__":
         for idx in ["train", "val", "test"]
     }
     train_loader = data_loaders["train"]
+    train_loader.table_data = table_data
 
     search_space = "mlp"
     rms = RunModelSelection(search_space, args)
