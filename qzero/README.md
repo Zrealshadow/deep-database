@@ -1,6 +1,6 @@
-# q_zero
+# qzero
 
-`q_zero` brings zero-cost neural architecture search (NAS) utilities to
+`qzero` brings zero-cost neural architecture search (NAS) utilities to
 [torch_frame](https://github.com/pyg-team/torch-frame) models focused on structured
 tabular data. The module groups two key parts:
 
@@ -32,8 +32,8 @@ tabular data. The module groups two key parts:
 import torch
 from torch_frame import stype
 
-from q_zero.search_space.mlp import QZeroMLP
-from q_zero.proxies.expressflow import express_flow_score
+from qzero.search_space.mlp import QZeroMLP
+from qzero.proxies.expressflow import express_flow_score
 
 # Dummy metadata — in practice take these from your Torch Frame dataset.
 col_stats = {"num_col": {}}
