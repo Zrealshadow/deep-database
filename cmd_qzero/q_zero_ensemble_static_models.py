@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
 from utils.data import TableData
-from q_zero.search_space.resnet import QZeroResNet
+from qzero.search_space.resnet import QZeroResNet
 
 
 def set_seed(seed=42):
@@ -576,7 +576,7 @@ def main():
                        help='Dataset name')
     parser.add_argument('--device', type=str, default='cuda', help='Device')
     parser.add_argument('--output_dir', type=str, 
-                       default='./result_raw_from_server/q_zero_ensemble_static',
+                       default='./result_raw_from_server/qzero_ensemble_static',
                        help='Output directory')
     
     args = parser.parse_args()
@@ -592,7 +592,7 @@ def main():
     print("="*80 + "\n")
     
     # Load config
-    with open('./q_zero_config.json', 'r') as f:
+    with open('./qzero_config.json', 'r') as f:
         config = json.load(f)
     
     # Get dataset config

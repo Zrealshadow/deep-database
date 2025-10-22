@@ -118,7 +118,7 @@ def main():
     # Config-based arguments
     parser.add_argument("--dataset_id", type=str, required=True,
                         help="Dataset ID from config (e.g., 'trial-study-outcome')")
-    parser.add_argument("--config_file", type=str, default="./q_zero_config.json",
+    parser.add_argument("--config_file", type=str, default="./qzero_config.json",
                         help="Path to config JSON")
     parser.add_argument("--val_split_ratio", type=float, default=0.1)
     

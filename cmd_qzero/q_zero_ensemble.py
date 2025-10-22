@@ -261,7 +261,7 @@ def main():
     
     # Config
     parser.add_argument("--dataset_id", type=str, required=True)
-    parser.add_argument("--config_file", type=str, default="./q_zero_config.json")
+    parser.add_argument("--config_file", type=str, default="./qzero_config.json")
     
     # Model
     parser.add_argument("--model", type=str, choices=["MLP", "ResNet", "FTTransformer"], default="ResNet")
@@ -348,7 +348,7 @@ def main():
         is_regression = False
         metric_name = "AUC"
     
-    # Build model (same style as q_zero_static.py)
+    # Build model (same style as qzero_static.py)
     stype_encoder_dict = construct_stype_encoder_dict(default_stype_encoder_cls_kwargs)
     
     # Model arguments dict (consistent style)

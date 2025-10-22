@@ -111,7 +111,7 @@ def main():
     parser = argparse.ArgumentParser(description="TabPFN Temporal Analysis - Config-Based")
     parser.add_argument("--dataset_id", type=str, required=True, 
                         help="Dataset ID from config (e.g., 'trial-study-outcome')")
-    parser.add_argument("--config_file", type=str, default="./q_zero_config.json", 
+    parser.add_argument("--config_file", type=str, default="./qzero_config.json", 
                         help="Path to config JSON")
 
     # all those can be default,
@@ -343,8 +343,8 @@ if __name__ == "__main__":
 
 """
 # Test command (Config-Based):
-python ./evl_cmd/q_zero_tabpfn.py --dataset_id trial-study-outcome
+python ./evl_cmd/qzero_tabpfn.py --dataset_id trial-study-outcome
 
 # Or with custom output:
-python ./evl_cmd/q_zero_tabpfn.py --dataset_id trial-study-outcome --output_dir ./test_output
+python ./evl_cmd/qzero_tabpfn.py --dataset_id trial-study-outcome --output_dir ./test_output
 """
