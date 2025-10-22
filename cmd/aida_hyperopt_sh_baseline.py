@@ -25,7 +25,6 @@ from utils.data import TableData
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
 
-
 def deactivate_dropout(net: torch.nn.Module):
     """Deactivate dropout layers in the model for regression task"""
     deactive_nn_instances = (
@@ -66,14 +65,14 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
 def get_search_space(trial, model_name, is_regression):
     """Get hyperparameter search space based on model type and task type"""
     model_name = model_name.lower()
-    
+
     # Model-specific search spaces
     if model_name == "mlp":
         # QZeroMLP: get search space from model class
         channel_choices = QZeroMLP.channel_choices
         blocks_choices = QZeroMLP.blocks_choices
         num_layers = trial.suggest_categorical("num_layers", blocks_choices)
-        
+
         channels = trial.suggest_categorical("channels", channel_choices)
         hidden_dims = [
             trial.suggest_categorical(f"hidden_dim_layer_{i}", channel_choices)
@@ -89,7 +88,7 @@ def get_search_space(trial, model_name, is_regression):
         channel_choices = QZeroResNet.channel_choices
         blocks_choices = QZeroResNet.blocks_choices
         num_layers = trial.suggest_categorical("num_layers", blocks_choices)
-        
+
         channels = trial.suggest_categorical("channels", channel_choices)
         block_widths = [
             trial.suggest_categorical(f"block_width_layer_{i}", channel_choices)
@@ -109,7 +108,7 @@ def get_search_space(trial, model_name, is_regression):
         }
     else:
         raise ValueError(f"Unknown model: {model_name}. Supported models: MLP, ResNet, FTTransformer")
-    
+
     return model_specific
 
 
@@ -128,7 +127,7 @@ def get_model_class(model_name):
 
 def train_final_model(best_params_dict, model_name, table_data, is_regression, evaluate_matric_func, higher_is_better):
     """Train the final model with best hyperparameters (matching dnn_baseline_table_data.py config)"""
-    
+
     print("\n" + "=" * 50)
     print("FINAL TRAINING WITH BEST HYPERPARAMETERS")
     print("=" * 50)
@@ -138,34 +137,35 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
     print("  batch_size: 256")
     print("  lr: 0.001")
     print("  max_round_epoch: 20")
-    
+
     final_train_start = time.time()
-    
+
     try:
         # Build final model with best hyperparameters
         final_search_space = get_search_space_from_params(best_params_dict, model_name)
         final_stype_encoder_dict = construct_stype_encoder_dict(default_stype_encoder_cls_kwargs)
         final_model_class = get_model_class(model_name)
-        final_model_args = get_model_args(final_search_space, model_name, table_data, final_stype_encoder_dict, is_regression)
+        final_model_args = get_model_args(final_search_space, model_name, table_data, final_stype_encoder_dict,
+                                          is_regression)
         final_net = final_model_class(**final_model_args)
-        
+
         # Training configuration (matching dnn_baseline_table_data.py)
         final_batch_size = 256
         final_lr = 0.001
         final_num_epochs = 200
         final_early_stop_threshold = 10
         final_max_round_epoch = 20
-        
+
         # Setup loss and optimizer
         if is_regression:
             final_loss_fn = L1Loss()
             deactivate_dropout(final_net)
         else:
             final_loss_fn = BCEWithLogitsLoss()
-        
+
         final_optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, final_net.parameters()), lr=final_lr)
-        
+
         # Setup data loaders
         final_data_loaders = {
             idx: torch_frame.data.DataLoader(
@@ -176,40 +176,40 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
             )
             for idx in ["train", "val", "test"]
         }
-        
+
         final_net.to(device)
         final_patience = 0
         final_best_val_metric = -math.inf if higher_is_better else math.inf
         final_best_model_state = None
-        
+
         # Training loop
         print("\nTraining...")
         for epoch in range(final_num_epochs):
             final_net.train()
             loss_accum = 0
             count_accum = 0
-            
+
             for idx, batch in enumerate(final_data_loaders["train"]):
                 if idx > final_max_round_epoch:
                     break
-                
+
                 final_optimizer.zero_grad()
                 batch = batch.to(device)
                 pred = final_net(batch)
                 pred = pred.view(-1) if pred.size(1) == 1 else pred
                 y = batch.y.float()
                 loss = final_loss_fn(pred, y)
-                
+
                 loss.backward()
                 final_optimizer.step()
                 loss_accum += loss.item()
                 count_accum += 1
-            
+
             # Validation
             val_logits, _, val_pred_hat = test(
                 final_net, final_data_loaders["val"], is_regression=is_regression)
             val_metric = evaluate_matric_func(val_pred_hat, val_logits)
-            
+
             # Early stopping
             if (higher_is_better and val_metric > final_best_val_metric) or \
                     (not higher_is_better and val_metric < final_best_val_metric):
@@ -221,32 +221,32 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
                 if final_patience > final_early_stop_threshold:
                     print(f"  Early stopped at epoch {epoch}")
                     break
-            
+
             if (epoch + 1) % 10 == 0:
-                print(f"  Epoch {epoch+1}: val_metric={val_metric:.4f}")
-        
+                print(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
+
         # Load best model and evaluate on test set
         if final_best_model_state:
             final_net.load_state_dict(final_best_model_state)
-        
+
         test_logits, _, test_pred_hat = test(
             final_net, final_data_loaders["test"], is_regression=is_regression)
         test_metric = evaluate_matric_func(test_pred_hat, test_logits)
-        
+
         final_train_end = time.time()
         final_train_time_seconds = final_train_end - final_train_start
-        
+
         print(f"\n✅ Final training completed!")
         print(f"   Best validation metric: {final_best_val_metric:.6f}")
         print(f"   Test metric: {test_metric:.6f}")
-        print(f"   Training time: {final_train_time_seconds:.2f} seconds ({final_train_time_seconds/3600:.2f} hours)")
-        
+        print(f"   Training time: {final_train_time_seconds:.2f} seconds ({final_train_time_seconds / 3600:.2f} hours)")
+
         return {
             "final_best_val_metric": final_best_val_metric,
             "final_test_metric": test_metric,
             "final_train_time_seconds": final_train_time_seconds,
         }
-        
+
     except Exception as e:
         print(f"\n❌ Final training failed: {str(e)}")
         import traceback
@@ -257,14 +257,14 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
 def get_search_space_from_params(params_dict, model_name):
     """Reconstruct search_space dict from Optuna trial params"""
     model_name = model_name.lower()
-    
+
     if model_name == "mlp" or model_name == "resnet":
         # Reconstruct the search space structure
         search_space = {
             "channels": params_dict["channels"],
             "num_layers": params_dict["num_layers"],
         }
-        
+
         if model_name == "mlp":
             # Reconstruct hidden_dims list
             hidden_dims = []
@@ -277,13 +277,13 @@ def get_search_space_from_params(params_dict, model_name):
             for i in range(params_dict["num_layers"]):
                 block_widths.append(params_dict[f"block_width_layer_{i}"])
             search_space["block_widths"] = block_widths
-    
+
     elif model_name in ["fttransformer", "fttrans"]:
         search_space = {
             "channels": params_dict["channels"],
             "num_layers": params_dict["num_layers"],
         }
-    
+
     return search_space
 
 
@@ -297,13 +297,13 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_
         "stype_encoder_dict": stype_encoder_dict,
         "col_stats": table_data.col_stats,
     }
-    
+
     # Set out_channels based on task type (not searched)
     if is_regression:
         base_args["out_channels"] = 1  # Regression: single output
     else:
         base_args["out_channels"] = 1  # Binary classification
-    
+
     # Add model-specific arguments
     model_name = model_name.lower()
     if model_name == "mlp":
@@ -320,7 +320,7 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_
     elif model_name in ["fttransformer", "fttrans"]:
         # FTTransformer: only uses channels and num_layers
         pass
-    
+
     return base_args
 
 
@@ -346,7 +346,7 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
         # Get model class and arguments using modular functions
         model_class = get_model_class(model_name)
         model_args = get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_regression)
-        
+
         # Create model instance
         net = model_class(**model_args)
 
@@ -488,21 +488,15 @@ def main():
     print(f"Task type: {table_data.task_type}")
     print(f"Optimization direction: {'maximize' if higher_is_better else 'minimize'}")
 
-    # Best practice defaults: Use HyperbandPruner and SQLite storage
+    # Use HyperbandPruner and in-memory storage (no database file)
     pruner = optuna.pruners.HyperbandPruner()
     direction = "maximize" if higher_is_better else "minimize"
 
-    # Create studies directory if it doesn't exist
-    os.makedirs("studies", exist_ok=True)
-
-    # Use SQLite storage for persistence (best practice)
-    storage_path = f"sqlite:///studies/{args.study_name}.db"
-    print(f"Using storage: {storage_path}")
+    # Use in-memory storage (no files created)
+    print(f"Using in-memory storage (no database file will be created)")
 
     study = optuna.create_study(
         study_name=args.study_name,
-        storage=storage_path,
-        load_if_exists=True,
         direction=direction,
         pruner=pruner
     )
@@ -527,7 +521,8 @@ def main():
 
     # Run optimization
     study.optimize(
-        lambda trial: model_selection(trial, table_data, is_regression, evaluate_matric_func, higher_is_better, args.model),
+        lambda trial: model_selection(trial, table_data, is_regression, evaluate_matric_func, higher_is_better,
+                                      args.model),
         n_trials=args.n_trials
     )
 
@@ -542,7 +537,7 @@ def main():
     print(f"Number of finished trials: {len(study.trials)}")
     print(f"Number of pruned trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])}")
     print(f"Number of complete trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])}")
-    print(f"Model selection time: {selection_time_seconds:.2f} seconds ({selection_time_seconds/3600:.2f} hours)")
+    print(f"Model selection time: {selection_time_seconds:.2f} seconds ({selection_time_seconds / 3600:.2f} hours)")
 
     # Prepare result data
     result_data = {
@@ -579,46 +574,44 @@ def main():
         result_data["best_params"] = str(best_trial.params)
         best_params_dict = best_trial.params
 
-    print(f"\nStudy saved to: {storage_path}")
-
     # ========== Final Training with Best Hyperparameters ==========
     if best_params_dict:
         final_results = train_final_model(
-            best_params_dict, 
-            args.model, 
-            table_data, 
-            is_regression, 
-            evaluate_matric_func, 
+            best_params_dict,
+            args.model,
+            table_data,
+            is_regression,
+            evaluate_matric_func,
             higher_is_better
         )
-        
+
         if final_results:
             result_data["final_best_val_metric"] = f"{final_results['final_best_val_metric']:.6f}"
             result_data["final_test_metric"] = f"{final_results['final_test_metric']:.6f}"
             result_data["final_train_time_seconds"] = f"{final_results['final_train_time_seconds']:.2f}"
-    
+
     # Calculate total time
     total_end_time = time.time()
     total_time_seconds = total_end_time - start_time
     result_data["total_time_seconds"] = f"{total_time_seconds:.2f}"
-    
+
     print(f"\n{'=' * 50}")
-    print(f"TOTAL TIME: {total_time_seconds:.2f} seconds ({total_time_seconds/3600:.2f} hours)")
+    print(f"TOTAL TIME: {total_time_seconds:.2f} seconds ({total_time_seconds / 3600:.2f} hours)")
     print(f"{'=' * 50}")
 
     # Save results to CSV
     output_csv = Path(args.output_csv)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Check if CSV exists to determine if we need to write header
     file_exists = output_csv.exists()
-    
+
     with open(output_csv, 'a', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=result_data.keys())
         if not file_exists:
             writer.writeheader()
         writer.writerow(result_data)
-    
+
     print(f"\n✅ Results appended to: {output_csv}")
     print(f"   Dataset: {dataset_name}, Model: {args.model}, Time: {total_time_seconds:.2f}s")
 
@@ -649,10 +642,7 @@ SEARCH SPACE:
 - NO dropout or normalization search (using model defaults: dropout=0.2, norm=layer_norm)
 
 OUTPUTS:
-1. SQLite Database: studies/{study_name}.db
-   - Contains all trial history, can be resumed if interrupted
-   
-2. CSV Results File: results/hyperopt/hyperopt_results.csv (default)
+1. CSV Results File: results/hyperopt/hyperopt_results.csv (default)
    - Automatically appends one row per experiment
    - Columns: timestamp, dataset, architecture, n_trials, n_completed, n_pruned,
              selection_time_seconds, best_val_metric, best_params,
