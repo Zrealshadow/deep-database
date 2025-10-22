@@ -32,8 +32,8 @@ class QZeroMLP(Module):
             If None, uses uniform `channels` per hidden layer (original behavior).
     """
 
-    blocks_choices = [2, 3, 4, 5]
-    channel_choices = [32, 64, 128, 256]
+    blocks_choices = [2, 3]
+    channel_choices = [64, 128, 256]
 
     def __init__(
         self,

@@ -29,8 +29,8 @@ class QZeroResNet(Module):
         block_widths (list[int] | None):each residual block width，
         length must == num_layers. if it == None，then use `channels`。
     """
-    blocks_choices = [2, 3, 4, 5]
-    channel_choices = [32, 64, 128, 256]
+    blocks_choices = [2, 3]
+    channel_choices = [64, 128, 256]
 
     def __init__(
             self,
