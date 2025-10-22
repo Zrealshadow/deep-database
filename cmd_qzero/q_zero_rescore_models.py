@@ -23,7 +23,7 @@ from typing import Tuple, Dict
 
 from utils.data import TableData
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
-from q_zero.search_space import QZeroMLP, QZeroResNet
+from qzero.search_space import QZeroMLP, QZeroResNet
 
 
 def load_existing_results(results_dir: str) -> pd.DataFrame:
@@ -92,7 +92,7 @@ def rescore_architecture_fast(
     dataset_cache: Dict,
 ) -> Tuple[float, float]:
     """
-    Re-score using QZeroMLP/QZeroResNet (same as q_zero_filter.py)
+    Re-score using QZeroMLP/QZeroResNet (same as qzero_filter.py)
     
     Load real data and use proper model creation
     """
@@ -170,11 +170,11 @@ def rescore_architecture_fast(
     
     # Call expressflow scoring
     if expressflow_version == "v1":
-        from q_zero.proxies.expressflow_v1 import express_flow_score
+        from qzero.proxies.expressflow_v1 import express_flow_score
     elif expressflow_version == "v2":
-        from q_zero.proxies.expressflow_v2 import express_flow_score
+        from qzero.proxies.expressflow_v2 import express_flow_score
     elif expressflow_version == "v3":
-        from q_zero.proxies.expressflow_v3 import express_flow_score
+        from qzero.proxies.expressflow_v3 import express_flow_score
     else:
         raise ValueError(f"Unknown expressflow_version: {expressflow_version}")
     
@@ -215,13 +215,13 @@ def main():
     parser.add_argument(
         '--results_dir',
         type=str,
-        default='./result_raw_from_server/q_zero_filter',
+        default='./result_raw_from_server/qzero_filter',
         help='Directory containing existing Q-Zero Filter results'
     )
     parser.add_argument(
         '--config_file',
         type=str,
-        default='./q_zero_config.json',
+        default='./qzero_config.json',
         help='Config file (to get num_cols for each dataset)'
     )
     parser.add_argument(

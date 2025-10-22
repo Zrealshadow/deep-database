@@ -96,7 +96,7 @@ def main():
                         help="Dataset ID from config (e.g., 'trial-study-outcome')")
     parser.add_argument("--train_group_idx", type=int, required=True,
                         help="Train group index (0-based, e.g., 0 for first group)")
-    parser.add_argument("--config_file", type=str, default="./q_zero_config.json",
+    parser.add_argument("--config_file", type=str, default="./qzero_config.json",
                         help="Path to config JSON")
     parser.add_argument("--val_split_ratio", type=float, default=0.1)
     

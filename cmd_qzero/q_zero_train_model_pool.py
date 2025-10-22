@@ -23,7 +23,7 @@ from relbench.base import TaskType
 
 from utils.data import TableData
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
-from q_zero.search_space import QZeroMLP, QZeroResNet
+from qzero.search_space import QZeroMLP, QZeroResNet
 
 
 def test(net, loader, device, is_regression=False):
@@ -68,8 +68,8 @@ def main():
     parser.add_argument('--space_name', type=str, required=True, choices=['mlp', 'resnet'], help='Search space')
     parser.add_argument('--architecture', type=str, required=True, help='Architecture (e.g., "64-128-256")')
     parser.add_argument('--model_size', type=str, required=True, choices=['small', 'medium', 'large'], help='Model size category')
-    parser.add_argument('--config_file', type=str, default='./q_zero_config.json', help='Dataset config file')
-    parser.add_argument('--output_dir', type=str, default='./result_raw_from_server/q_zero_model_performance_pool', help='Output directory')
+    parser.add_argument('--config_file', type=str, default='./qzero_config.json', help='Dataset config file')
+    parser.add_argument('--output_dir', type=str, default='./result_raw_from_server/qzero_model_performance_pool', help='Output directory')
     parser.add_argument('--device', type=str, default='cuda', help='Device')
     
     # Training parameters from dnn_baseline_table_data.py
@@ -141,7 +141,7 @@ def main():
     # Parse architecture
     arch_list = [int(x) for x in args.architecture.split('-')]
     
-    # Auto-determine encoder_channels (same formula as q_zero_filter.py)
+    # Auto-determine encoder_channels (same formula as qzero_filter.py)
     if args.space_name == 'mlp':
         channel_choices = QZeroMLP.channel_choices
         num_blocks = len(arch_list) + 1  # MLP: num_layers = len(hidden_dims) + 1

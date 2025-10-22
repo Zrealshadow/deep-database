@@ -30,8 +30,8 @@ import torch_frame.data
 
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
 from utils.data import TableData
-from q_zero.search_space import QZeroMLP, QZeroResNet
-from q_zero.proxies.expressflow import express_flow_score
+from qzero.search_space import QZeroMLP, QZeroResNet
+from qzero.proxies.expressflow import express_flow_score
 
 
 def set_seed(seed=42):
@@ -553,8 +553,8 @@ def main():
     parser = argparse.ArgumentParser(description='Q-Zero Filter: Model Selection + Fine-tuning')
     parser.add_argument('--dataset_id', type=str, required=True, help='Dataset ID (e.g., avito-ad-ctr)')
     parser.add_argument('--space_name', type=str, required=True, choices=['mlp', 'resnet'], help='Search space')
-    parser.add_argument('--config_file', type=str, default='./q_zero_config.json', help='Config file path')
-    parser.add_argument('--output_dir', type=str, default='./result_raw_from_server/q_zero_filter', help='Output directory')
+    parser.add_argument('--config_file', type=str, default='./qzero_config.json', help='Config file path')
+    parser.add_argument('--output_dir', type=str, default='./result_raw_from_server/qzero_filter', help='Output directory')
     parser.add_argument('--device', type=str, default='cuda', help='Device (cuda/cpu)')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--num_samples', type=int, default=500, help='Number of architectures to sample')
@@ -871,5 +871,5 @@ if __name__ == "__main__":
 
 """
 # 🚀 最简单的调试命令（10个架构，CPU，约2-3分钟）
-python q_zero_filter.py --dataset_id avito-ad-ctr --space_name mlp --config_file ./q_zero_config.json --device cpu --num_samples 5 --sample_batch_size 32 --seed 42
+python qzero_filter.py --dataset_id avito-ad-ctr --space_name mlp --config_file ./qzero_config.json --device cpu --num_samples 5 --sample_batch_size 32 --seed 42
 """

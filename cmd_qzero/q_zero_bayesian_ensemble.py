@@ -283,7 +283,7 @@ def main():
     
     # Config
     parser.add_argument("--dataset_id", type=str, required=True)
-    parser.add_argument("--config_file", type=str, default="./q_zero_config.json")
+    parser.add_argument("--config_file", type=str, default="./qzero_config.json")
     
     # Model checkpoints directory
     parser.add_argument("--checkpoint_dir", type=str, required=True,
