@@ -1,130 +1,160 @@
 #!/bin/bash
+# Hyperopt Baseline: Model Selection + Training Experiments
+# Search space: MLP, ResNet, FTTransformer with hyperparameter optimization
 
-# Set environment variables to avoid OpenMP conflicts
-export PYTHONPATH=$(pwd)
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-# Stop the script if any command fails
-set -e
+SCRIPT="./cmd/aida_hyperopt_sh_baseline.py"
 
-# Create results directory if it doesn't exist
-mkdir -p results/hyperopt
-
-# Create a single comprehensive results file
+# Configuration
+N_TRIALS=100
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-RESULTS_FILE="results/hyperopt/hyperopt_results_${TIMESTAMP}.txt"
 
-echo "Hyperopt Baseline Results - $(date)" > "$RESULTS_FILE"
-echo "===============================================" >> "$RESULTS_FILE"
-echo "Models: ${MODELS[*]}" >> "$RESULTS_FILE"
-echo "Data directories: ${#DATA_DIR_LIST[@]}" >> "$RESULTS_FILE"
-echo "Trials per experiment: $N_TRIALS" >> "$RESULTS_FILE"
-echo "Total experiments: $((${#MODELS[@]} * ${#DATA_DIR_LIST[@]}))" >> "$RESULTS_FILE"
-echo "===============================================" >> "$RESULTS_FILE"
-echo "" >> "$RESULTS_FILE"
+# Base data directory
+BASE_DATA_DIR="/home/lingze/embedding_fusion/data/dfs-flatten-table"
 
-# Define models to test
-MODELS=("ResNet" "FTTransformer")
+# Output directory includes configuration
+OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline_n${N_TRIALS}"
+LOG_FILE="${OUTPUT_DIR}/log_hyperopt_sh_baseline.txt"
+CSV_FILE="${OUTPUT_DIR}/hyperopt_sh_results.csv"
 
-# Define data directories
-DATA_DIR_LIST=(
-  avito-ad-ctr
-  avito-ad-ctr-dfs-depth3-feat1000-tw-1
-  avito-user-clicks
-  event-user-attendance
-  event-user-ignore
-  event-user-repeat
-  f1-driver-dnf
-  f1-driver-top3
-  ratebeer-beer-positive
-  ratebeer-place-positive
-  ratebeer-place-positive-dfs-depth3-feat1000-tw-1
-  ratebeer-user-active
-  trial-site-success
-  trial-study-adverse
-  trial-study-outcome
+# Create output directory
+mkdir -p "${OUTPUT_DIR}"
+
+# Redirect all output to log file AND console
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+echo "=========================================="
+echo "Hyperopt Baseline: Model Selection + Training"
+echo "=========================================="
+echo "Script: ${SCRIPT}"
+echo "Trials per experiment: ${N_TRIALS}"
+echo "Output: ${OUTPUT_DIR}"
+echo "Log: ${LOG_FILE}"
+echo "CSV: ${CSV_FILE}"
+echo "Started: $(date)"
+echo ""
+
+START_TIME=$(date +%s)
+
+# Dataset list (selected from /home/lingze/embedding_fusion/data/dfs-flatten-table)
+# Verified to exist on server
+DATASETS=(
+  event-user-repeat          # event user-repeat ✅
+  ratebeer-user-active       # ratebeer user-active ✅
+  trial-study-outcome        # trial study-outcome ✅
+  avito-user-clicks          # avito user-clicks ✅
+  amazon-user-churn          # amazon user-churn (hm user-churn) ✅
+  event-user-attendance      # event user-attendance ✅
+  ratebeer-beer-positive     # ratebeer beer-positive ✅
+  trial-site-success         # trial site-success ✅
+  avito-ad-ctr               # avito ad-ctr ✅
+  amazon-item-ltv            # amazon item-ltv (hm item-sales) ✅
 )
 
 
-# Number of trials for hyperparameter optimization
-N_TRIALS=100
+#==============================================================================
+# [1/3] MLP Search Space
+#==============================================================================
 
-echo "Starting Hyperopt Baseline Experiments..."
-echo "========================================"
-echo "Models: ${MODELS[*]}"
-echo "Data directories: ${#DATA_DIR_LIST[@]} directories"
-echo "Trials per experiment: $N_TRIALS"
-echo "Results will be saved to: $RESULTS_FILE"
-echo "========================================"
-echo
+echo "=========================================="
+echo "[1/3] MLP Search Space"
+echo "=========================================="
 
-# Run hyperparameter optimization for each model and data directory
-for MODEL in "${MODELS[@]}"; do
-    echo "=============== Running Hyperopt for Model: $MODEL ==============="
-    echo "=============== Running Hyperopt for Model: $MODEL ===============" >> "$RESULTS_FILE"
+for DATASET in "${DATASETS[@]}"; do
+    echo ""
+    echo "Processing: MLP on ${DATASET}"
+    python -u ${SCRIPT} \
+        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+        --model MLP \
+        --n_trials ${N_TRIALS} \
+        --study_name "MLP_${DATASET}_${TIMESTAMP}" \
+        --output_csv "${CSV_FILE}"
     
-    for DATA_DIR in "${DATA_DIR_LIST[@]}"; do
-        echo "Processing: $DATA_DIR with $MODEL"
-        echo "Processing: $DATA_DIR with $MODEL" >> "$RESULTS_FILE"
-        
-        # Create study name
-        STUDY_NAME="${MODEL}_${DATA_DIR}_${TIMESTAMP}"
-        
-        echo "Study name: $STUDY_NAME"
-        echo "Data directory: /home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR"
-        echo "----------------------------------------"
-        
-        # Run the hyperparameter optimization and capture output
-        echo "----------------------------------------" >> "$RESULTS_FILE"
-        echo "EXPERIMENT: $MODEL on $DATA_DIR" >> "$RESULTS_FILE"
-        echo "Study: $STUDY_NAME" >> "$RESULTS_FILE"
-        echo "Data: /home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR" >> "$RESULTS_FILE"
-        echo "----------------------------------------" >> "$RESULTS_FILE"
-
-        python ./cmd/hyperopt_baseline.py \
-            --data_dir "/home/lingze/embedding_fusion/data/dfs-flatten-table/$DATA_DIR" \
-            --model "$MODEL" \
-            --n_trials "$N_TRIALS" \
-            --study_name "$STUDY_NAME" \
-            >> "$RESULTS_FILE" 2>&1
-        
-        # Check if the command was successful
-        if [ $? -eq 0 ]; then
-            echo "✅ Successfully completed: $MODEL on $DATA_DIR"
-            echo "✅ SUCCESS: $MODEL on $DATA_DIR" >> "$RESULTS_FILE"
-        else
-            echo "❌ Failed: $MODEL on $DATA_DIR"
-            echo "❌ FAILED: $MODEL on $DATA_DIR" >> "$RESULTS_FILE"
-        fi
-        
-        # Clean up the database file to save space
-        if [ -f "studies/${STUDY_NAME}.db" ]; then
-            rm "studies/${STUDY_NAME}.db"
-        fi
-        
-        echo "----------------------------------------"
-        echo "----------------------------------------" >> "$RESULTS_FILE"
-        echo "" >> "$RESULTS_FILE"
-    done
-    
-    echo "=============== Finished Model: $MODEL ==============="
-    echo "=============== Finished Model: $MODEL ===============" >> "$RESULTS_FILE"
-    echo "" >> "$RESULTS_FILE"
+    if [ $? -eq 0 ]; then
+        echo "✅ MLP on ${DATASET} completed"
+    else
+        echo "❌ MLP on ${DATASET} failed"
+    fi
 done
 
-echo "========================================"
-echo "All hyperparameter optimization experiments completed!"
-echo "All results saved to: $RESULTS_FILE"
-echo "Note: Database files were cleaned up to save space"
-echo "========================================"
+echo ""
+echo "MLP Search Space Completed!"
+echo ""
 
-echo "========================================" >> "$RESULTS_FILE"
-echo "EXPERIMENT SUMMARY" >> "$RESULTS_FILE"
-echo "========================================" >> "$RESULTS_FILE"
-echo "Completed at: $(date)" >> "$RESULTS_FILE"
-echo "Models tested: ${MODELS[*]}" >> "$RESULTS_FILE"
-echo "Data directories: ${#DATA_DIR_LIST[@]}" >> "$RESULTS_FILE"
-echo "Trials per experiment: $N_TRIALS" >> "$RESULTS_FILE"
-echo "Total experiments: $((${#MODELS[@]} * ${#DATA_DIR_LIST[@]}))" >> "$RESULTS_FILE"
-echo "========================================" >> "$RESULTS_FILE"
 
-echo "All results saved to: $RESULTS_FILE"
+#==============================================================================
+# [2/3] ResNet Search Space
+#==============================================================================
+
+echo "=========================================="
+echo "[2/3] ResNet Search Space"
+echo "=========================================="
+
+for DATASET in "${DATASETS[@]}"; do
+    echo ""
+    echo "Processing: ResNet on ${DATASET}"
+    python -u ${SCRIPT} \
+        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+        --model ResNet \
+        --n_trials ${N_TRIALS} \
+        --study_name "ResNet_${DATASET}_${TIMESTAMP}" \
+        --output_csv "${CSV_FILE}"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ ResNet on ${DATASET} completed"
+    else
+        echo "❌ ResNet on ${DATASET} failed"
+    fi
+done
+
+echo ""
+echo "ResNet Search Space Completed!"
+echo ""
+
+
+#==============================================================================
+# [3/3] FTTransformer Search Space
+#==============================================================================
+
+echo "=========================================="
+echo "[3/3] FTTransformer Search Space"
+echo "=========================================="
+
+for DATASET in "${DATASETS[@]}"; do
+    echo ""
+    echo "Processing: FTTransformer on ${DATASET}"
+    python -u ${SCRIPT} \
+        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+        --model FTTransformer \
+        --n_trials ${N_TRIALS} \
+        --study_name "FTTransformer_${DATASET}_${TIMESTAMP}" \
+        --output_csv "${CSV_FILE}"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ FTTransformer on ${DATASET} completed"
+    else
+        echo "❌ FTTransformer on ${DATASET} failed"
+    fi
+done
+
+echo ""
+echo "FTTransformer Search Space Completed!"
+echo ""
+
+
+#==============================================================================
+# Summary
+#==============================================================================
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+
+echo "=========================================="
+echo "✅ Hyperopt Baseline Experiments Completed!"
+echo "=========================================="
+echo "Total time: $((ELAPSED / 3600))h $(((ELAPSED % 3600) / 60))m $((ELAPSED % 60))s"
+echo "Results: ${OUTPUT_DIR}"
+echo "CSV: ${CSV_FILE}"
+echo "Completed: $(date)"
+echo "=========================================="
