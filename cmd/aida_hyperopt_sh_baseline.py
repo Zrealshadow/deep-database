@@ -65,7 +65,7 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
 def get_search_space(trial, model_name, is_regression):
     """Get hyperparameter search space based on model type and task type"""
     model_name = model_name.lower()
-
+    
     # Model-specific search spaces
     if model_name == "mlp":
         # QZeroMLP: get search space from model class
@@ -74,9 +74,13 @@ def get_search_space(trial, model_name, is_regression):
         num_layers = trial.suggest_categorical("num_layers", blocks_choices)
 
         channels = trial.suggest_categorical("channels", channel_choices)
+        # Generate num_layers hidden_dims (because we'll pass num_layers+1 to model)
+        # Model needs: len(hidden_dims) == num_layers_passed - 1
+        # We pass: num_layers + 1
+        # So we need: len(hidden_dims) == (num_layers + 1) - 1 == num_layers
         hidden_dims = [
             trial.suggest_categorical(f"hidden_dim_layer_{i}", channel_choices)
-            for i in range(num_layers - 1)
+            for i in range(num_layers)
         ]
         model_specific = {
             "channels": channels,
@@ -108,7 +112,7 @@ def get_search_space(trial, model_name, is_regression):
         }
     else:
         raise ValueError(f"Unknown model: {model_name}. Supported models: MLP, ResNet, FTTransformer")
-
+    
     return model_specific
 
 
@@ -267,8 +271,9 @@ def get_search_space_from_params(params_dict, model_name):
 
         if model_name == "mlp":
             # Reconstruct hidden_dims list
+            # Same logic as get_search_space: generate num_layers items
             hidden_dims = []
-            for i in range(params_dict["num_layers"] - 1):
+            for i in range(params_dict["num_layers"]):
                 hidden_dims.append(params_dict[f"hidden_dim_layer_{i}"])
             search_space["hidden_dims"] = hidden_dims
         elif model_name == "resnet":
@@ -297,7 +302,7 @@ def get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_
         "stype_encoder_dict": stype_encoder_dict,
         "col_stats": table_data.col_stats,
     }
-
+    
     # Set out_channels based on task type (not searched)
     if is_regression:
         base_args["out_channels"] = 1  # Regression: single output
@@ -346,7 +351,7 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
         # Get model class and arguments using modular functions
         model_class = get_model_class(model_name)
         model_args = get_model_args(search_space, model_name, table_data, stype_encoder_dict, is_regression)
-
+        
         # Create model instance
         net = model_class(**model_args)
 
