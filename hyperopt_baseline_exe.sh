@@ -7,14 +7,16 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 SCRIPT="./cmd/aida_hyperopt_sh_baseline.py"
 
 # Configuration
-N_TRIALS=100
+N_TRIALS_MLP=100           # MLP has 108 configs
+N_TRIALS_RESNET=100        # ResNet has 108 configs
+N_TRIALS_FTTRANS=30        # FTTransformer has only 28 configs
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Base data directory
 BASE_DATA_DIR="/home/lingze/embedding_fusion/data/dfs-flatten-table"
 
-# Output directory includes configuration
-OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline_n${N_TRIALS}"
+# Output directory
+OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline"
 LOG_FILE="${OUTPUT_DIR}/log_hyperopt_sh_baseline.txt"
 CSV_FILE="${OUTPUT_DIR}/hyperopt_sh_results.csv"
 
@@ -28,7 +30,7 @@ echo "=========================================="
 echo "Hyperopt Baseline: Model Selection + Training"
 echo "=========================================="
 echo "Script: ${SCRIPT}"
-echo "Trials per experiment: ${N_TRIALS}"
+echo "Trials: MLP=${N_TRIALS_MLP}, ResNet=${N_TRIALS_RESNET}, FTTransformer=${N_TRIALS_FTTRANS}"
 echo "Output: ${OUTPUT_DIR}"
 echo "Log: ${LOG_FILE}"
 echo "CSV: ${CSV_FILE}"
@@ -63,11 +65,11 @@ echo "=========================================="
 
 for DATASET in "${DATASETS[@]}"; do
     echo ""
-    echo "Processing: MLP on ${DATASET}"
+    echo "Processing: MLP on ${DATASET} (${N_TRIALS_MLP} trials)"
     python -u ${SCRIPT} \
         --data_dir "${BASE_DATA_DIR}/${DATASET}" \
         --model MLP \
-        --n_trials ${N_TRIALS} \
+        --n_trials ${N_TRIALS_MLP} \
         --study_name "MLP_${DATASET}_${TIMESTAMP}" \
         --output_csv "${CSV_FILE}"
     
@@ -93,11 +95,11 @@ echo "=========================================="
 
 for DATASET in "${DATASETS[@]}"; do
     echo ""
-    echo "Processing: ResNet on ${DATASET}"
+    echo "Processing: ResNet on ${DATASET} (${N_TRIALS_RESNET} trials)"
     python -u ${SCRIPT} \
         --data_dir "${BASE_DATA_DIR}/${DATASET}" \
         --model ResNet \
-        --n_trials ${N_TRIALS} \
+        --n_trials ${N_TRIALS_RESNET} \
         --study_name "ResNet_${DATASET}_${TIMESTAMP}" \
         --output_csv "${CSV_FILE}"
     
@@ -123,11 +125,11 @@ echo "=========================================="
 
 for DATASET in "${DATASETS[@]}"; do
     echo ""
-    echo "Processing: FTTransformer on ${DATASET}"
+    echo "Processing: FTTransformer on ${DATASET} (${N_TRIALS_FTTRANS} trials)"
     python -u ${SCRIPT} \
         --data_dir "${BASE_DATA_DIR}/${DATASET}" \
         --model FTTransformer \
-        --n_trials ${N_TRIALS} \
+        --n_trials ${N_TRIALS_FTTRANS} \
         --study_name "FTTransformer_${DATASET}_${TIMESTAMP}" \
         --output_csv "${CSV_FILE}"
     

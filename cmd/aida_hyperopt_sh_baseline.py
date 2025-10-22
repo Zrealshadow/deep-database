@@ -229,26 +229,36 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
             if (epoch + 1) % 10 == 0:
                 print(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
 
+        # Training ends here
+        final_train_end = time.time()
+        final_train_time_seconds = final_train_end - final_train_start
+        
         # Load best model and evaluate on test set
         if final_best_model_state:
             final_net.load_state_dict(final_best_model_state)
 
+        # Inference on test set
+        print(f"\nRunning inference on test set...")
+        inference_start = time.time()
+        
         test_logits, _, test_pred_hat = test(
             final_net, final_data_loaders["test"], is_regression=is_regression)
         test_metric = evaluate_matric_func(test_pred_hat, test_logits)
-
-        final_train_end = time.time()
-        final_train_time_seconds = final_train_end - final_train_start
+        
+        inference_end = time.time()
+        inference_time_seconds = inference_end - inference_start
 
         print(f"\n✅ Final training completed!")
         print(f"   Best validation metric: {final_best_val_metric:.6f}")
         print(f"   Test metric: {test_metric:.6f}")
         print(f"   Training time: {final_train_time_seconds:.2f} seconds ({final_train_time_seconds / 3600:.2f} hours)")
+        print(f"   Inference time: {inference_time_seconds:.2f} seconds")
 
         return {
             "final_best_val_metric": final_best_val_metric,
             "final_test_metric": test_metric,
             "final_train_time_seconds": final_train_time_seconds,
+            "inference_time_seconds": inference_time_seconds,
         }
 
     except Exception as e:
@@ -558,6 +568,7 @@ def main():
         "final_best_val_metric": None,
         "final_test_metric": None,
         "final_train_time_seconds": None,
+        "inference_time_seconds": None,
         "total_time_seconds": None,
         "metric": "roc_auc" if higher_is_better else "mae",
     }
@@ -594,6 +605,7 @@ def main():
             result_data["final_best_val_metric"] = f"{final_results['final_best_val_metric']:.6f}"
             result_data["final_test_metric"] = f"{final_results['final_test_metric']:.6f}"
             result_data["final_train_time_seconds"] = f"{final_results['final_train_time_seconds']:.2f}"
+            result_data["inference_time_seconds"] = f"{final_results['inference_time_seconds']:.2f}"
 
     # Calculate total time
     total_end_time = time.time()
@@ -652,10 +664,10 @@ OUTPUTS:
    - Columns: timestamp, dataset, architecture, n_trials, n_completed, n_pruned,
              selection_time_seconds, best_val_metric, best_params,
              final_best_val_metric, final_test_metric, final_train_time_seconds,
-             total_time_seconds, metric
+             inference_time_seconds, total_time_seconds, metric
    - Perfect for tracking multiple experiments across datasets
 
-WORKFLOW (两个独立阶段，无交叉):
+WORKFLOW (三个独立阶段，无交叉):
 1. Phase 1: Model Selection (超参数搜索)
    - Time: selection_time_seconds
    - Config: 100 epochs, early_stop=5, max_round_epoch=20
@@ -663,14 +675,17 @@ WORKFLOW (两个独立阶段，无交叉):
    - Output: best_params (最佳超参数)
    
 2. Phase 2: Final Training (用最佳超参数重新训练)
-   - Time: final_train_time_seconds
+   - Time: final_train_time_seconds (只包含训练)
    - Config: 200 epochs, early_stop=10, max_round_epoch=20 (matching dnn_baseline_table_data.py)
    - Output: final_best_val_metric (完整训练验证集最佳，Early Stop的基础)
+   
+3. Phase 3: Test Inference (测试集推理)
+   - Time: inference_time_seconds
    - Output: final_test_metric (测试集性能)
    
-3. Total: total_time_seconds = selection_time_seconds + final_train_time_seconds
+4. Total: total_time_seconds = selection_time_seconds + final_train_time_seconds + inference_time_seconds
 
 EXAMPLE CSV OUTPUT:
-timestamp,dataset,architecture,n_trials,n_completed,n_pruned,selection_time_seconds,best_val_metric,best_params,final_best_val_metric,final_test_metric,final_train_time_seconds,total_time_seconds,metric
-2025-01-22 14:30:52,avito-ad-ctr,ResNet,50,32,18,12345.67,0.8567,"{'channels': 128}",0.8623,0.8645,3456.78,15802.45,roc_auc
+timestamp,dataset,architecture,n_trials,n_completed,n_pruned,selection_time_seconds,best_val_metric,best_params,final_best_val_metric,final_test_metric,final_train_time_seconds,inference_time_seconds,total_time_seconds,metric
+2025-10-22 14:22:34,trial-study-outcome,ResNet,5,4,1,24.23,0.668860,"{'num_layers': 3, ...}",0.666577,0.705441,8.30,0.45,32.54,roc_auc
 """
