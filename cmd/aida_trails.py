@@ -185,7 +185,7 @@ def prepare_sample_batch_for_proxy(
             x_encoded = x_encoded.view(x_encoded.size(0), -1)
 
     del temp_model
-    if device.startswith('cuda'):
+    if str(device).startswith('cuda'):
         torch.cuda.empty_cache()
 
     print(f"✅ Encoded features: {x_encoded.shape}")
@@ -559,7 +559,7 @@ def successive_halving(
 
             # Clean up
             del model
-            if device.startswith('cuda'):
+            if str(device).startswith('cuda'):
                 torch.cuda.empty_cache()
 
         # Sort by validation score
