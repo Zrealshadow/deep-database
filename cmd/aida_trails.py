@@ -26,12 +26,10 @@ import os
 import random
 import time
 from datetime import datetime
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict
 
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn as nn
 from torch.nn import L1Loss, BCEWithLogitsLoss
 from torch.utils.data import Subset
 from sklearn.metrics import mean_absolute_error, roc_auc_score
@@ -662,6 +660,10 @@ def train_model(
 
         # Training loop
         print("\nTraining...")
+        print("   💤 Sleeping for 5 seconds to check GPU memory...")
+        time.sleep(50)
+        print("   ✅ Sleep complete, starting training...")
+    
         for epoch in range(num_epochs):
             model.train()
             loss_accum = 0
