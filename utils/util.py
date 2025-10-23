@@ -1,4 +1,5 @@
 import gc
+import random
 import torch
 import os
 import pickle
@@ -17,9 +18,9 @@ DEFAULT_COL_DICT_NAME = "col_types.pkl"
 
 ColTypeDictHint = Union[Dict[str, Dict[str, stype]], Dict[str, stype]]
 
+
 def get_default_text_embedder_cfg():
     pass
-
 
 
 def load_col_types(
@@ -80,7 +81,6 @@ def load_np_dict(path: str) -> Dict[str, np.array]:
     return {key: loaded[key] for key in loaded.files}
 
 
-
 def to_unix_time(ser: pd.Series) -> np.ndarray:
     r"""Converts a :class:`pandas.Timestamp` series to UNIX timestamp (in seconds)."""
     assert ser.dtype in [np.dtype("datetime64[s]"), np.dtype("datetime64[ns]")]
@@ -98,3 +98,14 @@ def remove_pkey_fkey(col_to_stype: Dict[str, Any], table: Table) -> dict:
     for fkey in table.fkey_col_to_pkey_table.keys():
         if fkey in col_to_stype:
             col_to_stype.pop(fkey)
+
+
+def setup_torch(seed: int = 1998):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    torch.backends.cuda.enable_mem_efficient_sdp(False)
+    torch.backends.cuda.enable_flash_sdp(False)
+    torch.backends.cuda.enable_math_sdp(True)

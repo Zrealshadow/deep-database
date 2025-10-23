@@ -1,4 +1,5 @@
 
+from utils.logger import ModernLogger
 from utils.data import TableData
 from utils.resource import get_text_embedder_cfg
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
@@ -7,7 +8,6 @@ import math
 import torch_frame
 import argparse
 import copy
-from tqdm import tqdm
 import time
 
 from torch_frame.nn.models import MLP, ResNet, FTTransformer
@@ -27,9 +27,14 @@ device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser(description="Model configuration parser")
 
+
 parser.add_argument("--data_dir", type=str, required=True,
                     help="Path to the data directory.")
-parser.add_argument("--channels", type=int, default=128,
+
+parser.add_argument("--verbose", action="store_true", default=False,
+                    help="Enable verbose logging.")
+
+parser.add_argument("--channels", type=int, default=64,
                     help="Number of input channels.")
 parser.add_argument("--out_channels", type=int, default=1,
                     help="Number of output channels.")
@@ -59,7 +64,22 @@ parser.add_argument("--max_round_epoch", type=int,
 args = parser.parse_args()
 
 
+verbose = args.verbose
+# Initialize logger
+logger = ModernLogger(
+    name="DNN_Baseline",
+    level="info" if verbose else "critical"
+)
+
 table_data = TableData.load_from_dir(args.data_dir)
+
+# Display task information
+logger.section(f"Task: {table_data.task_type.value}")
+task_info = f"Dataset: {args.data_dir}\n"
+task_info += f"Model: {args.model}\n"
+task_info += f"Channels: {args.channels}, Layers: {args.num_layers}, Dropout: {args.dropout_prob}\n"
+task_info += f"Batch Size: {args.batch_size}, Learning Rate: {args.lr}, Epochs: {args.num_epochs}"
+logger.info_panel("Configuration", task_info)
 
 if not table_data.is_materialize:
     text_cfg = get_text_embedder_cfg(
@@ -144,7 +164,12 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
     if not is_regression:
         net.eval()
 
-    for idx, batch in tqdm(enumerate(loader), total=len(loader), leave=False, desc="Testing"):
+    if verbose:
+        progress, task_id = logger.tmp_progress(
+            total=len(loader), description="Testing")
+        progress.start()
+
+    for idx, batch in enumerate(loader):
         with torch.no_grad():
             batch = batch.to(device)
             y = batch.y.float()
@@ -152,8 +177,16 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
             pred = pred.view(-1) if pred.size(1) == 1 else pred
             pred_list.append(pred.detach().cpu())
             y_list.append(y.detach().cpu())
+
+        if verbose:
+            progress.update(task_id, advance=1)
+
         if idx > early_stop:
             break
+
+    if verbose:
+        progress.stop()
+
     pred_list = torch.cat(pred_list, dim=0)
     pred_logits = pred_list
     pred_list = torch.sigmoid(pred_list)
@@ -170,13 +203,19 @@ patience = 0
 best_epoch = 0
 best_val_metric = -math.inf if higher_is_better else math.inf
 best_model_state = None
+start_time = time.time()
 for epoch in range(num_epochs):
     loss_accum = count_accum = 0
     net.train()
-    for idx, batch in tqdm(enumerate(data_loaders["train"]),
-                           leave=False,
-                           total=len(data_loaders["train"]),
-                           desc=f"Epoch {epoch} =>"):
+
+    if verbose:
+        progress, task_id = logger.tmp_progress(
+            total=min(len(data_loaders["train"]), max_round_epoch + 1),
+            description=f"Epoch {epoch}"
+        )
+        progress.start()
+
+    for idx, batch in enumerate(data_loaders["train"]):
 
         if idx > max_round_epoch:
             break
@@ -193,14 +232,21 @@ for epoch in range(num_epochs):
         loss_accum += loss.item()
         count_accum += 1
 
+        if verbose:
+            progress.update(task_id, advance=1)
+
+    if verbose:
+        progress.stop()
+
     train_loss = loss_accum / count_accum
     val_logits, _, val_pred_hat = test(
         net, data_loaders["val"], is_regression=is_regression)
 
     val_metric = evaluate_matric_func(val_pred_hat, val_logits)
 
-    print(
-        f"==> Epcoh: {epoch} => Train Loss: {train_loss:.6f}, Val {evaluate_matric_func.__name__} Metric: {val_metric:.6f}")
+    if verbose:
+        logger.info(
+            f"Epoch {epoch} | Train Loss: {train_loss:.6f} | Val {evaluate_matric_func.__name__}: {val_metric:.6f}")
     if (higher_is_better and val_metric > best_val_metric) or \
        (not higher_is_better and val_metric < best_val_metric):
         best_val_metric = val_metric
@@ -212,14 +258,21 @@ for epoch in range(num_epochs):
             net, data_loaders["test"], is_regression=is_regression)
         test_metric = evaluate_matric_func(test_pred_hat, test_logits)
 
-        print(
-            f"Update the best scores => Test {evaluate_matric_func.__name__} Metric: {test_metric:.6f}")
+        if verbose:
+            logger.info(
+                f"Updated best scores | Test {evaluate_matric_func.__name__}: {test_metric:.6f}")
     else:
         patience += 1
         if patience > early_stop_threshold:
-            print(f"Early stopping at epoch {epoch}")
+            if verbose:
+                logger.warning(f"Early stopping at epoch {epoch}")
             break
+end_time = time.time()
+training_duration = end_time - start_time
 
+logger.success(
+    f"Training completed in {training_duration:.2f}s | Best Val {evaluate_matric_func.__name__}: {best_val_metric:.6f} at epoch {best_epoch}"
+)
 
 start_time = time.time()
 net.load_state_dict(best_model_state)
@@ -229,5 +282,5 @@ test_metric = evaluate_matric_func(test_pred_hat, test_logits)
 end_time = time.time()
 inference_time = end_time - start_time
 
-print(
-    f"Test {evaluate_matric_func.__name__} Metric: {test_metric:.6f}, Inference Time: {inference_time:.2f} seconds")
+logger.success(
+    f"Final Test {evaluate_matric_func.__name__}: {test_metric:.6f} | Inference Time: {inference_time:.2f}s")

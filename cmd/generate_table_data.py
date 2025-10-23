@@ -31,6 +31,8 @@ np.random.seed(2025)
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+from utils.logger import ModernLogger
+
 parser = argparse.ArgumentParser(description="Process user attendance task.")
 
 parser.add_argument("--dbname", type=str, default="event",
@@ -60,10 +62,20 @@ parser.add_argument("--n_jobs", type=int, default=1,
                     help="Number of parallel jobs for processing. Default is 1.")
 # a flag, if add the args in output dir name
 parser.add_argument("--cfg", action='store_true', default=False)
+parser.add_argument("--verbose", action="store_false", default=True,
+                    help="Enable verbose logging.")
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
+
+    verbose = args.verbose
+
+    # Initialize logger
+    logger = ModernLogger(
+        name="GenerateTableData",
+        level="info" if verbose else "critical"
+    )
 
     dbname = args.dbname
     task_name = args.task_name
@@ -81,6 +93,21 @@ if __name__ == "__main__":
 
     selection_cfg = args.selection
 
+    # Display configuration
+    logger.section(f"Generate Table Data: {dbname} - {task_name}")
+    config_info = f"Database: {dbname}\n"
+    config_info += f"Task: {task_name}\n"
+    config_info += f"Sample Size: {'All' if sample_size == -1 else sample_size}\n"
+    config_info += f"DFS Enabled: {use_dfs}\n"
+    if use_dfs:
+        config_info += f"DFS Max Depth: {dfs_max_depth}\n"
+        config_info += f"DFS Max Features: {dfs_max_features}\n"
+        config_info += f"DFS Time Window: {'Unlimited' if dfs_number_timedelta == -1 else f'{dfs_number_timedelta} days'}\n"
+        config_info += f"Feature Selection: {selection_cfg}\n"
+        config_info += f"Parallel Jobs: {dfs_n_jobs}"
+    logger.info_panel("Configuration", config_info)
+
+    logger.info("Loading database and task...")
     db = DatabaseFactory.get_db(
         db_name=dbname,
         cache_dir=db_cache_dir,
@@ -98,6 +125,7 @@ if __name__ == "__main__":
         task_name=task_name,
         dataset=dataset,
     )
+    logger.success("Database and task loaded successfully")
 
     # ------------TODO: code support "avito" dataset ---------------
     # because there are many null in foreign key columns, which raise error in featuretools dfs
@@ -113,7 +141,7 @@ if __name__ == "__main__":
             dropped_instance_num = table.df.shape[0] - df_.shape[0]
             table.df = df_
             if dropped_instance_num > 0:
-                print(f"Table {table_name} drops {dropped_instance_num}")
+                logger.warning(f"Table {table_name} dropped {dropped_instance_num} rows with null foreign keys")
 
             # not allowed to reindex
 
@@ -123,8 +151,7 @@ if __name__ == "__main__":
                 pkey_name = table_name + "_id"
                 table.df[pkey_name] = range(len(table.df))
                 table.pkey_col = pkey_name
-                print(
-                    f"Table {table_name} has no pkey, add column {pkey_name} as pkey.")
+                logger.info(f"Table {table_name} has no primary key, added column {pkey_name} as primary key")
 
     if dbname == "amazon":
         # TODO put it in dataset class
@@ -167,7 +194,7 @@ if __name__ == "__main__":
 
     selected_columns = []
     if use_dfs:
-        print(f"==> Using Deep Feature Synthesis(DFS) to augment features")
+        logger.section("Deep Feature Synthesis (DFS)")
 
         # initialize the EntitySet for featuretools dfs.
         for table_name, table in db.table_dict.items():
@@ -182,8 +209,7 @@ if __name__ == "__main__":
                 # =================== TODO:code supports "event" dataset =================
                 if dbname == "event" and (db.table_dict[pkey_table].df[pkey_table_pkey_col].hasnans or
                                           db.table_dict[table_name].df[fkey_col].hasnans):
-                    print(
-                        f"There is null in relationship values: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}")
+                    logger.warning(f"Null values in relationship: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}, skipping")
                     continue
                 # ====[Special case] need incorporates the logic into Dataset class =============
 
@@ -204,7 +230,7 @@ if __name__ == "__main__":
 
         build_es_end_time = time.time()
         build_es_duration = build_es_end_time - build_es_start_time
-        print(f"==> EntitySet built in {build_es_duration:.2f} seconds")
+        logger.success(f"EntitySet built in {build_es_duration:.2f}s")
 
         dfs_kwargs = {
             'entityset': es,
@@ -213,15 +239,11 @@ if __name__ == "__main__":
             'max_features': dfs_max_features,
             'training_window': time_window,
             'n_jobs': dfs_n_jobs,
-            # 'verbose': True,
+            'verbose': verbose,
             'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
         }
-        # print the dfs important args
-        print(f"==> DFS args: max_depth={dfs_max_depth}, \
-                max_features={dfs_max_features}, \
-                time_window={time_window}, \
-                n_jobs={dfs_n_jobs}, \
-                time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} minutes'}")
+        # Log DFS parameters
+        logger.info(f"DFS Parameters: max_depth={dfs_max_depth}, max_features={dfs_max_features}, time_window={time_window}, n_jobs={dfs_n_jobs}, time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} min'}")
 
     # ---------------- generate the feature matrix for each split
     feature_matrix_n = None  # number of features in feature matrix in dfs
@@ -261,7 +283,7 @@ if __name__ == "__main__":
         cutoff_times['time'] = table.df[task.time_col]
 
         split_start_time = time.time()
-        print(f"==> Starting DFS for {split} split...")
+        logger.info(f"Starting DFS for {split} split...")
 
         dfs_kwargs['cutoff_time'] = cutoff_times
 
@@ -269,8 +291,7 @@ if __name__ == "__main__":
 
         split_end_time = time.time()
         split_duration = split_end_time - split_start_time
-        print(
-            f"==> DFS for {split} split completed in {split_duration:.2f} seconds")
+        logger.success(f"DFS for {split} split completed in {split_duration:.2f}s")
 
         # assertion that generated features in training is equal to val/test
         if not feature_matrix_n:
@@ -283,7 +304,6 @@ if __name__ == "__main__":
             if not selection_cfg:
                 selected_columns = feature_matrix.columns.tolist()
             else:
-                print(f"==> Using feature selection to select features ...")
                 start_time = time.time()
                 fm = remove_highly_null_features(feature_matrix)
                 fm = remove_single_value_features(fm)
@@ -291,10 +311,8 @@ if __name__ == "__main__":
                 selected_columns = fm.columns.tolist()
                 end_time = time.time()
                 duration = end_time - start_time
-                print(
-                    f"==> Feature selection completed in {duration:.2f} seconds")
-                print(
-                    f"==> Selected {len(selected_columns)}/{len(feature_matrix.columns)} features after selection")
+                logger.success(f"Feature selection completed in {duration:.2f}s")
+                logger.success(f"Selected {len(selected_columns)}/{len(feature_matrix.columns)} features")
 
         feature_matrix = feature_matrix[selected_columns]
 
@@ -310,8 +328,8 @@ if __name__ == "__main__":
 
     process_end_time = time.time()
     overall_duration = process_end_time - process_start_time
-    print(
-        f"==> Overall processing completed in {overall_duration:.2f} seconds ({overall_duration/60:.2f} minutes)")
+    logger.section("Processing Complete")
+    logger.success(f"Overall processing completed in {overall_duration:.2f}s ({overall_duration/60:.2f} min)")
 
     # ------------------ Construct Table for type inference
     object_table = Table(
@@ -325,7 +343,7 @@ if __name__ == "__main__":
     table_col_types = infer_type_in_table(
         object_table,
         " ",
-        verbose=True
+        verbose=verbose
     )
 
     remove_pkey_fkey(
@@ -363,6 +381,7 @@ if __name__ == "__main__":
     if table_output_dir:
         path = os.path.join(table_output_dir, dirname)
 
+
         text_embedder_cfg = get_text_embedder_cfg()
         data.materilize(
             col_to_text_embedder_cfg=text_embedder_cfg,
@@ -372,5 +391,4 @@ if __name__ == "__main__":
             path
         )
 
-        print(
-            f"==> Table in task {task_name} in database {dbname} is saved to {path}")
+        logger.file_saved(path, f"{dbname}-{task_name}")
