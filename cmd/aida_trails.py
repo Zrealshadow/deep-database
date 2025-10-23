@@ -86,6 +86,11 @@ def create_evaluation_function(
         except Exception as e:
             print(f"  ⚠️  Error computing proxy for arch {arch}: {e}")
             score = -1e10  # Very low score for failed architectures
+        finally:
+            # Clean up after each evaluation
+            if str(device).startswith('cuda'):
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
         return float(score)
 
@@ -472,11 +477,15 @@ def diversity_based_selection(
         if top_models:
             print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
         
-        # Clean up space_instance
+        # Clean up space_instance and force garbage collection
         del space_instance
         if str(device).startswith('cuda'):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
 
     print(f"\n   📊 Total selected models: {len(all_results)}")
     print(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
@@ -570,6 +579,10 @@ def successive_halving(
             if str(device).startswith('cuda'):
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
+            
+            # Force garbage collection
+            import gc
+            gc.collect()
 
         # Sort by validation score
         if is_regression:
