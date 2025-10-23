@@ -61,8 +61,8 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
     y_list = []
     early_stop = early_stop if early_stop > 0 else len(loader.dataset)
 
-    # Always set eval mode for consistent evaluation behavior
-    net.eval()
+    if not is_regression:
+        net.eval()
 
     for idx, batch in tqdm(enumerate(loader), total=len(loader), leave=False, desc="Testing"):
         with torch.no_grad():
@@ -760,7 +760,8 @@ def train_model(
 
             # Calculate metric
             if is_regression:
-                val_metric = mean_absolute_error(val_pred_hat, val_logits)
+                # For regression, use raw logits (not sigmoided values)
+                val_metric = mean_absolute_error(val_logits, val_pred_hat)
             else:
                 if len(np.unique(val_pred_hat)) > 1:
                     val_metric = roc_auc_score(val_pred_hat, val_logits)
@@ -818,7 +819,8 @@ def evaluate_model(
 
     # Calculate metric
     if is_regression:
-        metric = mean_absolute_error(test_y, test_pred_hat)
+        # For regression, use raw logits (not sigmoided values)
+        metric = mean_absolute_error(test_y, test_logits)
     else:
         if len(np.unique(test_y)) > 1:
             metric = roc_auc_score(test_y, test_pred_hat)
