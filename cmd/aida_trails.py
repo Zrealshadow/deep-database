@@ -876,7 +876,7 @@ def main():
         'final_best_val_metric': best_val_score,
         'final_test_metric': test_metric,
         'best_params': str(best_arch),
-        'metric': 'MAE' if is_regression else 'AUC',
+        'metric': 'mae' if is_regression else 'roc_auc',
     }
 
     # Write to CSV
