@@ -119,3 +119,13 @@ class QZeroMLP(Module):
         return: [B, out_channels]
         """
         return self.mlp(x)
+
+    def estimate_capacity(self, include_bias: bool = True) -> int:
+        """Head capacity (Linear params only; exclude encoder)."""
+        n = 0
+        for m in self.mlp.modules():
+            if isinstance(m, Linear):
+                n += m.in_features * m.out_features
+                if include_bias and (m.bias is not None):
+                    n += m.out_features
+        return n
