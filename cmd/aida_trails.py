@@ -532,6 +532,9 @@ def diversity_based_selection(
         print(f"     Selected top {len(top_models)} models")
         if top_models:
             print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
+            print(f"     📋 {size_group.upper()} group selected models:")
+            for i, (arch, score) in enumerate(top_models):
+                print(f"       {i+1}. {arch} (score: {score:.4f})")
 
         # Clean up space_instance and force garbage collection
         if str(device).startswith('cuda'):
@@ -544,6 +547,14 @@ def diversity_based_selection(
 
     print(f"\n   📊 Total selected models: {len(all_results)}")
     print(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
+    
+    # Print summary of all selected models by group
+    print(f"\n   🎯 FINAL SELECTED MODELS SUMMARY:")
+    for size_group, group_architectures in [('small', small_archs), ('medium', medium_archs), ('large', large_archs)]:
+        group_models = [(arch, score, group, val_score) for arch, score, group, val_score in all_results if group == size_group]
+        print(f"   📋 {size_group.upper()} GROUP ({len(group_models)} models):")
+        for i, (arch, score, group, val_score) in enumerate(group_models):
+            print(f"     {i+1}. {arch} (proxy_score: {score:.4f})")
 
     return all_results
 
