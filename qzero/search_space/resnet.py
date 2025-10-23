@@ -23,9 +23,10 @@ from torch_frame.nn.encoder.stype_encoder import (
 )
 from torch_frame.nn.encoder.stypewise_encoder import StypeWiseFeatureEncoder
 from torch_frame.nn.models.resnet import FCResidualBlock
+from qzero.search_space.space_base import BaseSearchSpace
 
 
-class QZeroResNet(Module):
+class QZeroResNet(Module, BaseSearchSpace):
     r"""q-zero:  Modified from from torch_frame.nn.models.resnet
         block_widths (list[int] | None):each residual block width，
         length must == num_layers. if it == None，then use `channels`。
@@ -148,4 +149,53 @@ class QZeroResNet(Module):
                 if include_bias and (m.bias is not None):
                     n += m.out_features
         return n
+
+    @staticmethod
+    def mutate_architecture(architecture: list[int], mutation_rate: float = 0.3) -> list[int]:
+        """
+        Mutate an architecture by randomly changing some channels
+        
+        Args:
+            architecture: Original architecture (list of channel sizes)
+            mutation_rate: Probability of mutating each channel
+        
+        Returns:
+            Mutated architecture
+        """
+        import random
+        
+        mutated = architecture.copy()
+        
+        for i in range(len(mutated)):
+            if random.random() < mutation_rate:
+                # Mutate this channel
+                mutated[i] = random.choice(QZeroResNet.channel_choices_large)
+        
+        return mutated
+
+    @staticmethod
+    def crossover_architectures(parent1: list[int], parent2: list[int]) -> tuple[list[int], list[int]]:
+        """
+        Crossover two architectures to create two children
+        
+        Args:
+            parent1: First parent architecture
+            parent2: Second parent architecture
+        
+        Returns:
+            Two child architectures
+        """
+        if len(parent1) != len(parent2):
+            # If different lengths, return parents unchanged
+            return parent1.copy(), parent2.copy()
+
+        # Single-point crossover
+        import random
+        crossover_point = random.randint(1, len(parent1) - 1)
+
+        child1 = parent1[:crossover_point] + parent2[crossover_point:]
+        child2 = parent2[:crossover_point] + parent1[crossover_point:]
+
+        return child1, child2
+
 
