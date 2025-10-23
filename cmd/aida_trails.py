@@ -548,15 +548,29 @@ def diversity_based_selection(
     print(f"\n   📊 Total selected models: {len(all_results)}")
     print(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
     
+    # Remove duplicates based on architecture (keep the one with highest score)
+    print(f"\n   🔄 Removing duplicates...")
+    unique_results = {}
+    for arch, score, group, val_score in all_results:
+        arch_key = tuple(arch)  # Convert to tuple for hashing
+        if arch_key not in unique_results or score > unique_results[arch_key][1]:
+            unique_results[arch_key] = (arch, score, group, val_score)
+    
+    # Convert back to list and sort by score
+    deduplicated_results = list(unique_results.values())
+    deduplicated_results.sort(key=lambda x: x[1], reverse=True)  # Sort by proxy score
+    
+    print(f"   ✅ After deduplication: {len(deduplicated_results)} unique models")
+    
     # Print summary of all selected models by group
     print(f"\n   🎯 FINAL SELECTED MODELS SUMMARY:")
     for size_group, group_architectures in [('small', small_archs), ('medium', medium_archs), ('large', large_archs)]:
-        group_models = [(arch, score, group, val_score) for arch, score, group, val_score in all_results if group == size_group]
+        group_models = [(arch, score, group, val_score) for arch, score, group, val_score in deduplicated_results if group == size_group]
         print(f"   📋 {size_group.upper()} GROUP ({len(group_models)} models):")
         for i, (arch, score, group, val_score) in enumerate(group_models):
             print(f"     {i+1}. {arch} (proxy_score: {score:.4f})")
 
-    return all_results
+    return deduplicated_results
 
 
 def successive_halving(
