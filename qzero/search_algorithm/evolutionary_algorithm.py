@@ -56,7 +56,7 @@ def evolutionary_algorithm(
     assert generations > 0, "EA requires at least 1 generation"
 
     # Initialize tracking variables
-    best_individuals = []  # Track best individuals across all generations
+    best_individuals = []  # Track the best individuals across all generations
 
     # Evolution loop
     for generation in range(generations):
