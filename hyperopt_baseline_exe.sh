@@ -58,61 +58,61 @@ DATASETS=(
 #==============================================================================
 # [1/3] MLP Search Space
 #==============================================================================
-
-echo "=========================================="
-echo "[1/3] MLP Search Space"
-echo "=========================================="
-
-for DATASET in "${DATASETS[@]}"; do
-    echo ""
-    echo "Processing: MLP on ${DATASET} (${N_TRIALS_MLP} trials)"
-    python -u ${SCRIPT} \
-        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
-        --model MLP \
-        --n_trials ${N_TRIALS_MLP} \
-        --study_name "MLP_${DATASET}_${TIMESTAMP}" \
-        --output_csv "${CSV_FILE}"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ MLP on ${DATASET} completed"
-    else
-        echo "❌ MLP on ${DATASET} failed"
-    fi
-done
-
-echo ""
-echo "MLP Search Space Completed!"
-echo ""
+#
+#echo "=========================================="
+#echo "[1/3] MLP Search Space"
+#echo "=========================================="
+#
+#for DATASET in "${DATASETS[@]}"; do
+#    echo ""
+#    echo "Processing: MLP on ${DATASET} (${N_TRIALS_MLP} trials)"
+#    python -u ${SCRIPT} \
+#        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+#        --model MLP \
+#        --n_trials ${N_TRIALS_MLP} \
+#        --study_name "MLP_${DATASET}_${TIMESTAMP}" \
+#        --output_csv "${CSV_FILE}"
+#
+#    if [ $? -eq 0 ]; then
+#        echo "✅ MLP on ${DATASET} completed"
+#    else
+#        echo "❌ MLP on ${DATASET} failed"
+#    fi
+#done
+#
+#echo ""
+#echo "MLP Search Space Completed!"
+#echo ""
 
 
 #==============================================================================
 # [2/3] ResNet Search Space
 #==============================================================================
-
-echo "=========================================="
-echo "[2/3] ResNet Search Space"
-echo "=========================================="
-
-for DATASET in "${DATASETS[@]}"; do
-    echo ""
-    echo "Processing: ResNet on ${DATASET} (${N_TRIALS_RESNET} trials)"
-    python -u ${SCRIPT} \
-        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
-        --model ResNet \
-        --n_trials ${N_TRIALS_RESNET} \
-        --study_name "ResNet_${DATASET}_${TIMESTAMP}" \
-        --output_csv "${CSV_FILE}"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ ResNet on ${DATASET} completed"
-    else
-        echo "❌ ResNet on ${DATASET} failed"
-    fi
-done
-
-echo ""
-echo "ResNet Search Space Completed!"
-echo ""
+#
+#echo "=========================================="
+#echo "[2/3] ResNet Search Space"
+#echo "=========================================="
+#
+#for DATASET in "${DATASETS[@]}"; do
+#    echo ""
+#    echo "Processing: ResNet on ${DATASET} (${N_TRIALS_RESNET} trials)"
+#    python -u ${SCRIPT} \
+#        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+#        --model ResNet \
+#        --n_trials ${N_TRIALS_RESNET} \
+#        --study_name "ResNet_${DATASET}_${TIMESTAMP}" \
+#        --output_csv "${CSV_FILE}"
+#
+#    if [ $? -eq 0 ]; then
+#        echo "✅ ResNet on ${DATASET} completed"
+#    else
+#        echo "❌ ResNet on ${DATASET} failed"
+#    fi
+#done
+#
+#echo ""
+#echo "ResNet Search Space Completed!"
+#echo ""
 
 
 #==============================================================================
