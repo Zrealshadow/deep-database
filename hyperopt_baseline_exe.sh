@@ -4,7 +4,7 @@
 
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-SCRIPT="./cmd/aida_hyperopt_sh_baseline.py"
+SCRIPT="./cmd/aida_fit_best_baseline.py"
 
 # Configuration
 N_TRIALS_MLP=100           # MLP has 108 configs
