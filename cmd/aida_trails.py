@@ -41,6 +41,7 @@ from utils.data import TableData
 from qzero.search_space import QZeroMLP, QZeroResNet
 from qzero.proxies.expressflow import express_flow_score
 from qzero.search_algorithm import evolutionary_algorithm
+from relbench.base import TaskType
 
 
 def deactivate_dropout(net: torch.nn.Module):
@@ -60,8 +61,8 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
     y_list = []
     early_stop = early_stop if early_stop > 0 else len(loader.dataset)
 
-    if not is_regression:
-        net.eval()
+    # Always set eval mode for consistent evaluation behavior
+    net.eval()
 
     for idx, batch in tqdm(enumerate(loader), total=len(loader), leave=False, desc="Testing"):
         with torch.no_grad():
@@ -81,8 +82,13 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
 
 
 def create_evaluation_function(
-        space_instance,
         sample_batch_x: torch.Tensor,
+        table_data: TableData,
+        col_stats: Dict,
+        col_names_dict: Dict,
+        stype_encoder_dict: Dict,
+        out_channels: int,
+        space_name: str,
 ):
     """
     Create an evaluation function with bound parameters
@@ -90,21 +96,51 @@ def create_evaluation_function(
     Args:
         space_instance: Instance of QZeroMLP or QZeroResNet
         sample_batch_x: encoded features
-        device: device to use
+        table_data: TableData object
+        col_stats: column statistics
+        col_names_dict: column names dictionary
+        stype_encoder_dict: stype encoder dictionary
+        out_channels: output channels
+        space_name: 'mlp' or 'resnet'
     
     Returns:
         Callable function that takes architecture and returns score
     """
 
     def evaluate_func(arch: List[int]) -> float:
-        # Get the network directly from the space instance
-        if isinstance(space_instance, QZeroMLP):
-            net_for_proxy = space_instance.mlp
-        else:  # QZeroResNet
-            net_for_proxy = space_instance.backbone
-
-        # Compute ExpressFlow score
+        # Dynamically build model based on arch parameter
         try:
+            num_cols = get_num_cols(table_data)
+            if space_name == 'mlp':
+                # Create MLP with specific architecture
+                model = QZeroMLP(
+                    channels=num_cols,
+                    out_channels=out_channels,
+                    num_layers=len(arch) + 1,
+                    col_stats=col_stats,
+                    col_names_dict=col_names_dict,
+                    stype_encoder_dict=stype_encoder_dict,
+                    hidden_dims=arch,
+                    normalization='layer_norm',
+                    dropout_prob=0.2,
+                ).to(device)
+                net_for_proxy = model.mlp
+            else:  # resnet
+                # Create ResNet with specific architecture
+                model = QZeroResNet(
+                    channels=num_cols,
+                    out_channels=out_channels,
+                    num_layers=len(arch),
+                    col_stats=col_stats,
+                    col_names_dict=col_names_dict,
+                    stype_encoder_dict=stype_encoder_dict,
+                    block_widths=arch,
+                    normalization='layer_norm',
+                    dropout_prob=0.2,
+                ).to(device)
+                net_for_proxy = model.backbone
+
+            # Compute ExpressFlow score
             score, _ = express_flow_score(
                 arch=net_for_proxy,
                 batch_data=sample_batch_x,
@@ -115,6 +151,10 @@ def create_evaluation_function(
                 weight_mode="traj_width",
                 use_fp64=False,
             )
+
+            # Clean up model
+            del model
+
         except Exception as e:
             print(f"  ⚠️  Error computing proxy for arch {arch}: {e}")
             score = -1e10  # Very low score for failed architectures
@@ -419,7 +459,6 @@ def diversity_based_selection(
         out_channels: int,
         models_per_size: int = 5,
 ) -> List[Tuple[List[int], float, str, float]]:
-
     print(f"\n🎯 Diversity-Based Selection")
     print(f"   Pre-calculating capacities and grouping by size")
     print(f"   Keeping top {models_per_size} from each size group")
@@ -453,47 +492,32 @@ def diversity_based_selection(
 
         print(f"\n   🔍 Running EA for {size_group} models...")
 
-        # Create space instance for EA
-        num_cols = get_num_cols(table_data)
-        if space_name == 'mlp':
-            space_instance = QZeroMLP(
-                channels=num_cols,
-                out_channels=out_channels,
-                num_layers=2,  # Will be overridden in EA
-                col_stats=col_stats,
-                col_names_dict=col_names_dict,
-                stype_encoder_dict=stype_encoder_dict,
-                hidden_dims=[num_cols],
-                normalization='layer_norm',
-                dropout_prob=0.2,
-            )
-        else:  # resnet
-            space_instance = QZeroResNet(
-                channels=num_cols,
-                out_channels=out_channels,
-                num_layers=2,  # Will be overridden in EA
-                col_stats=col_stats,
-                col_names_dict=col_names_dict,
-                stype_encoder_dict=stype_encoder_dict,
-                block_widths=[num_cols, num_cols],
-                normalization='layer_norm',
-                dropout_prob=0.2,
-            )
-
         # Create evaluation function
         evaluate_func = create_evaluation_function(
-            space_instance=space_instance,
             sample_batch_x=sample_batch_x,
+            table_data=table_data,
+            col_stats=col_stats,
+            col_names_dict=col_names_dict,
+            stype_encoder_dict=stype_encoder_dict,
+            out_channels=out_channels,
+            space_name=space_name,
         )
 
-        # Run EA for this size group
+        # Run EA for this size group with constrained search space
+        # Get the model class for EA
+        if space_name == 'mlp':
+            model_class = QZeroMLP
+        else:  # resnet
+            model_class = QZeroResNet
         ea_results = evolutionary_algorithm(
-            space_instance=space_instance,
+            model_class=model_class,
             evaluate_func=evaluate_func,
             population_size=20,  # Smaller population for each group
             generations=5,  # Fewer generations for each group
             elite_size=5,
             mutation_rate=0.3,
+            # Constrain search to architectures from this size group
+            allowed_architectures=group_architectures,
         )
 
         # Keep top models from this size group
@@ -510,7 +534,6 @@ def diversity_based_selection(
             print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
 
         # Clean up space_instance and force garbage collection
-        del space_instance
         if str(device).startswith('cuda'):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
@@ -833,9 +856,12 @@ def main():
     print(f"\n📂 Loading data...")
     table_data = TableData.load_from_dir(args.data_dir)
 
-    # Determine task type
-    is_regression = 'regression' in args.data_dir.lower() or 'mae' in args.data_dir.lower()
-    print(f"Task type: {'regression' if is_regression else 'classification'}")
+    # Determine task type (same as aida_fit_best_baseline.py)
+    if table_data.task_type == TaskType.REGRESSION:
+        is_regression = True
+    else:
+        is_regression = False
+    print(f"Task type: {table_data.task_type}")
 
     # Prepare sample batch for proxy evaluation
     x_encoded = prepare_sample_batch_for_proxy(

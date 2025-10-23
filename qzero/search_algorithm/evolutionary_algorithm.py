@@ -6,29 +6,31 @@ neural network architectures using genetic operations and proxy evaluation.
 """
 
 import random
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Type
 
 from qzero.search_space.space_base import BaseSearchSpace
 
 
 def evolutionary_algorithm(
-        space_instance: BaseSearchSpace,
+        model_class: Type[BaseSearchSpace],
         evaluate_func,
         population_size: int = 50,
         generations: int = 20,
         elite_size: int = 10,
         mutation_rate: float = 0.3,
+        allowed_architectures: List[List[int]] = None,
 ) -> List[Tuple[List[int], float]]:
     """
     Run evolutionary algorithm to find best architectures
     
     Args:
-        space_instance: Instance of BaseSearchSpace (e.g., QZeroMLP or QZeroResNet)
+        model_class: Model class that inherits from BaseSearchSpace (e.g., QZeroMLP or QZeroResNet)
         evaluate_func: Callable function to evaluate architecture (arch: List[int]) -> float
         population_size: Size of population
         generations: Number of generations
         elite_size: Number of elite individuals to keep
         mutation_rate: Probability of mutation
+        allowed_architectures: Optional list of allowed architectures to constrain search
     
     Returns:
         List of (architecture, score) tuples sorted by score
@@ -42,15 +44,20 @@ def evolutionary_algorithm(
     # Assert that generations > 0 (EA requires at least 1 generation)
     assert generations > 0, "EA requires at least 1 generation"
 
-    # Get search space choices from the instance
-    blocks_choices = space_instance.blocks_choices_large
-    channel_choices = space_instance.channel_choices_large
+    # Get search space choices from the model class
+    blocks_choices = model_class.blocks_choices_large
+    channel_choices = model_class.channel_choices_large
 
     # Initialize population
     population = []
     for _ in range(population_size):
-        num_blocks = random.choice(blocks_choices)
-        arch = [random.choice(channel_choices) for _ in range(num_blocks)]
+        if allowed_architectures:
+            # If constrained, sample from allowed architectures
+            arch = random.choice(allowed_architectures).copy()
+        else:
+            # If not constrained, sample from full space
+            num_blocks = random.choice(blocks_choices)
+            arch = [random.choice(channel_choices) for _ in range(num_blocks)]
         population.append(arch)
 
     print(f"   Initialized population of {len(population)} architectures")
@@ -100,11 +107,11 @@ def evolutionary_algorithm(
             parent2 = random.choice(elite)
 
             # Crossover
-            child1, child2 = space_instance.crossover_architectures(parent1, parent2)
+            child1, child2 = model_class.crossover_architectures(parent1, parent2)
 
             # Mutate
-            child1 = space_instance.mutate_architecture(child1, mutation_rate)
-            child2 = space_instance.mutate_architecture(child2, mutation_rate)
+            child1 = model_class.mutate_architecture(child1, mutation_rate)
+            child2 = model_class.mutate_architecture(child2, mutation_rate)
 
             # Add children one by one to avoid exceeding population_size
             new_population.append(child1)
