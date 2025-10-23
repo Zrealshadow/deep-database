@@ -631,7 +631,11 @@ def successive_halving(
             print(f"     Best validation score: {best_score:.4f}")
 
         # Increase epochs for next round
-        current_epochs = min(max_epochs, current_epochs * 2)
+        if current_epochs < max_epochs:
+            current_epochs = min(max_epochs, current_epochs * 2)
+        else:
+            # If we've reached max_epochs, we're done
+            break
 
     # Return best architecture and its score
     if candidates:
@@ -806,7 +810,7 @@ def main():
     parser.add_argument('--data_dir', type=str, required=True, help='Data directory')
     parser.add_argument('--space_name', type=str, required=True, choices=['mlp', 'resnet'], help='Search space')
     parser.add_argument('--output_csv', type=str, required=True, help='Output CSV file')
-    parser.add_argument('--device', type=str, default='cuda:5', help='Device')
+    parser.add_argument('--device', type=str, default='cuda:0', help='Device')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
 
     args = parser.parse_args()
