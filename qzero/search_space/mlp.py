@@ -35,6 +35,9 @@ class QZeroMLP(Module):
     blocks_choices = [2, 3]
     channel_choices = [64, 128, 256]
 
+    blocks_choices_large = [2, 3, 4]
+    channel_choices_large = [32, 64, 128, 256]
+
     def __init__(
         self,
         channels: int,
