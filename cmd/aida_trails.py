@@ -418,7 +418,7 @@ def diversity_based_selection(
         stype_encoder_dict: Dict,
         out_channels: int,
         models_per_size: int = 5,
-) -> List[Tuple[List[int], float, str]]:
+) -> List[Tuple[List[int], float, str, float]]:
 
     print(f"\n🎯 Diversity-Based Selection")
     print(f"   Pre-calculating capacities and grouping by size")
@@ -500,9 +500,9 @@ def diversity_based_selection(
         ea_results.sort(key=lambda x: x[1], reverse=True)
         top_models = ea_results[:models_per_size]
 
-        # Add size group info to results
+        # Add size group info to results (with placeholder val_score for consistency)
         for arch, score in top_models:
-            all_results.append((arch, score, size_group))
+            all_results.append((arch, score, size_group, None))  # None as placeholder for val_score
 
         print(f"     Found {len(ea_results)} models in {size_group} group")
         print(f"     Selected top {len(top_models)} models")
@@ -526,7 +526,7 @@ def diversity_based_selection(
 
 
 def successive_halving(
-        selected_models: List[Tuple[List[int], float, str]],
+        selected_models: List[Tuple[List[int], float, str, float]],
         space_name: str,
         table_data: TableData,
         is_regression: bool,
@@ -551,7 +551,7 @@ def successive_halving(
         # Train each candidate for current_epochs
         candidate_scores = []
 
-        for i, (arch, proxy_score, size_group) in enumerate(candidates):
+        for i, (arch, proxy_score, size_group, val_score) in enumerate(candidates):
             print(f"     Training candidate {i + 1}/{len(candidates)}: {arch} ({size_group})")
 
             # Create model
@@ -584,7 +584,7 @@ def successive_halving(
                     dropout_prob=0.2,
                 ).to(device)
 
-            # Train model
+            # Train model (always train in successive halving)
             model, _ = train_model(
                 model=model,
                 train_loader=train_loader,
@@ -871,7 +871,7 @@ def main():
         table_data=table_data,
         is_regression=is_regression,
         max_epochs=50,
-        min_epochs=5,
+        min_epochs=1,
     )
 
     print(f"✅ Best architecture: {best_arch}")
