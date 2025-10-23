@@ -28,6 +28,7 @@ import time
 from datetime import datetime
 from typing import List, Tuple, Dict
 
+from tqdm import tqdm
 import numpy as np
 import torch
 from torch.nn import L1Loss, BCEWithLogitsLoss
@@ -41,9 +42,42 @@ from qzero.search_space import QZeroMLP, QZeroResNet
 from qzero.proxies.expressflow import express_flow_score
 from qzero.search_algorithm import evolutionary_algorithm
 
-from cmd.aida_fit_best_baseline import test, deactivate_dropout, train_final_model
 
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+def deactivate_dropout(net: torch.nn.Module):
+    """Deactivate dropout layers in the model for regression task"""
+    deactive_nn_instances = (
+        torch.nn.Dropout, torch.nn.Dropout2d, torch.nn.Dropout3d)
+    for module in net.modules():
+        if isinstance(module, deactive_nn_instances):
+            module.eval()
+            for param in module.parameters():
+                param.requires_grad = False
+
+
+def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: int = -1, is_regression: bool = False):
+    """Test function for model evaluation"""
+    pred_list = []
+    y_list = []
+    early_stop = early_stop if early_stop > 0 else len(loader.dataset)
+
+    if not is_regression:
+        net.eval()
+
+    for idx, batch in tqdm(enumerate(loader), total=len(loader), leave=False, desc="Testing"):
+        with torch.no_grad():
+            batch = batch.to(device)
+            y = batch.y.float()
+            pred = net(batch)
+            pred = pred.view(-1) if pred.size(1) == 1 else pred
+            pred_list.append(pred.detach().cpu())
+            y_list.append(y.detach().cpu())
+        if idx > early_stop:
+            break
+    pred_list = torch.cat(pred_list, dim=0)
+    pred_logits = pred_list
+    pred_list = torch.sigmoid(pred_list)
+    y_list = torch.cat(y_list, dim=0).numpy()
+    return pred_logits.numpy(), pred_list.numpy(), y_list
 
 
 def create_evaluation_function(
@@ -109,7 +143,7 @@ def get_num_cols(table_data):
     # Try to get from col_stats first
     if 'num_cols' in table_data.col_stats:
         return table_data.col_stats['num_cols']
-    
+
     # If not available, calculate from the first batch
     sample_batch = next(iter(torch_frame.data.DataLoader(table_data.train_tf, batch_size=1, shuffle=False)))
     if hasattr(sample_batch, 'x'):
@@ -153,7 +187,7 @@ def prepare_sample_batch_for_proxy(
     # Create temporary model for encoding
     # Get the number of columns
     num_cols = get_num_cols(table_data)
-    
+
     if space_name == 'mlp':
         temp_model = QZeroMLP(
             channels=num_cols,
@@ -474,13 +508,13 @@ def diversity_based_selection(
         print(f"     Selected top {len(top_models)} models")
         if top_models:
             print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
-        
+
         # Clean up space_instance and force garbage collection
         del space_instance
         if str(device).startswith('cuda'):
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-        
+
         # Force garbage collection
         import gc
         gc.collect()
@@ -499,7 +533,6 @@ def successive_halving(
         max_epochs: int = 50,
         min_epochs: int = 1,
 ) -> Tuple[List[int], float]:
-
     print(f"\n🏆 Successive Halving Selection")
     print(f"   Candidates: {len(selected_models)}")
 
@@ -577,7 +610,7 @@ def successive_halving(
             if str(device).startswith('cuda'):
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
-            
+
             # Force garbage collection
             import gc
             gc.collect()
@@ -660,10 +693,7 @@ def train_model(
 
         # Training loop
         print("\nTraining...")
-        print("   💤 Sleeping for 5 seconds to check GPU memory...")
-        time.sleep(50)
-        print("   ✅ Sleep complete, starting training...")
-    
+
         for epoch in range(num_epochs):
             model.train()
             loss_accum = 0
@@ -672,7 +702,7 @@ def train_model(
             for idx, batch in enumerate(data_loaders["train"]):
                 if idx > max_batches_per_epoch:
                     break
-                
+
                 # Clear cache before each batch
                 if str(device).startswith('cuda'):
                     torch.cuda.empty_cache()
@@ -688,7 +718,7 @@ def train_model(
                 optimizer.step()
                 loss_accum += loss.item()
                 count_accum += 1
-                
+
                 # Clear cache after each batch
                 if str(device).startswith('cuda'):
                     torch.cuda.empty_cache()
@@ -696,7 +726,7 @@ def train_model(
             # Validation
             val_logits, _, val_pred_hat = test(
                 model, data_loaders["val"], is_regression=is_regression)
-            
+
             # Clear cache after validation
             if str(device).startswith('cuda'):
                 torch.cuda.empty_cache()
