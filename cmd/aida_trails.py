@@ -138,7 +138,7 @@ def prepare_sample_batch_for_proxy(
     sample_size = min(sample_size, len(table_data.train_tf))
     sample_indices = random.sample(range(len(table_data.train_tf)), sample_size)
     sample_subset = Subset(table_data.train_tf, sample_indices)
-    sample_loader = torch_frame.data.DataLoader(sample_subset, batch_size=sample_size, shuffle=False)
+    sample_loader = torch_frame.data.DataLoader(sample_subset, batch_size=min(4, sample_size), shuffle=False)
 
     # Get one batch and encode it
     batch = next(iter(sample_loader)).to(device)
@@ -187,6 +187,7 @@ def prepare_sample_batch_for_proxy(
     del temp_model
     if str(device).startswith('cuda'):
         torch.cuda.empty_cache()
+        torch.cuda.synchronize()
 
     print(f"✅ Encoded features: {x_encoded.shape}")
     return x_encoded
@@ -470,6 +471,12 @@ def diversity_based_selection(
         print(f"     Selected top {len(top_models)} models")
         if top_models:
             print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
+        
+        # Clean up space_instance
+        del space_instance
+        if str(device).startswith('cuda'):
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
 
     print(f"\n   📊 Total selected models: {len(all_results)}")
     print(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
@@ -490,6 +497,7 @@ def successive_halving(
     print(f"   Candidates: {len(selected_models)}")
 
     # Prepare data loaders (use original train/val/test splits)
+    # Use normal batch size for training
     train_loader = torch_frame.data.DataLoader(table_data.train_tf, batch_size=256, shuffle=True)
     val_loader = torch_frame.data.DataLoader(table_data.val_tf, batch_size=256, shuffle=False)
 
@@ -561,6 +569,7 @@ def successive_halving(
             del model
             if str(device).startswith('cuda'):
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
         # Sort by validation score
         if is_regression:
@@ -648,6 +657,10 @@ def train_model(
             for idx, batch in enumerate(data_loaders["train"]):
                 if idx > max_batches_per_epoch:
                     break
+                
+                # Clear cache before each batch
+                if str(device).startswith('cuda'):
+                    torch.cuda.empty_cache()
 
                 optimizer.zero_grad()
                 batch = batch.to(device)
@@ -660,10 +673,18 @@ def train_model(
                 optimizer.step()
                 loss_accum += loss.item()
                 count_accum += 1
+                
+                # Clear cache after each batch
+                if str(device).startswith('cuda'):
+                    torch.cuda.empty_cache()
 
             # Validation
             val_logits, _, val_pred_hat = test(
                 model, data_loaders["val"], is_regression=is_regression)
+            
+            # Clear cache after validation
+            if str(device).startswith('cuda'):
+                torch.cuda.empty_cache()
 
             # Calculate metric
             if is_regression:
