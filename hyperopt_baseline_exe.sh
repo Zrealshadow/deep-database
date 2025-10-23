@@ -13,7 +13,7 @@ N_TRIALS_FTTRANS=30        # FTTransformer has only 28 configs
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Base data directory
-BASE_DATA_DIR="/home/lingze/embedding_fusion/data/dfs-flatten-table"
+BASE_DATA_DIR="/home/lingze/embedding_fusion/data/dfs-fs-table"
 
 # Output directory
 OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline"
@@ -39,19 +39,19 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# Dataset list (selected from /home/lingze/embedding_fusion/data/dfs-flatten-table)
-# Verified to exist on server
+# Dataset list (selected from /home/lingze/embedding_fusion/data/dfs-fs-table, feature-selection)
+# Verified to exist on server.
 DATASETS=(
   event-user-repeat          # event user-repeat ✅
   ratebeer-user-active       # ratebeer user-active ✅
   trial-study-outcome        # trial study-outcome ✅
   avito-user-clicks          # avito user-clicks ✅
-  amazon-user-churn          # amazon user-churn (hm user-churn) ✅
+  hm-user-churn              # hm user-churn) ✅
   event-user-attendance      # event user-attendance ✅
   ratebeer-beer-positive     # ratebeer beer-positive ✅
   trial-site-success         # trial site-success ✅
   avito-ad-ctr               # avito ad-ctr ✅
-  amazon-item-ltv            # amazon item-ltv (hm item-sales) ✅
+  hm-item-sales              # hm item-sales ✅
 )
 
 
