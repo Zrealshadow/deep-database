@@ -348,7 +348,7 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
     # Fixed training parameters (not searched)
     batch_size = 256
     lr = 0.001
-    num_epochs = 100  # Reduced for hyperparameter search
+    num_epochs = 100  # Hyperband will dynamically adjust this
     early_stop_threshold = 5
     max_round_epoch = 20
 
@@ -422,7 +422,7 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
                 net, data_loaders["val"], is_regression=is_regression)
             val_metric = evaluate_matric_func(val_pred_hat, val_logits)
 
-            # Early stopping and model selection
+            # Track the best metric for hyperparameter search
             if (higher_is_better and val_metric > best_val_metric) or \
                     (not higher_is_better and val_metric < best_val_metric):
                 best_val_metric = val_metric
@@ -430,15 +430,18 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
                 patience = 0
             else:
                 patience += 1
-                if patience > early_stop_threshold:
-                    break
 
-            # Report intermediate result for pruning
+            # Report intermediate result for pruning (MUST be before should_prune check)
             trial.report(val_metric, epoch)
 
             # Handle pruning based on the intermediate value
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
+            
+            # Early stopping (only if not pruned by Hyperband)
+            if patience > early_stop_threshold:
+                print(f"  Early stopping at epoch {epoch+1} (patience={patience})")
+                break
 
         # Return validation performance for hyperparameter optimization
         return best_val_metric
