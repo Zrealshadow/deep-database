@@ -39,6 +39,9 @@ def evolutionary_algorithm(
     print(f"   Elite size: {elite_size}")
     print(f"   Mutation rate: {mutation_rate}")
 
+    # Assert that generations > 0 (EA requires at least 1 generation)
+    assert generations > 0, "EA requires at least 1 generation"
+
     # Get search space choices from the instance
     blocks_choices = space_instance.blocks_choices_large
     channel_choices = space_instance.channel_choices_large
@@ -51,9 +54,6 @@ def evolutionary_algorithm(
         population.append(arch)
 
     print(f"   Initialized population of {len(population)} architectures")
-
-    # Assert that generations > 0 (EA requires at least 1 generation)
-    assert generations > 0, "EA requires at least 1 generation"
 
     # Initialize tracking variables
     best_individuals = []  # Track the best individuals across all generations
