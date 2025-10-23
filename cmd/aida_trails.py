@@ -76,7 +76,7 @@ def create_evaluation_function(
             score, _ = express_flow_score(
                 arch=net_for_proxy,
                 batch_data=sample_batch_x,
-                device=device,
+                device=str(device),
                 use_wo_embedding=False,
                 linearize_target=None,
                 epsilon=1e-5,

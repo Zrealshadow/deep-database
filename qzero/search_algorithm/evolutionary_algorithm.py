@@ -75,9 +75,12 @@ def evolutionary_algorithm(
         best_individuals.extend(current_scores)
 
         # Keep only the best individuals (remove duplicates and keep top ones)
-        best_individuals = list(set(best_individuals))  # Remove duplicates
-        best_individuals.sort(key=lambda x: x[1], reverse=True)
-        best_individuals = best_individuals[:population_size]  # Keep top population_size
+        # Convert to tuples for hashing, then back to lists
+        best_individuals_tuples = [(tuple(arch), score) for arch, score in best_individuals]
+        best_individuals_tuples = list(set(best_individuals_tuples))  # Remove duplicates
+        best_individuals_tuples.sort(key=lambda x: x[1], reverse=True)
+        best_individuals_tuples = best_individuals_tuples[:population_size]  # Keep top population_size
+        best_individuals = [(list(arch), score) for arch, score in best_individuals_tuples]
 
         # Use current generation scores for selection
         arch_scores = current_scores
