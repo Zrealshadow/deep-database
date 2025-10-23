@@ -101,6 +101,22 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
 
+def get_num_cols(table_data):
+    """Get the number of columns from table_data"""
+    # Try to get from col_stats first
+    if 'num_cols' in table_data.col_stats:
+        return table_data.col_stats['num_cols']
+    
+    # If not available, calculate from the first batch
+    sample_batch = next(iter(torch_frame.data.DataLoader(table_data.train_tf, batch_size=1, shuffle=False)))
+    if hasattr(sample_batch, 'x'):
+        return sample_batch.x.shape[1]
+    else:
+        # Sum up all feature dimensions
+        total_dims = sum(feat.shape[1] for feat in sample_batch.feat_dict.values())
+        return total_dims
+
+
 def prepare_sample_batch_for_proxy(
         table_data: TableData,
         space_name: str,
@@ -132,27 +148,30 @@ def prepare_sample_batch_for_proxy(
     out_channels = 1
 
     # Create temporary model for encoding
+    # Get the number of columns
+    num_cols = get_num_cols(table_data)
+    
     if space_name == 'mlp':
         temp_model = QZeroMLP(
-            channels=table_data.col_stats['num_cols'],
+            channels=num_cols,
             out_channels=out_channels,
             num_layers=2,
             col_stats=table_data.col_stats,
             col_names_dict=table_data.col_names_dict,
             stype_encoder_dict=stype_encoder_dict,
-            hidden_dims=[table_data.col_stats['num_cols']],
+            hidden_dims=[num_cols],
             normalization='layer_norm',
             dropout_prob=0.2,
         ).to(device)
     else:
         temp_model = QZeroResNet(
-            channels=table_data.col_stats['num_cols'],
+            channels=num_cols,
             out_channels=out_channels,
             num_layers=2,
             col_stats=table_data.col_stats,
             col_names_dict=table_data.col_names_dict,
             stype_encoder_dict=stype_encoder_dict,
-            block_widths=[table_data.col_stats['num_cols'], table_data.col_stats['num_cols']],
+            block_widths=[num_cols, num_cols],
             normalization='layer_norm',
             dropout_prob=0.2,
         ).to(device)
@@ -397,27 +416,28 @@ def diversity_based_selection(
         print(f"\n   🔍 Running EA for {size_group} models...")
 
         # Create space instance for EA
+        num_cols = get_num_cols(table_data)
         if space_name == 'mlp':
             space_instance = QZeroMLP(
-                channels=table_data.col_stats['num_cols'],
+                channels=num_cols,
                 out_channels=out_channels,
                 num_layers=2,  # Will be overridden in EA
                 col_stats=col_stats,
                 col_names_dict=col_names_dict,
                 stype_encoder_dict=stype_encoder_dict,
-                hidden_dims=[table_data.col_stats['num_cols']],
+                hidden_dims=[num_cols],
                 normalization='layer_norm',
                 dropout_prob=0.2,
             )
         else:  # resnet
             space_instance = QZeroResNet(
-                channels=table_data.col_stats['num_cols'],
+                channels=num_cols,
                 out_channels=out_channels,
                 num_layers=2,  # Will be overridden in EA
                 col_stats=col_stats,
                 col_names_dict=col_names_dict,
                 stype_encoder_dict=stype_encoder_dict,
-                block_widths=[table_data.col_stats['num_cols'], table_data.col_stats['num_cols']],
+                block_widths=[num_cols, num_cols],
                 normalization='layer_norm',
                 dropout_prob=0.2,
             )
@@ -490,9 +510,10 @@ def successive_halving(
             stype_encoder_dict = construct_stype_encoder_dict(default_stype_encoder_cls_kwargs)
             out_channels = 1
 
+            num_cols = get_num_cols(table_data)
             if space_name == 'mlp':
                 model = QZeroMLP(
-                    channels=table_data.col_stats['num_cols'],
+                    channels=num_cols,
                     out_channels=out_channels,
                     num_layers=len(arch) + 1,
                     col_stats=table_data.col_stats,
@@ -504,7 +525,7 @@ def successive_halving(
                 ).to(device)
             else:  # resnet
                 model = QZeroResNet(
-                    channels=table_data.col_stats['num_cols'],
+                    channels=num_cols,
                     out_channels=out_channels,
                     num_layers=len(arch),
                     col_stats=table_data.col_stats,
@@ -795,9 +816,10 @@ def main():
     train_start_time = time.time()
 
     # Create final model
+    num_cols = get_num_cols(table_data)
     if args.space_name == 'mlp':
         final_model = QZeroMLP(
-            channels=table_data.col_stats['num_cols'],
+            channels=num_cols,
             out_channels=out_channels,
             num_layers=len(best_arch) + 1,
             col_stats=table_data.col_stats,
@@ -809,7 +831,7 @@ def main():
         ).to(args.device)
     else:
         final_model = QZeroResNet(
-            channels=table_data.col_stats['num_cols'],
+            channels=num_cols,
             out_channels=out_channels,
             num_layers=len(best_arch),
             col_stats=table_data.col_stats,
