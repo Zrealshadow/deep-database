@@ -32,45 +32,86 @@ echo "Log: ${LOG_FILE}"
 echo "CSV: ${CSV_FILE}"
 echo "Started: $(date)"
 echo ""
+echo "📊 Experiment Configuration:"
+echo "   Datasets: ${#DATASETS[@]}"
+echo "   Models: 2 (MLP, ResNet)"
+echo "   Total experiments: $((${#DATASETS[@]} * 2))"
+echo ""
 
 START_TIME=$(date +%s)
 
-# Dataset list (using sample data for testing)
+# Dataset list (selected from /home/lingze/embedding_fusion/data/dfs-fs-table, feature-selection)
+# Verified to exist on server.
 DATASETS=(
-    avito-user-clicks          # avito user-clicks ✅
-)
-
-# Model types
-MODELS=(
-    mlp                        # MLP with evolutionary algorithm
-    resnet                     # ResNet with evolutionary algorithm
+  event-user-repeat          # event user-repeat ✅
+  ratebeer-user-active       # ratebeer user-active ✅
+  trial-study-outcome        # trial study-outcome ✅
+  avito-user-clicks          # avito user-clicks ✅
+  hm-user-churn              # hm user-churn) ✅
+  event-user-attendance      # event user-attendance ✅
+  ratebeer-beer-positive     # ratebeer beer-positive ✅
+  trial-site-success         # trial site-success ✅
+  avito-ad-ctr               # avito ad-ctr ✅
+  hm-item-sales              # hm item-sales ✅
 )
 
 #==============================================================================
-# Run AIDA Trails for each dataset and model combination
+# [1/2] MLP Search Space
 #==============================================================================
+
+echo "=========================================="
+echo "[1/2] MLP Search Space"
+echo "=========================================="
 
 for DATASET in "${DATASETS[@]}"; do
-    for MODEL in "${MODELS[@]}"; do
-        echo ""
-        echo "=========================================="
-        echo "Processing: ${MODEL} on ${DATASET}"
-        echo "=========================================="
-        
-        python3 -u ${SCRIPT} \
-            --data_dir "${BASE_DATA_DIR}/${DATASET}" \
-            --space_name "${MODEL}" \
-            --output_csv "${CSV_FILE}" \
-            --device "cuda:0" \
-            --seed 42
-        
-        if [ $? -eq 0 ]; then
-            echo "✅ ${MODEL} on ${DATASET} completed"
-        else
-            echo "❌ ${MODEL} on ${DATASET} failed"
-        fi
-    done
+    echo ""
+    echo "Processing: MLP on ${DATASET}"
+    python3 -u ${SCRIPT} \
+        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+        --space_name "mlp" \
+        --output_csv "${CSV_FILE}" \
+        --device "cuda:0" \
+        --seed 42
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ MLP on ${DATASET} completed"
+    else
+        echo "❌ MLP on ${DATASET} failed"
+    fi
 done
+
+echo ""
+echo "MLP Search Space Completed!"
+echo ""
+
+#==============================================================================
+# [2/2] ResNet Search Space
+#==============================================================================
+
+echo "=========================================="
+echo "[2/2] ResNet Search Space"
+echo "=========================================="
+
+for DATASET in "${DATASETS[@]}"; do
+    echo ""
+    echo "Processing: ResNet on ${DATASET}"
+    python3 -u ${SCRIPT} \
+        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
+        --space_name "resnet" \
+        --output_csv "${CSV_FILE}" \
+        --device "cuda:0" \
+        --seed 42
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ ResNet on ${DATASET} completed"
+    else
+        echo "❌ ResNet on ${DATASET} failed"
+    fi
+done
+
+echo ""
+echo "ResNet Search Space Completed!"
+echo ""
 
 #==============================================================================
 # Summary
