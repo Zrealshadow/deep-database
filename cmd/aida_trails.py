@@ -689,7 +689,10 @@ def successive_halving(
     if candidates:
         best_arch, _, best_size_group, best_val_score = candidates[0]
         print(f"   🏆 Best model: {best_arch} ({best_size_group})")
-        print(f"   Validation score: {best_val_score:.4f}")
+        if best_val_score is not None:
+            print(f"   Validation score: {best_val_score:.4f}")
+        else:
+            print(f"   Validation score: None (using proxy score)")
         return best_arch, best_val_score
     else:
         raise ValueError("No candidates remaining after successive halving")
