@@ -21,13 +21,13 @@ parser.add_argument("--disable_msg", action="store_false", default=True,
 # Random Forest specific arguments (for classification)
 parser.add_argument("--n_estimators", type=int, default=100,
                     help="Number of trees in Random Forest.")
-parser.add_argument("--max_depth", type=int, default=None,
+parser.add_argument("--max_depth", type=int, default=30,
                     help="Maximum depth of trees. None means unlimited.")
 parser.add_argument("--min_samples_split", type=int, default=2,
                     help="Minimum samples required to split a node.")
 
 # Lasso specific arguments (for regression)
-parser.add_argument("--max_iter", type=int, default=1000,
+parser.add_argument("--max_iter", type=int, default=500,
                     help="Maximum iterations for Lasso.")
 
 args = parser.parse_args()
