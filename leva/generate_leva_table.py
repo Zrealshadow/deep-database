@@ -251,7 +251,6 @@ if table_output_dir:
     text_embedder_cfg = get_text_embedder_cfg()
     data.materilize(
         col_to_text_embedder_cfg=text_embedder_cfg,
-        verbose=verbose
     )
 
     data.save_to_dir(
