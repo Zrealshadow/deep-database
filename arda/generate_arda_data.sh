@@ -1,4 +1,4 @@
-#ARDA, only generate 1-hop flattened table data
+#  generate arda table data to the directory ./data/arda-table
 python -m cmds.generate_table_data    --dbname avito    --task_name user-clicks \
    --sample_size 100000      --dfs     --selection  --n_timedelta 4 --max_depth 1  \
    --table_output_dir ./data/arda-table

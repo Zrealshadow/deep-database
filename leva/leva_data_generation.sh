@@ -22,13 +22,13 @@ declare -A dataset_map=(
 
 # List of datasets to process
 data_list=(
-    # "avito-user-clicks"
-    # "avito-ad-ctr"
-    # "event-user-repeat"
-    # "event-user-attendance"
-    # "ratebeer-beer-positive"
-    # "ratebeer-place-positive"
-    # "ratebeer-user-active"
+    "avito-user-clicks"
+    "avito-ad-ctr"
+    "event-user-repeat"
+    "event-user-attendance"
+    "ratebeer-beer-positive"
+    "ratebeer-place-positive"
+    "ratebeer-user-active"
     "trial-site-success"
     "trial-study-outcome"
     "hm-item-sales"

@@ -2,7 +2,7 @@
 # ARDA baseline testing script (Lasso for regression, Random Forest for classification)
 
 # Configuration
-data_dir_root="./data/flatten-table"
+data_dir_root="./data/arda-table"
 
 # List of datasets to test
 data_list=(

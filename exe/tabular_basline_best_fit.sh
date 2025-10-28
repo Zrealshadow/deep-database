@@ -20,13 +20,13 @@ data_list=(
 )
 
 # Model types to test
-# models=("MLP" "FTTrans" "ResNet")
-models=("MLP")
+models=("MLP" "FTTrans" "ResNet")
+# models=("MLP")
 # models=()
 
 # ML baseline methods
-# ml_methods=("lgb" "catboost")
-ml_methods=("catboost")
+ml_methods=("lgb" "catboost")
+# ml_methods=("catboost")
 
 # Function to run DNN baseline
 run_dnn_baseline() {

@@ -38,4 +38,8 @@ echo "Running F1 tasks ..."
 python ./cmd/generate_table_data.py --dbname f1 --task_name driver-dnf --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR
 python ./cmd/generate_table_data.py --dbname f1 --task_name driver-top3 --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR    
 
+echo "Running HM tasks ..."
+python ./cmd/generate_table_data.py --dbname hm --task_name user-churn --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR
+python ./cmd/generate_table_data.py --dbname hm --task_name item-sales --sample_size $SAMPLE_SIZE --table_output_dir $OUTPUT_DIR    
+
 echo "✅ All tasks completed!"
