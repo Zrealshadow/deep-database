@@ -14,9 +14,9 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 
 # Output directory
-OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline"
-LOG_FILE="${OUTPUT_DIR}/log_hyperopt_sh_baseline.txt"
-CSV_FILE="${OUTPUT_DIR}/hyperopt_sh_results.csv"
+OUTPUT_DIR="./result_raw_from_server/aida_optuna"
+LOG_FILE="${OUTPUT_DIR}/log_aida_optuna.txt"
+CSV_FILE="${OUTPUT_DIR}/aida_optuna_results.csv"
 
 # Create output directory
 mkdir -p "${OUTPUT_DIR}"
