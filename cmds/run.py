@@ -236,7 +236,8 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, entity_table
     pred_list = pred_logits = torch.cat(pred_list, dim=0)
     pred_list = torch.sigmoid(pred_list).numpy()
     y_list = torch.cat(y_list, dim=0).numpy()
-    return pred_logits.numpy(), pred_list,  y_list
+    pred_list = pred_logits.numpy() if is_regression else pred_list
+    return pred_list,  y_list
 
 
 optimizer = torch.optim.Adam(
@@ -278,7 +279,7 @@ for epoch in range(num_epochs):
         loss_accum += loss.item()
         count_accum += 1
     train_loss = loss_accum / count_accum
-    val_logits, _, val_pred_hat = test(
+    val_logits, val_pred_hat = test(
         net, data_loader_dict["valid"], task.entity_table, early_stop=-1, is_regression=is_regression
     )
     val_metric = evaluate_metric_func(val_pred_hat, val_logits)
@@ -295,7 +296,7 @@ for epoch in range(num_epochs):
         patience = 0
 
         if no_need_test:
-            test_logits, _, test_pred_hat = test(
+            test_logits, test_pred_hat = test(
                 net, data_loader_dict["test"], task.entity_table, is_regression=is_regression)
             test_metric = evaluate_metric_func(test_pred_hat, test_logits)
 
@@ -344,7 +345,7 @@ loader = NeighborLoader(
 )
 
 start_time = time.time()
-test_logits, _, test_pred_hat = test(
+test_logits, test_pred_hat = test(
     net, loader, task.entity_table, is_regression=is_regression)
 test_metric = evaluate_metric_func(test_pred_hat, test_logits)
 end_time = time.time()

@@ -191,7 +191,8 @@ def test(net: torch.nn.Module, loader: torch.utils.data.DataLoader, early_stop: 
     pred_logits = pred_list
     pred_list = torch.sigmoid(pred_list)
     y_list = torch.cat(y_list, dim=0).numpy()
-    return pred_logits.numpy(), pred_list.numpy(),  y_list
+    pred_list = pred_logits.numpy() if is_regression else pred_list.numpy()
+    return pred_list, y_list
 
 
 #  deactivate dropout layer in regression task
@@ -239,9 +240,8 @@ for epoch in range(num_epochs):
         progress.stop()
 
     train_loss = loss_accum / count_accum
-    val_logits, _, val_pred_hat = test(
+    val_logits, val_pred_hat = test(
         net, data_loaders["val"], is_regression=is_regression)
-
     val_metric = evaluate_matric_func(val_pred_hat, val_logits)
 
     if verbose:
@@ -254,7 +254,7 @@ for epoch in range(num_epochs):
         best_model_state = copy.deepcopy(net.state_dict())
         patience = 0
 
-        test_logits, _, test_pred_hat = test(
+        test_logits, test_pred_hat = test(
             net, data_loaders["test"], is_regression=is_regression)
         test_metric = evaluate_matric_func(test_pred_hat, test_logits)
 
@@ -276,7 +276,7 @@ logger.success(
 
 start_time = time.time()
 net.load_state_dict(best_model_state)
-test_logits, _, test_pred_hat = test(
+test_logits, test_pred_hat = test(
     net, data_loaders["test"], is_regression=is_regression)
 test_metric = evaluate_matric_func(test_pred_hat, test_logits)
 end_time = time.time()
