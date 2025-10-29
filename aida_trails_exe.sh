@@ -4,7 +4,7 @@
 
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-SCRIPT="./cmd/aida_trails.py"
+SCRIPT="${SCRIPT_DIR}/cmds/aida_trails.py"
 
 # Configuration
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

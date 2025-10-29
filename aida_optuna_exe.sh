@@ -4,7 +4,7 @@
 
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-SCRIPT="./cmd/aida_optuna.py"
+SCRIPT="${SCRIPT_DIR}/cmds/aida_optuna.py"
 
 # Configuration
 N_TRIALS_MLP=100           # MLP has 108 configs
