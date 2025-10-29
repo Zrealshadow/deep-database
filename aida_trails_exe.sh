@@ -9,8 +9,10 @@ SCRIPT="./cmd/aida_trails.py"
 # Configuration
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# Base data directory
-BASE_DATA_DIR="/home/lingze/embedding_fusion/data/dfs-fs-table"
+# Base data directories
+BASE_DATA_DIR_FIT_BEST="/home/lingze/embedding_fusion/data/fit-best-table"
+BASE_DATA_DIR_FIT_MEDIUM="/home/lingze/embedding_fusion/data/fit-medium-table"
+BASE_DATA_DIR_FLATTEN="/home/lingze/embedding_fusion/data/flatten-table"
 
 # Output directory
 OUTPUT_DIR="./result_raw_from_server/aida_trails"
@@ -34,55 +36,76 @@ echo "Started: $(date)"
 echo ""
 echo "📊 Experiment Configuration:"
 echo "   Datasets: ${#DATASETS[@]}"
-echo "   Models: 2 (MLP, ResNet)"
-echo "   Total experiments: $((${#DATASETS[@]} * 2))"
+echo "   Data sources: ${#DATA_DIRS[@]} (fit-best-table, fit-medium-table, flatten-table)"
+echo "   Models: 1 (ResNet only - MLP commented out)"
+TOTAL_EXPERIMENTS=$((${#DATASETS[@]} * ${#DATA_DIRS[@]} * 1))
+echo "   Total experiments: ${TOTAL_EXPERIMENTS}"
 echo ""
 
 START_TIME=$(date +%s)
 
-# Dataset list (selected from /home/lingze/embedding_fusion/data/dfs-fs-table, feature-selection)
-# Verified to exist on server.
+# Selected datasets - Only the 10 core datasets
 DATASETS=(
-  event-user-repeat          # event user-repeat ✅
-  ratebeer-user-active       # ratebeer user-active ✅
-  trial-study-outcome        # trial study-outcome ✅
-  avito-user-clicks          # avito user-clicks ✅
-  hm-user-churn              # hm user-churn) ✅
-  event-user-attendance      # event user-attendance ✅
-  ratebeer-beer-positive     # ratebeer beer-positive ✅
-  trial-site-success         # trial site-success ✅
-  avito-ad-ctr               # avito ad-ctr ✅
-  hm-item-sales              # hm item-sales ✅
+  avito-ad-ctr
+  avito-user-clicks
+  event-user-attendance
+  event-user-repeat
+  hm-item-sales
+  hm-user-churn
+  ratebeer-beer-positive
+  ratebeer-user-active
+  trial-site-success
+  trial-study-outcome
+)
+
+# Data source directories
+DATA_DIRS=(
+  "fit-best-table"
+  "fit-medium-table" 
+  "flatten-table"
 )
 
 #==============================================================================
-# [1/2] MLP Search Space
+# [1/2] MLP Search Space - COMMENTED OUT
 #==============================================================================
-
-echo "=========================================="
-echo "[1/2] MLP Search Space"
-echo "=========================================="
-
-for DATASET in "${DATASETS[@]}"; do
-    echo ""
-    echo "Processing: MLP on ${DATASET}"
-    python3 -u ${SCRIPT} \
-        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
-        --space_name "mlp" \
-        --output_csv "${CSV_FILE}" \
-        --device "cuda:0" \
-        --seed 42
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ MLP on ${DATASET} completed"
-    else
-        echo "❌ MLP on ${DATASET} failed"
-    fi
-done
-
-echo ""
-echo "MLP Search Space Completed!"
-echo ""
+#
+#echo "=========================================="
+#echo "[1/2] MLP Search Space"
+#echo "=========================================="
+#
+## Process all datasets from all data sources
+#for DATA_SOURCE in "${DATA_DIRS[@]}"; do
+#    echo ""
+#    echo "Processing ${DATA_SOURCE} datasets..."
+#    
+#    for DATASET in "${DATASETS[@]}"; do
+#        # Check if dataset exists in this data source
+#        DATA_PATH="/home/lingze/embedding_fusion/data/${DATA_SOURCE}/${DATASET}"
+#        if [ ! -d "${DATA_PATH}" ]; then
+#            echo "⚠️  Skipping ${DATASET} (not found in ${DATA_SOURCE})"
+#            continue
+#        fi
+#        
+#        echo ""
+#        echo "Processing: MLP on ${DATASET} (${DATA_SOURCE})"
+#        python3 -u ${SCRIPT} \
+#            --data_dir "${DATA_PATH}" \
+#            --space_name "mlp" \
+#            --output_csv "${CSV_FILE}" \
+#            --device "cuda:0" \
+#            --seed 42
+#        
+#        if [ $? -eq 0 ]; then
+#            echo "✅ MLP on ${DATASET} (${DATA_SOURCE}) completed"
+#        else
+#            echo "❌ MLP on ${DATASET} (${DATA_SOURCE}) failed"
+#        fi
+#    done
+#done
+#
+#echo ""
+#echo "MLP Search Space Completed!"
+#echo ""
 
 #==============================================================================
 # [2/2] ResNet Search Space
@@ -92,21 +115,34 @@ echo "=========================================="
 echo "[2/2] ResNet Search Space"
 echo "=========================================="
 
-for DATASET in "${DATASETS[@]}"; do
+# Process all datasets from all data sources
+for DATA_SOURCE in "${DATA_DIRS[@]}"; do
     echo ""
-    echo "Processing: ResNet on ${DATASET}"
-    python3 -u ${SCRIPT} \
-        --data_dir "${BASE_DATA_DIR}/${DATASET}" \
-        --space_name "resnet" \
-        --output_csv "${CSV_FILE}" \
-        --device "cuda:0" \
-        --seed 42
+    echo "Processing ${DATA_SOURCE} datasets..."
     
-    if [ $? -eq 0 ]; then
-        echo "✅ ResNet on ${DATASET} completed"
-    else
-        echo "❌ ResNet on ${DATASET} failed"
-    fi
+    for DATASET in "${DATASETS[@]}"; do
+        # Check if dataset exists in this data source
+        DATA_PATH="/home/lingze/embedding_fusion/data/${DATA_SOURCE}/${DATASET}"
+        if [ ! -d "${DATA_PATH}" ]; then
+            echo "⚠️  Skipping ${DATASET} (not found in ${DATA_SOURCE})"
+            continue
+        fi
+        
+        echo ""
+        echo "Processing: ResNet on ${DATASET} (${DATA_SOURCE})"
+        python3 -u ${SCRIPT} \
+            --data_dir "${DATA_PATH}" \
+            --space_name "resnet" \
+            --output_csv "${CSV_FILE}" \
+            --device "cuda:0" \
+            --seed 42
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ ResNet on ${DATASET} (${DATA_SOURCE}) completed"
+        else
+            echo "❌ ResNet on ${DATASET} (${DATA_SOURCE}) failed"
+        fi
+    done
 done
 
 echo ""

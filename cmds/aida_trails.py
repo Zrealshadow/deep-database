@@ -38,11 +38,15 @@ import torch_frame.data
 
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
 from utils.data import TableData
+from utils.logger import ModernLogger
 from qzero.search_space import QZeroMLP, QZeroResNet
 from qzero.proxies.expressflow import express_flow_score
 from qzero.search_algorithm import evolutionary_algorithm
 from relbench.base import TaskType
 
+# Initialize logger
+global logger
+logger = ModernLogger(name="aida_trails", level="info")
 
 def deactivate_dropout(net: torch.nn.Module):
     """Deactivate dropout layers in the model for regression task"""
@@ -156,7 +160,7 @@ def create_evaluation_function(
             del model
 
         except Exception as e:
-            print(f"  ⚠️  Error computing proxy for arch {arch}: {e}")
+            logger.warning(f"Error computing proxy for arch {arch}: {e}")
             score = -1e10  # Very low score for failed architectures
         finally:
             # Clean up after each evaluation
@@ -211,7 +215,7 @@ def prepare_sample_batch_for_proxy(
     Returns:
         Encoded features tensor
     """
-    print(f"\n🔍 Preparing sample batch for proxy evaluation...")
+    logger.info(f"Preparing sample batch for proxy evaluation...")
     sample_size = min(sample_size, len(table_data.train_tf))
     sample_indices = random.sample(range(len(table_data.train_tf)), sample_size)
     sample_subset = Subset(table_data.train_tf, sample_indices)
@@ -266,7 +270,7 @@ def prepare_sample_batch_for_proxy(
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-    print(f"✅ Encoded features: {x_encoded.shape}")
+    logger.success(f"Encoded features: {x_encoded.shape}")
     return x_encoded
 
 
@@ -286,16 +290,16 @@ def calculate_and_group_architectures(
     Returns:
         Tuple of (grouped_architectures_dict, calculation_time)
     """
-    print(f"\n📊 Calculating Model Capacities and Grouping")
-    print(f"   Space: {space_name}")
-    print(f"   Mode: ALL possible architectures (dataset-independent)")
+    logger.section("Calculating Model Capacities and Grouping")
+    logger.info(f"   Space: {space_name}")
+    logger.info(f"   Mode: ALL possible architectures (dataset-independent)")
 
     # Try to load existing global results first
     global_dir = "./result_raw_from_server/hyperopt_sh_baseline"
     os.makedirs(global_dir, exist_ok=True)
     global_file = os.path.join(global_dir, f"capacity_groups_{space_name}_global.json")
     if os.path.exists(global_file):
-        print(f"\n   📂 Loading global results from {global_file}...")
+        logger.info(f"Loading global results from {global_file}...")
         try:
             with open(global_file, 'r') as f:
                 grouped_architectures = json.load(f)
@@ -304,17 +308,17 @@ def calculate_and_group_architectures(
                 if group in grouped_architectures:
                     grouped_architectures[group] = [eval(arch) if isinstance(arch, str) else arch
                                                     for arch in grouped_architectures[group]]
-            print(f"   ✅ Loaded global results: {global_file}")
-            print(f"   Small group: {len(grouped_architectures.get('small', []))} architectures")
-            print(f"   Medium group: {len(grouped_architectures.get('medium', []))} architectures")
-            print(f"   Large group: {len(grouped_architectures.get('large', []))} architectures")
+            logger.success(f"Loaded global results: {global_file}")
+            logger.info(f"   Small group: {len(grouped_architectures.get('small', []))} architectures")
+            logger.info(f"   Medium group: {len(grouped_architectures.get('medium', []))} architectures")
+            logger.info(f"   Large group: {len(grouped_architectures.get('large', []))} architectures")
             return grouped_architectures, 0.0  # No calculation time for loading
         except Exception as e:
-            print(f"   ⚠️  Failed to load global results: {e}")
-            print(f"   🔄 Will recalculate...")
+            logger.warning(f"Failed to load global results: {e}")
+            logger.info(f"Will recalculate...")
 
     # If no global results exist, calculate from scratch
-    print(f"\n   🔍 Generating ALL possible architectures...")
+    logger.info(f"Generating ALL possible architectures...")
     start_time = time.time()
     architectures_with_capacity = []
 
@@ -322,19 +326,19 @@ def calculate_and_group_architectures(
     all_channels = [32, 64, 128, 256]  # Define available channels
     num_blocks_range = (2, 4)  # Define block range
 
-    print(f"   Channels: {all_channels}")
-    print(f"   Block range: {num_blocks_range}")
+    logger.info(f"   Channels: {all_channels}")
+    logger.info(f"   Block range: {num_blocks_range}")
 
     # Calculate total number of possible architectures
     total_possible = 0
     for num_blocks in range(num_blocks_range[0], num_blocks_range[1] + 1):
         total_possible += len(all_channels) ** num_blocks
 
-    print(f"   Total possible architectures: {total_possible}")
+    logger.info(f"   Total possible architectures: {total_possible}")
 
     # Generate ALL possible architectures
     for num_blocks in range(num_blocks_range[0], num_blocks_range[1] + 1):
-        print(f"   Processing {num_blocks}-block architectures...")
+        logger.info(f"   Processing {num_blocks}-block architectures...")
 
         # Generate all combinations for this number of blocks
         from itertools import product
@@ -375,10 +379,10 @@ def calculate_and_group_architectures(
 
             architectures_with_capacity.append((arch, capacity))
 
-    print(f"   ✅ Generated {len(architectures_with_capacity)} architectures")
+    logger.success(f"Generated {len(architectures_with_capacity)} architectures")
 
     # Step 2: Sort by capacity and group
-    print(f"\n   📈 Sorting and grouping architectures...")
+    logger.info(f"Sorting and grouping architectures...")
     architectures_with_capacity.sort(key=lambda x: x[1])
     total_archs = len(architectures_with_capacity)
 
@@ -386,17 +390,17 @@ def calculate_and_group_architectures(
     small_threshold = architectures_with_capacity[total_archs // 3][1]
     large_threshold = architectures_with_capacity[2 * total_archs // 3][1]
 
-    print(f"   Small threshold: < {small_threshold}")
-    print(f"   Large threshold: >= {large_threshold}")
+    logger.info(f"   Small threshold: < {small_threshold}")
+    logger.info(f"   Large threshold: >= {large_threshold}")
 
     # Group architectures by size
     small_archs = [arch for arch, cap in architectures_with_capacity if cap < small_threshold]
     medium_archs = [arch for arch, cap in architectures_with_capacity if small_threshold <= cap < large_threshold]
     large_archs = [arch for arch, cap in architectures_with_capacity if cap >= large_threshold]
 
-    print(f"   Small group: {len(small_archs)} architectures")
-    print(f"   Medium group: {len(medium_archs)} architectures")
-    print(f"   Large group: {len(large_archs)} architectures")
+    logger.info(f"   Small group: {len(small_archs)} architectures")
+    logger.info(f"   Medium group: {len(medium_archs)} architectures")
+    logger.info(f"   Large group: {len(large_archs)} architectures")
 
     # Prepare results
     grouped_architectures = {
@@ -416,17 +420,17 @@ def calculate_and_group_architectures(
     }
 
     calculation_time = time.time() - start_time
-    print(f"\n   ✅ Capacity calculation complete: {calculation_time:.2f}s")
+    logger.success(f"Capacity calculation complete: {calculation_time:.2f}s")
 
     # Save results to global file
-    print(f"\n   💾 Saving global results to {global_file}...")
+    logger.info(f"Saving global results to {global_file}...")
     with open(global_file, 'w') as f:
         json.dump(grouped_architectures, f, indent=2)
-    print(f"   ✅ Global results saved to {global_file}")
+    logger.success(f"Global results saved to {global_file}")
 
     # Also save to specified output file if different
     if output_file and output_file != global_file:
-        print(f"\n   💾 Copying to {output_file}...")
+        logger.info(f"Copying to {output_file}...")
         if output_file.endswith('.json'):
             with open(output_file, 'w') as f:
                 json.dump(grouped_architectures, f, indent=2)
@@ -444,7 +448,7 @@ def calculate_and_group_architectures(
                     })
             df = pd.DataFrame(data)
             df.to_csv(output_file, index=False)
-        print(f"   ✅ Results also saved to {output_file}")
+        logger.success(f"Results also saved to {output_file}")
 
     return grouped_architectures, calculation_time
 
@@ -459,9 +463,9 @@ def diversity_based_selection(
         out_channels: int,
         models_per_size: int = 5,
 ) -> List[Tuple[List[int], float, str, float]]:
-    print(f"\n🎯 Diversity-Based Selection")
-    print(f"   Pre-calculating capacities and grouping by size")
-    print(f"   Keeping top {models_per_size} from each size group")
+    logger.section("Diversity-Based Selection")
+    logger.info(f"   Pre-calculating capacities and grouping by size")
+    logger.info(f"   Keeping top {models_per_size} from each size group")
 
     # Step 1: Calculate capacities and group architectures (dataset-independent!)
     grouped_architectures, capacity_time = calculate_and_group_architectures(
@@ -469,7 +473,7 @@ def diversity_based_selection(
         output_file=f"capacity_groups_{space_name}_global.json",
     )
 
-    print(f"   Capacity calculation time: {capacity_time:.2f}s")
+    logger.info(f"   Capacity calculation time: {capacity_time:.2f}s")
 
     # Extract grouped architectures
     small_archs = grouped_architectures['small']
@@ -487,10 +491,10 @@ def diversity_based_selection(
 
     for size_group, group_architectures in size_groups:
         if len(group_architectures) == 0:
-            print(f"   Skipping {size_group} group (no architectures)")
+            logger.warning(f"   Skipping {size_group} group (no architectures)")
             continue
 
-        print(f"\n   🔍 Running EA for {size_group} models...")
+        logger.info(f"Running EA for {size_group} models...")
 
         # Create evaluation function
         evaluate_func = create_evaluation_function(
@@ -528,13 +532,13 @@ def diversity_based_selection(
         for arch, score in top_models:
             all_results.append((arch, score, size_group, None))  # None as placeholder for val_score
 
-        print(f"     Found {len(ea_results)} models in {size_group} group")
-        print(f"     Selected top {len(top_models)} models")
+        logger.info(f"     Found {len(ea_results)} models in {size_group} group")
+        logger.info(f"     Selected top {len(top_models)} models")
         if top_models:
-            print(f"     Best {size_group} score: {top_models[0][1]:.4f}")
-            print(f"     📋 {size_group.upper()} group selected models:")
+            logger.info(f"     Best {size_group} score: {top_models[0][1]:.4f}")
+            logger.info(f"     {size_group.upper()} group selected models:")
             for i, (arch, score) in enumerate(top_models):
-                print(f"       {i+1}. {arch} (score: {score:.4f})")
+                logger.info(f"       {i+1}. {arch} (score: {score:.4f})")
 
         # Clean up space_instance and force garbage collection
         if str(device).startswith('cuda'):
@@ -545,11 +549,11 @@ def diversity_based_selection(
         import gc
         gc.collect()
 
-    print(f"\n   📊 Total selected models: {len(all_results)}")
-    print(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
+    logger.info(f"Total selected models: {len(all_results)}")
+    logger.info(f"   Target: {models_per_size} × 3 = {models_per_size * 3}")
     
     # Remove duplicates based on architecture (keep the one with highest score)
-    print(f"\n   🔄 Removing duplicates...")
+    logger.info(f"Removing duplicates...")
     unique_results = {}
     for arch, score, group, val_score in all_results:
         arch_key = tuple(arch)  # Convert to tuple for hashing
@@ -560,15 +564,15 @@ def diversity_based_selection(
     deduplicated_results = list(unique_results.values())
     deduplicated_results.sort(key=lambda x: x[1], reverse=True)  # Sort by proxy score
     
-    print(f"   ✅ After deduplication: {len(deduplicated_results)} unique models")
+    logger.success(f"After deduplication: {len(deduplicated_results)} unique models")
     
     # Print summary of all selected models by group
-    print(f"\n   🎯 FINAL SELECTED MODELS SUMMARY:")
+    logger.section("FINAL SELECTED MODELS SUMMARY")
     for size_group, group_architectures in [('small', small_archs), ('medium', medium_archs), ('large', large_archs)]:
         group_models = [(arch, score, group, val_score) for arch, score, group, val_score in deduplicated_results if group == size_group]
-        print(f"   📋 {size_group.upper()} GROUP ({len(group_models)} models):")
+        logger.info(f"{size_group.upper()} GROUP ({len(group_models)} models):")
         for i, (arch, score, group, val_score) in enumerate(group_models):
-            print(f"     {i+1}. {arch} (proxy_score: {score:.4f})")
+            logger.info(f"     {i+1}. {arch} (proxy_score: {score:.4f})")
 
     return deduplicated_results
 
@@ -581,8 +585,8 @@ def successive_halving(
         max_epochs: int = 50,
         min_epochs: int = 1,
 ) -> Tuple[List[int], float]:
-    print(f"\n🏆 Successive Halving Selection")
-    print(f"   Candidates: {len(selected_models)}")
+    logger.section("Successive Halving Selection")
+    logger.info(f"   Candidates: {len(selected_models)}")
 
     # Prepare data loaders (use original train/val/test splits)
     # Use normal batch size for training
@@ -594,13 +598,13 @@ def successive_halving(
     current_epochs = min_epochs
 
     while len(candidates) > 1 and current_epochs <= max_epochs:
-        print(f"   Round: {len(candidates)} candidates, {current_epochs} epochs")
+        logger.info(f"   Round: {len(candidates)} candidates, {current_epochs} epochs")
 
         # Train each candidate for current_epochs
         candidate_scores = []
 
         for i, (arch, proxy_score, size_group, val_score) in enumerate(candidates):
-            print(f"     Training candidate {i + 1}/{len(candidates)}: {arch} ({size_group})")
+            logger.info(f"     Training candidate {i + 1}/{len(candidates)}: {arch} ({size_group})")
 
             # Create model
             stype_encoder_dict = construct_stype_encoder_dict(default_stype_encoder_cls_kwargs)
@@ -673,10 +677,10 @@ def successive_halving(
         keep_count = max(1, len(candidates) // 2)
         candidates = candidate_scores[:keep_count]
 
-        print(f"     Kept top {len(candidates)} candidates")
+        logger.info(f"     Kept top {len(candidates)} candidates")
         if candidates:
             best_score = candidates[0][3]
-            print(f"     Best validation score: {best_score:.4f}")
+            logger.info(f"     Best validation score: {best_score:.4f}")
 
         # Increase epochs for next round
         if current_epochs < max_epochs:
@@ -688,11 +692,11 @@ def successive_halving(
     # Return best architecture and its score
     if candidates:
         best_arch, _, best_size_group, best_val_score = candidates[0]
-        print(f"   🏆 Best model: {best_arch} ({best_size_group})")
+        logger.success(f"Best model: {best_arch} ({best_size_group})")
         if best_val_score is not None:
-            print(f"   Validation score: {best_val_score:.4f}")
+            logger.info(f"   Validation score: {best_val_score:.4f}")
         else:
-            print(f"   Validation score: None (using proxy score)")
+            logger.info(f"   Validation score: None (using proxy score)")
         return best_arch, best_val_score
     else:
         raise ValueError("No candidates remaining after successive halving")
@@ -710,15 +714,13 @@ def train_model(
 ) -> Tuple[torch.nn.Module, float]:
     """Train model using the training logic from train_final_model"""
 
-    print("\n" + "=" * 50)
-    print("TRAINING MODEL")
-    print("=" * 50)
-    print(f"Training configuration:")
-    print(f"  num_epochs: {num_epochs}")
-    print(f"  early_stop_threshold: {early_stop_patience}")
-    print(f"  batch_size: 256")
-    print(f"  lr: {lr}")
-    print(f"  max_round_epoch: {max_batches_per_epoch}")
+    logger.section("TRAINING MODEL")
+    logger.info(f"Training configuration:")
+    logger.info(f"  num_epochs: {num_epochs}")
+    logger.info(f"  early_stop_threshold: {early_stop_patience}")
+    logger.info(f"  batch_size: 256")
+    logger.info(f"  lr: {lr}")
+    logger.info(f"  max_round_epoch: {max_batches_per_epoch}")
 
     train_start = time.time()
 
@@ -747,7 +749,7 @@ def train_model(
         best_model_state = None
 
         # Training loop
-        print("\nTraining...")
+        logger.info("Training...")
 
         for epoch in range(num_epochs):
             model.train()
@@ -805,11 +807,11 @@ def train_model(
             else:
                 patience += 1
                 if patience > early_stop_patience:
-                    print(f"  Early stopped at epoch {epoch}")
+                    logger.info(f"  Early stopped at epoch {epoch}")
                     break
 
             if (epoch + 1) % 10 == 0:
-                print(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
+                logger.info(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
 
         # Training ends here
         train_end = time.time()
@@ -819,14 +821,14 @@ def train_model(
         if best_model_state:
             model.load_state_dict(best_model_state)
 
-        print(f"\n✅ Training completed!")
-        print(f"   Best validation metric: {best_val_metric:.6f}")
-        print(f"   Training time: {train_time_seconds:.2f} seconds ({train_time_seconds / 3600:.2f} hours)")
+        logger.success(f"Training completed!")
+        logger.info(f"   Best validation metric: {best_val_metric:.6f}")
+        logger.info(f"   Training time: {train_time_seconds:.2f} seconds ({train_time_seconds / 3600:.2f} hours)")
 
         return model, train_time_seconds
 
     except Exception as e:
-        print(f"\n❌ Training failed: {str(e)}")
+        logger.error(f"Training failed: {str(e)}")
         import traceback
         traceback.print_exc()
         raise
@@ -874,16 +876,14 @@ def main():
 
     set_seed(args.seed)
 
-    print("=" * 80)
-    print(f"🧬 AIDA Trails: Evolutionary Algorithm for Model Selection")
-    print("=" * 80)
-    print(f"Data directory: {args.data_dir}")
-    print(f"Search space: {args.space_name}")
-    print(f"Device: {args.device}")
-    print(f"Output CSV: {args.output_csv}")
+    logger.banner(
+        "AIDA TRAILS",
+        "Evolutionary Algorithm for Model Selection",
+        f"Data: {args.data_dir}\nSpace: {args.space_name}\nDevice: {args.device}\nOutput: {args.output_csv}"
+    )
 
     # Load data
-    print(f"\n📂 Loading data...")
+    logger.info(f"Loading data...")
     table_data = TableData.load_from_dir(args.data_dir)
 
     # Determine task type (same as aida_fit_best_baseline.py)
@@ -891,7 +891,7 @@ def main():
         is_regression = True
     else:
         is_regression = False
-    print(f"Task type: {table_data.task_type}")
+    logger.info(f"Task type: {table_data.task_type}")
 
     # Prepare sample batch for proxy evaluation
     x_encoded = prepare_sample_batch_for_proxy(
@@ -905,7 +905,7 @@ def main():
     out_channels = 1
 
     # Step 1: Diversity-based selection with EA
-    print(f"\n🎯 Step 1: Diversity-based selection with EA")
+    logger.section("Step 1: Diversity-based selection with EA")
     selection_start_time = time.time()
 
     selected_models = diversity_based_selection(
@@ -920,10 +920,10 @@ def main():
     )
 
     selection_time = time.time() - selection_start_time
-    print(f"✅ Model selection complete: {selection_time:.2f}s")
+    logger.success(f"Model selection complete: {selection_time:.2f}s")
 
     # Step 2: Successive halving
-    print(f"\n🏆 Step 2: Successive halving")
+    logger.section("Step 2: Successive halving")
 
     best_arch, best_val_score = successive_halving(
         selected_models=selected_models,
@@ -934,11 +934,11 @@ def main():
         min_epochs=1,
     )
 
-    print(f"✅ Best architecture: {best_arch}")
-    print(f"   Validation score: {best_val_score:.4f}")
+    logger.success(f"Best architecture: {best_arch}")
+    logger.info(f"   Validation score: {best_val_score:.4f}")
 
     # Step 3: Train final model
-    print(f"\n🚀 Step 3: Training final model")
+    logger.section("Step 3: Training final model")
     train_start_time = time.time()
 
     # Create final model
@@ -987,10 +987,10 @@ def main():
         early_stop_patience=10,
     )
 
-    print(f"✅ Final training complete: {train_time:.2f}s")
+    logger.success(f"Final training complete: {train_time:.2f}s")
 
     # Step 4: Test final model
-    print(f"\n🧪 Step 4: Testing final model")
+    logger.section("Step 4: Testing final model")
 
     test_loader = torch_frame.data.DataLoader(table_data.test_tf, batch_size=256, shuffle=False)
 
@@ -1000,21 +1000,25 @@ def main():
         is_regression=is_regression,
     )
 
-    print(f"✅ Testing complete: {test_metric:.4f}, {inference_time:.2f}s")
+    logger.success(f"Testing complete: {test_metric:.4f}, {inference_time:.2f}s")
 
     # Calculate total time
     total_time = selection_time + train_time + inference_time
 
     # Save results to CSV
-    print(f"\n💾 Saving results to CSV...")
+    logger.info(f"Saving results to CSV...")
 
     # Check if CSV exists
     csv_exists = os.path.exists(args.output_csv)
 
+    # Extract data source from data_dir
+    data_source = os.path.basename(os.path.dirname(args.data_dir))
+    
     # Prepare result row
     result_row = {
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'dataset': os.path.basename(args.data_dir),
+        'data_source': data_source,
         'architecture': args.space_name,
         'selection_time_seconds': selection_time,
         'final_train_time_seconds': train_time,
@@ -1034,20 +1038,18 @@ def main():
             writer.writeheader()
         writer.writerow(result_row)
 
-    print(f"✅ Results saved to: {args.output_csv}")
+    logger.success(f"Results saved to: {args.output_csv}")
 
     # Print summary
-    print(f"\n{'=' * 80}")
-    print(f"🎉 AIDA Trails Complete!")
-    print(f"{'=' * 80}")
-    print(f"📊 Results:")
-    print(f"   Best architecture: {best_arch}")
-    print(f"   Test metric: {test_metric:.4f}")
-    print(f"   Selection time: {selection_time:.2f}s")
-    print(f"   Training time: {train_time:.2f}s")
-    print(f"   Inference time: {inference_time:.2f}s")
-    print(f"   Total time: {total_time:.2f}s")
-    print(f"📁 Results saved to: {args.output_csv}")
+    logger.section("AIDA Trails Complete!")
+    logger.info(f"Results:")
+    logger.info(f"   Best architecture: {best_arch}")
+    logger.info(f"   Test metric: {test_metric:.4f}")
+    logger.info(f"   Selection time: {selection_time:.2f}s")
+    logger.info(f"   Training time: {train_time:.2f}s")
+    logger.info(f"   Inference time: {inference_time:.2f}s")
+    logger.info(f"   Total time: {total_time:.2f}s")
+    logger.info(f"Results saved to: {args.output_csv}")
 
 
 if __name__ == "__main__":
