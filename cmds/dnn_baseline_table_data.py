@@ -10,7 +10,7 @@ import argparse
 import copy
 import time
 
-from torch_frame.nn.models import MLP, ResNet, FTTransformer
+from model.tabular import construct_tabular_model
 from torch.nn import L1Loss, BCEWithLogitsLoss
 from sklearn.metrics import mean_absolute_error, roc_auc_score
 from relbench.base import TaskType
@@ -45,7 +45,7 @@ parser.add_argument("--dropout_prob", type=float,
 parser.add_argument("--norm", type=str, choices=[
                     "layer_norm", "batch_norm", "none"], default="layer_norm", help="Normalization type.")
 parser.add_argument("--model", type=str,
-                    choices=["MLP", "FTTrans", "ResNet"], default="MLP", help="Model architecture type.")
+                    choices=["MLP", "FTTrans", "ResNet", "DFM"], default="MLP", help="Model architecture type.")
 
 # --- training parameters
 
@@ -104,15 +104,7 @@ model_args = {
     "col_stats": table_data.col_stats,
 }
 
-if args.model == "MLP":
-    net = MLP(**model_args)
-elif args.model == "ResNet":
-    net = ResNet(**model_args)
-elif args.model == "FTTrans":
-    model_args.pop("normalization")
-    model_args.pop("dropout_prob")
-    net = FTTransformer(**model_args)
-
+net = construct_tabular_model(args.model, model_args)
 
 if table_data.task_type == TaskType.REGRESSION:
     loss_fn = L1Loss()
