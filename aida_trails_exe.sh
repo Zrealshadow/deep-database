@@ -9,10 +9,6 @@ SCRIPT="./cmds/aida_trails.py"
 # Configuration
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# Base data directories
-BASE_DATA_DIR_FIT_BEST="/home/lingze/embedding_fusion/data/fit-best-table"
-BASE_DATA_DIR_FIT_MEDIUM="/home/lingze/embedding_fusion/data/fit-medium-table"
-BASE_DATA_DIR_FLATTEN="/home/lingze/embedding_fusion/data/flatten-table"
 
 # Output directory
 OUTPUT_DIR="./result_raw_from_server/aida_trails"

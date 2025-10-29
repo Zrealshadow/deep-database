@@ -12,10 +12,6 @@ N_TRIALS_RESNET=100        # ResNet has 108 configs
 N_TRIALS_FTTRANS=30        # FTTransformer has only 28 configs
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
-# Base data directories
-BASE_DATA_DIR_FIT_BEST="/home/lingze/embedding_fusion/data/fit-best-table"
-BASE_DATA_DIR_FIT_MEDIUM="/home/lingze/embedding_fusion/data/fit-medium-table"
-BASE_DATA_DIR_FLATTEN="/home/lingze/embedding_fusion/data/flatten-table"
 
 # Output directory
 OUTPUT_DIR="./result_raw_from_server/hyperopt_sh_baseline"
