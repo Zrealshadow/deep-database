@@ -16,13 +16,11 @@ from sklearn.metrics import mean_absolute_error, roc_auc_score
 from relbench.base import TaskType
 
 import sys
+import random
 from pathlib import Path
 
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-
-device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
 
 parser = argparse.ArgumentParser(description="Model configuration parser")
@@ -33,6 +31,9 @@ parser.add_argument("--data_dir", type=str, required=True,
 
 parser.add_argument("--verbose", action="store_true", default=False,
                     help="Enable verbose logging.")
+
+parser.add_argument("--device", type=str, default="auto",
+                    help="Device to use for training. Use 'auto' to randomly select from available GPUs.")
 
 parser.add_argument("--channels", type=int, default=64,
                     help="Number of input channels.")
@@ -71,11 +72,27 @@ logger = ModernLogger(
     level="info" if verbose else "critical"
 )
 
+# Device selection with auto-random feature
+if args.device == "auto":
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        selected_gpu = random.randint(0, num_gpus - 1)
+        device = torch.device(f"cuda:{selected_gpu}")
+        logger.info(f"Auto-selected GPU {selected_gpu} from {num_gpus} available GPUs")
+    else:
+        device = torch.device("cpu")
+        logger.warning("No GPUs available, using CPU")
+else:
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    if not torch.cuda.is_available() and args.device.startswith("cuda"):
+        logger.warning(f"CUDA not available, falling back to CPU")
+
 table_data = TableData.load_from_dir(args.data_dir)
 
 # Display task information
 logger.section(f"Task: {table_data.task_type.value}")
 task_info = f"Dataset: {args.data_dir}\n"
+task_info += f"Device: {device}\n"
 task_info += f"Model: {args.model}\n"
 task_info += f"Channels: {args.channels}, Layers: {args.num_layers}, Dropout: {args.dropout_prob}\n"
 task_info += f"Batch Size: {args.batch_size}, Learning Rate: {args.lr}, Epochs: {args.num_epochs}"

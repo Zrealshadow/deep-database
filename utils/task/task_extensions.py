@@ -51,7 +51,7 @@ def extend_task_classes():
         - mask_database(db): Mask features that may leak target information
     """
     BaseTask.mask_database = default_mask_features
-    print("✓ Task extensions applied: BaseTask.mask_features")
+    # print("✓ Task extensions applied: BaseTask.mask_features")
 
 
 # Auto-apply extensions when this module is imported
