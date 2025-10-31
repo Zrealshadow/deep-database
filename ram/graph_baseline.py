@@ -11,7 +11,7 @@ from relbench.base import TaskType
 from typing import Dict
 
 
-from utils.util import load_col_types
+from utils.util import load_col_types, setup_torch
 from utils.resource import get_text_embedder_cfg
 from utils.builder import build_pyg_hetero_graph
 from utils.data import DatabaseFactory
@@ -92,6 +92,7 @@ no_need_test = args.no_need_test
 # db = DatabaseFactory.get_db(
 #     db_name, cache_dir=data_cache_dir, with_text_compress=True)
 # task = DatabaseFactory.get_task(db_name, task_name)
+setup_torch(seed=1998)
 
 db = DatabaseFactory.get_db(
     db_name=db_name,
