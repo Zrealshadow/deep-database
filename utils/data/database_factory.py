@@ -6,7 +6,7 @@ import numpy as np
 
 from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
-from relbench.tasks import avito, trial, f1, amazon, hm
+from relbench.tasks import trial, f1, amazon, hm, avito
 
 from utils.task import task_extensions
 
@@ -195,6 +195,7 @@ def _load_f1_dataset(cache_dir: Optional[str] = None) -> Dataset:
 def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the Amazon dataset."""
     return get_dataset("rel-amazon", download=True)
+
 
 def _load_hm_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the HM dataset."""

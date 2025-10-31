@@ -123,6 +123,7 @@ class EventDataset(RDBenchEventDataset):
         """
         db = super().get_db()
         preprocess_event_database(db)
+        self.validate_and_correct_db(db)
         return db
 
 

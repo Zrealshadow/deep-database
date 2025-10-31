@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from utils.logger import ModernLogger
 from utils.resource import get_text_embedder_cfg
 from utils.preprocess import infer_type_in_table
 from utils.util import remove_pkey_fkey
@@ -31,7 +32,6 @@ np.random.seed(2025)
 # Add parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from utils.logger import ModernLogger
 
 parser = argparse.ArgumentParser(description="Process user attendance task.")
 
@@ -129,6 +129,12 @@ if __name__ == "__main__":
 
     # ------------TODO: code support "avito" dataset ---------------
     # because there are many null in foreign key columns, which raise error in featuretools dfs
+    if dbname == "avito":
+        from utils.data.avito_dataset import preprocess_avito_database
+        # after preprocessing it, there is no null in foreign key columns
+        # NOTE: after registration, this part of logic should be removed
+        preprocess_avito_database(db)
+        
     if (dbname in ['ratebeer', 'amazon', 'avito', 'hm']) and use_dfs:
         # WARNING: isolated drop nan is dangerous,
         # for example in avito, drop some "AdsInfo",
@@ -141,8 +147,8 @@ if __name__ == "__main__":
             dropped_instance_num = table.df.shape[0] - df_.shape[0]
             table.df = df_
             if dropped_instance_num > 0:
-                logger.warning(f"Table {table_name} dropped {dropped_instance_num} rows with null foreign keys")
-
+                logger.warning(
+                    f"Table {table_name} dropped {dropped_instance_num} rows with null foreign keys")
             # not allowed to reindex
 
         # for no-pky table, add a column as pkey
@@ -151,7 +157,8 @@ if __name__ == "__main__":
                 pkey_name = table_name + "_id"
                 table.df[pkey_name] = range(len(table.df))
                 table.pkey_col = pkey_name
-                logger.info(f"Table {table_name} has no primary key, added column {pkey_name} as primary key")
+                logger.info(
+                    f"Table {table_name} has no primary key, added column {pkey_name} as primary key")
 
     if dbname == "amazon":
         # TODO put it in dataset class
@@ -209,7 +216,8 @@ if __name__ == "__main__":
                 # =================== TODO:code supports "event" dataset =================
                 if dbname == "event" and (db.table_dict[pkey_table].df[pkey_table_pkey_col].hasnans or
                                           db.table_dict[table_name].df[fkey_col].hasnans):
-                    logger.warning(f"Null values in relationship: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}, skipping")
+                    logger.warning(
+                        f"Null values in relationship: {table_name}.{fkey_col} -> {pkey_table}.{pkey_table_pkey_col}, skipping")
                     continue
                 # ====[Special case] need incorporates the logic into Dataset class =============
 
@@ -243,7 +251,8 @@ if __name__ == "__main__":
             'agg_primitives': ["sum", "max", "min", "mean", "count", "percent_true", "num_unique", "mode"]
         }
         # Log DFS parameters
-        logger.info(f"DFS Parameters: max_depth={dfs_max_depth}, max_features={dfs_max_features}, time_window={time_window}, n_jobs={dfs_n_jobs}, time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} min'}")
+        logger.info(
+            f"DFS Parameters: max_depth={dfs_max_depth}, max_features={dfs_max_features}, time_window={time_window}, n_jobs={dfs_n_jobs}, time_budget={'unlimited' if dfs_time_budget == -1 else f'{dfs_time_budget} min'}")
 
     # ---------------- generate the feature matrix for each split
     feature_matrix_n = None  # number of features in feature matrix in dfs
@@ -263,6 +272,7 @@ if __name__ == "__main__":
                 how="left",
                 left_on=left_entity,
                 right_on=entity_table.pkey_col,
+                suffixes=('', '_extend')
             )
             continue
 
@@ -291,7 +301,8 @@ if __name__ == "__main__":
 
         split_end_time = time.time()
         split_duration = split_end_time - split_start_time
-        logger.success(f"DFS for {split} split completed in {split_duration:.2f}s")
+        logger.success(
+            f"DFS for {split} split completed in {split_duration:.2f}s")
 
         # assertion that generated features in training is equal to val/test
         if not feature_matrix_n:
@@ -311,8 +322,10 @@ if __name__ == "__main__":
                 selected_columns = fm.columns.tolist()
                 end_time = time.time()
                 duration = end_time - start_time
-                logger.success(f"Feature selection completed in {duration:.2f}s")
-                logger.success(f"Selected {len(selected_columns)}/{len(feature_matrix.columns)} features")
+                logger.success(
+                    f"Feature selection completed in {duration:.2f}s")
+                logger.success(
+                    f"Selected {len(selected_columns)}/{len(feature_matrix.columns)} features")
 
         feature_matrix = feature_matrix[selected_columns]
 
@@ -329,7 +342,8 @@ if __name__ == "__main__":
     process_end_time = time.time()
     overall_duration = process_end_time - process_start_time
     logger.section("Processing Complete")
-    logger.success(f"Overall processing completed in {overall_duration:.2f}s ({overall_duration/60:.2f} min)")
+    logger.success(
+        f"Overall processing completed in {overall_duration:.2f}s ({overall_duration/60:.2f} min)")
 
     # ------------------ Construct Table for type inference
     object_table = Table(
@@ -380,7 +394,6 @@ if __name__ == "__main__":
 
     if table_output_dir:
         path = os.path.join(table_output_dir, dirname)
-
 
         text_embedder_cfg = get_text_embedder_cfg()
         data.materilize(
