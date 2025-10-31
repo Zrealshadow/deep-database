@@ -12,7 +12,7 @@
 
 ## Overview
 
-![overview](figs/readme/overview.jpg)
+![overview](figs/overview.jpg)
 
 
 
@@ -145,7 +145,7 @@ python pretrain_baseline.py --help
 ```
 
 ## Experiments Results
-![overview](figs/readme/results.png)
+![overview](figs/results.png)
 
 
 
