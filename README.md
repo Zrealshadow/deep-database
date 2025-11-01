@@ -66,15 +66,192 @@ This project uses **Conda** for environment and dependency management, configure
 
 Deep Database is organized so that dataset handling, task logic, and modeling remain loosely coupled:
 
-- **Dataset Registry** — `utils/data` defines `Database`, `Dataset`, and `Table` classes plus the `table_data` adapters that materialize relational sources into task-aligned tables.
-- **Task Layer** — `utils/task` standardizes objectives, metrics, and splits, allowing experiments to pivot between regression, classification, and future task plugins.
-- **Relational Builders** — `utils/builder` transforms schemas into homogeneous or heterogeneous graphs while reusing the same registry metadata used for tabular views.
-- **Adaptive Preprocessing** — `utils/preprocess` inspects column types and roles; `utils/document` and `utils/tokenize` translate rows into textual artefacts for retrieval and language-model interfaces.
-- **Model Library** — `model/` houses shared modules (`model/base`, `model/utils`), graph networks (`model/gcn`, `model/hgt`, `model/gat`), contrastive learners (`model/bgrl`, `model/dgi`, `model/graphcl`), and tabular architectures (`model/tabular`).
-- **Command Entrypoints** — `cmds/` provides Python front-ends for data generation, baselines, and diagnostics; `exe/` collects repeatable shell scripts for end-to-end workflows.
-- **Artefact Stores** — `data/` persist generated tables and tensorframes.
-- **Extensions** — directories like `ram/`, `leva/`, `tabICL/`, `tabPFN/`, and `qzero/` demonstrate how the shared core supports retrieval augmentation, boosted relational learning, tabular foundation models, and neural architecture search.
-- **Quality Gates** — `test/` houses unit coverage; notebooks under `scripts/` and assets in `static/`/`webapp/` support exploration and demos without altering the production workflow.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          DEEP DATABASE FRAMEWORK                                │
+│                     Advanced Relational Data Analytics                          │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+                                    ┌──────────────┐
+                                    │   Raw Data   │
+                                    │ (Relational) │
+                                    └──────┬───────┘
+                                           │
+                    ┌──────────────────────┴──────────────────────┐
+                    │                                              │
+           ┌────────▼─────────┐                          ┌────────▼─────────┐
+           │ DATASET REGISTRY │                          │   TASK LAYER     │
+           │   (utils/data)   │                          │  (utils/task)    │
+           ├──────────────────┤                          ├──────────────────┤
+           │ • Database       │◄────────────────────────►│ • Objectives     │
+           │ • Dataset        │                          │ • Metrics        │
+           │ • Table          │                          │ • Splits         │
+           │ • table_data     │                          │ • Classification │
+           │   adapters       │                          │ • Regression     │
+           └────────┬─────────┘                          └──────────────────┘
+                    │
+        ┌───────────┴───────────────────┐
+        │                               │
+┌───────▼──────────┐         ┌──────────▼────────────┐
+│ RELATIONAL       │         │   ADAPTIVE            │
+│ BUILDERS         │         │   PREPROCESSING       │
+│ (utils/builder)  │         │                       │
+├──────────────────┤         ├───────────────────────┤
+│ • Schema → Graph │         │ • utils/preprocess    │
+│ • Homogeneous    │         │   (column analysis)   │
+│ • Heterogeneous  │         │ • utils/document      │
+│ • Graph Metadata │         │   (row → text)        │
+└────────┬─────────┘         │ • utils/tokenize      │
+         │                   │   (retrieval prep)    │
+         │                   └──────────┬────────────┘
+         │                              │
+         └──────────┬───────────────────┘
+                    │
+         ┌──────────▼──────────────────────────────────────┐
+         │                                                 │
+         │              MODEL LIBRARY (model/)             │
+         │                                                 │
+         ├─────────────────────────────────────────────────┤
+         │                                                 │
+         │  ┌─────────────┐  ┌──────────────┐              │
+         │  │   SHARED    │  │   TABULAR    │              │
+         │  │             │  │              │              │
+         │  │ • base      │  │ • MLP        │              │
+         │  │ • utils     │  │ • ResNet     │              │
+         │  └─────────────┘  │ • TabM       │              │
+         │                   │ • FT-Trans   │              │
+         │  ┌─────────────┐  │ • ARMNet     │              │
+         │  │   GRAPH     │  └──────────────┘              │
+         │  │   MODELS    │                                │
+         │  │             │  ┌──────────────┐              │
+         │  │ • GCN       │  │ CONTRASTIVE  │              │
+         │  │ • HGT       │  │              │              │ 
+         │  │ • GAT       │  │ • BGRL       │              │
+         │  │ • SAGE      │  │ • DGI        │              │
+         │  └─────────────┘  │ • GraphCL    │              │
+         │                   └──────────────┘              │
+         └──────────────────────┬──────────────────────────┘
+                                │
+                    ┌───────────┴────────────┐
+                    │                        │
+         ┌──────────▼──────────┐  ┌──────────▼──────────────┐
+         │   COMMAND           │  │   ARTEFACT STORES       │
+         │   ENTRYPOINTS       │  │      (data/)            │
+         │                     │  │                         │
+         │ • cmds/             │  │ • Generated Tables      │
+         │   - Data Gen        │  │ • TensorFrames          │
+         │   - Baselines       │  │ • Cached Features       │
+         │   - Diagnostics     │  │ • Model Checkpoints     │
+         │                     │  │                         │
+         │ • exe/              │  │                         │
+         │   - Shell Scripts   │  │                         │
+         │   - End-to-End      │  │                         │
+         └─────────────────────┘  └─────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              EXTENSIONS                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │   RAM    │  │   LEVA   │  │  tabICL  │  │  tabPFN  │  │  Qzero   │           │
+│  ├──────────┤  ├──────────┤  ├──────────┤  ├──────────┤  ├──────────┤           │
+│  │Retrieval │  │ Boosted  │  │ In-Ctx   │  │  Prior   │  │  Neural  │           │
+│  │Augmented │  │Relational│  │ Learning │  │ Fitted   │  │  Arch    │           │
+│  │ Modeling │  │ Learning │  │          │  │ Network  │  │  Search  │           │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘           │
+│                                                                                 │
+│                              AIDA: Advanced Interface for Data Analytics        │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            QUALITY GATES                                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│  │  test/   │  │  scripts/    │  │   static/    │  │   webapp/    │             │
+│  ├──────────┤  ├──────────────┤  ├──────────────┤  ├──────────────┤             │
+│  │   Unit   │  │  Notebooks   │  │   Assets     │  │   Demos      │             │
+│  │ Coverage │  │ Exploration  │  │ Figures      │  │ Interactive  │             │
+│  └──────────┘  └──────────────┘  └──────────────┘  └──────────────┘             │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+                                    DATA FLOW
+                                    ─────────
+    Raw Relational Data → Dataset Registry → Task Layer
+                              ↓
+                    Relational Builders + Preprocessing
+                              ↓
+                    Graph/Tabular Representations
+                              ↓
+                        Model Library
+                              ↓
+                    Predictions & Evaluations
+                              ↓
+                        Artefact Stores
+
+                                KEY FEATURES
+                                ────────────
+    • Multi-Paradigm: Graph, Tabular, Retrieval-Augmented
+    • Consistent Abstractions: Unified dataset/task interfaces
+    • Extensive Baselines: Classic ML + Neural Networks
+    • Reproducible: End-to-end scripts and configs
+    • Extensible: Plugin architecture for new methods
+```
+
+
+### Core Components
+
+1. **Dataset Registry** (`utils/data`)
+   - Defines abstractions: Database, Dataset, Table
+   - table_data adapters materialize relational sources
+   - Self-registration for new workloads
+
+2. **Task Layer** (`utils/task`)
+   - Standardizes objectives, metrics, splits
+   - Supports classification, regression, future plugins
+   - Consistent experiment interface
+
+3. **Relational Builders** (`utils/builder`)
+   - Schema → Graph transformations
+   - Homogeneous & heterogeneous graph support
+   - Reuses registry metadata
+
+4. **Adaptive Preprocessing** (`utils/preprocess`, `utils/document`, `utils/tokenize`)
+   - Column type and role inspection
+   - Row → text translation for retrieval
+   - Language model interface preparation
+
+5. **Model Library** (`model/`)
+   - Shared modules: base, utils
+   - Graph: GCN, HGT, GAT, SAGE
+   - Contrastive: BGRL, DGI, GraphCL
+   - Tabular: MLP, ResNet, TabM, FT-Transformer, ARMNet
+
+### Supporting Infrastructure
+
+6. **Command Entrypoints** (`cmds/`, `exe/`)
+   - Python frontends for data generation, baselines, diagnostics
+   - Shell scripts for end-to-end workflows
+
+7. **Artefact Stores** (`data/`)
+   - Persists generated tables and tensorframes
+   - Cached features and model checkpoints
+
+### Extensions & Quality
+
+8. **Extensions**
+   - RAM: Retrieval-Augmented Modeling
+   - LEVA: Boosted Relational Learning
+   - tabICL, tabPFN: Tabular Foundation Models
+   - Qzero: Neural Architecture Search
+   - AIDA: Advanced Interface for Data Analytics
+
+9. **Quality Gates**
+   - test/: Unit coverage
+   - scripts/: Notebooks for exploration
+   - static/, webapp/: Demos and visualizationsts/` and assets in `static/`/`webapp/` support exploration and demos without altering the production workflow.
 
 ## Quick Start
 
