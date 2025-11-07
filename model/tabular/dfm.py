@@ -33,7 +33,7 @@ class DeepFMModel(torch.nn.Module):
     def __init__(self, nfield, nemb, mlp_layers, mlp_hid, dropout, noutput):
         super().__init__()
         self.linear = torch.nn.Linear(nemb, 1)
-        self.fm = FactorizationMachine(reduce_dim=True)
+        self.fm = FactorizationMachine(reduce_dim=True, normalize=True)
         self.mlp_ninput = nfield*nemb
         self.mlp = MLP(self.mlp_ninput, mlp_layers, mlp_hid, dropout, noutput)
 
@@ -43,14 +43,13 @@ class DeepFMModel(torch.nn.Module):
         :return:    y of size B, Regression and Classification (+sigmoid)
         """
         x_emb = x     # B*F*E
-        x_linear = torch.sum(self.linear(x_emb), axis=1) # B * 1
+        x_linear = torch.mean(self.linear(x_emb), axis=1) # B * 1
         x_fm = self.fm(x_emb).unsqueeze(-1)               # B * 1
-        x_mlp = self.mlp(x_emb.view(-1, self.mlp_ninput)) # B * 1 
-        # print(x_linear.shape, x_fm.shape, x_mlp.shape)
-        y = x_linear + x_fm + x_mlp
+        x_mlp = self.mlp(x_emb.view(-1, self.mlp_ninput))  # B * 1
+        # print(x_linear, x_fm, x_mlp)
+        y = x_linear + x_mlp + x_fm
         # B * 1
         return y
-    
 
 
 class DeepFM(torch.nn.Module):
@@ -116,6 +115,8 @@ class DeepFM(torch.nn.Module):
             noutput=out_channels
         )
 
+        self.reset_parameters()
+        
     def forward(self, x: TensorFrame) -> torch.Tensor:
         r"""Transforming :class:`TensorFrame` object into output prediction.
 
@@ -130,3 +131,13 @@ class DeepFM(torch.nn.Module):
         y = self.deepfm(x)      # B*out_channels
 
         return y
+
+    def reset_parameters(self):
+        """Reset model parameters"""
+        self.encoder.reset_parameters()
+        torch.nn.init.xavier_uniform_(self.deepfm.linear.weight)
+        torch.nn.init.zeros_(self.deepfm.linear.bias)
+        self.deepfm.mlp.reset_parameters()
+        
+        
+        

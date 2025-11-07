@@ -46,7 +46,7 @@ parser.add_argument("--dropout_prob", type=float,
 parser.add_argument("--norm", type=str, choices=[
                     "layer_norm", "batch_norm", "none"], default="layer_norm", help="Normalization type.")
 parser.add_argument("--model", type=str,
-                    choices=["MLP", "FTTrans", "ResNet", "DFM"], default="MLP", help="Model architecture type.")
+                    choices=["MLP", "FTTrans", "ResNet", "DFM", "TabM"], default="MLP", help="Model architecture type.")
 
 # --- training parameters
 

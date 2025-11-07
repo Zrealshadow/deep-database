@@ -25,11 +25,20 @@ class MLP(nn.Module):
         """
         return self.mlp(x)
 
+    def reset_parameters(self):
+        """Reset model parameters"""
+        for layer in self.mlp:
+            if isinstance(layer, nn.Linear):
+                torch.nn.init.xavier_uniform_(layer.weight)
+                torch.nn.init.zeros_(layer.bias)
+
+
 class FactorizationMachine(nn.Module):
 
-    def __init__(self, reduce_dim=True):
+    def __init__(self, reduce_dim=True, normalize=False):
         super().__init__()
         self.reduce_dim = reduce_dim
+        self.normalize = normalize
 
     def forward(self, x):
         """
@@ -38,6 +47,10 @@ class FactorizationMachine(nn.Module):
         square_of_sum = torch.sum(x, dim=1)**2                  # B*E
         sum_of_square = torch.sum(x**2, dim=1)                  # B*E
         fm = square_of_sum - sum_of_square                      # B*E
+        F = x.size(1)
         if self.reduce_dim:
-            fm = torch.sum(fm, dim=1)                           # B
+            fm = torch.sum(fm, dim=1)
+            if self.normalize:
+                fm = fm / F
+
         return 0.5 * fm                                         # B*E/B

@@ -6,7 +6,7 @@ data_dir_root="./data/fit-best-table"
 # List of datasets to test
 data_list=(
     "avito-user-clicks"
-    # "avito-ad-ctr"
+    "avito-ad-ctr"
     "event-user-repeat"
     "event-user-attendance"
     "ratebeer-beer-positive"
@@ -19,7 +19,7 @@ data_list=(
 )
 
 # Model types to test
-models=("MLP" "FTTrans" "ResNet" "DFM")
+models=("MLP" "FTTrans" "ResNet" "DFM" "TabM")
 
 # Function to run DNN baseline
 run_dnn_baseline() {
