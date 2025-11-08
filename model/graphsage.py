@@ -51,7 +51,7 @@ class HeteroGraphSAGE(torch.nn.Module):
     def forward(
         self,
         x_dict: Dict[NodeType, Tensor],
-        edge_index_dict: Dict[NodeType, Tensor],
+        edge_index_dict: Dict[EdgeType, Tensor],
         num_sampled_nodes_dict: Optional[Dict[NodeType, List[int]]] = None,
         num_sampled_edges_dict: Optional[Dict[EdgeType, List[int]]] = None,
     ) -> Dict[NodeType, Tensor]:
