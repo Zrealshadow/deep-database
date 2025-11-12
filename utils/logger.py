@@ -46,7 +46,8 @@ class ModernLogger:
         level: str = "info",
         log_file: Optional[str] = None,
         show_path: bool = False,
-        rich_tracebacks: bool = True
+        rich_tracebacks: bool = True,
+        propagate: bool = False,
     ):
         # Enable rich tracebacks
         install_rich_traceback(show_locals=True)
@@ -94,7 +95,10 @@ class ModernLogger:
         self.logger.setLevel(log_level)
         self.logger.handlers.clear()
         self.logger.addHandler(rich_handler)
-
+        
+        # Prevent double logging
+        self.logger.propagate = propagate
+        
         if log_file:
             self._setup_file_handler(log_file)
 

@@ -64,12 +64,12 @@ parser.add_argument("--max_round_epoch", type=int,
 
 args = parser.parse_args()
 
-
 verbose = args.verbose
 # Initialize logger
 logger = ModernLogger(
     name="DNN_Baseline",
-    level="info" if verbose else "critical"
+    level="info" if verbose else "critical",
+    rich_tracebacks=False
 )
 
 # Device selection with auto-random feature

@@ -81,7 +81,7 @@ class AttentionHeteroConv(torch.nn.Module):
     Zero aggregations are masked out in attention. 
     """
 
-    def __init__(self, edge_types, in_channels, out_channels, num_heads=4, dropout=0.1):
+    def __init__(self, edge_types, in_channels, out_channels, num_heads=1, dropout=0.1):
         super().__init__()
         self.edge_types = edge_types
         self.in_channels = in_channels
@@ -186,9 +186,10 @@ class AttentionHeteroConv(torch.nn.Module):
 
             # Take the output for the first token (self token) + residual
             # This represents the updated node features
-            out = self_feat + attn_output[0]  # [num_nodes, out_channels]
+            # mean pool the attn_output over all heads
+            attn_output = attn_output.mean(dim=0) # [num_nodes, out_channels]
+            out = self_feat + attn_output  # [num_nodes, out_channels]
 
             result[node_type] = out
-                
-        return result, node_type_seq_types, node_type_attn_weights
 
+        return result, node_type_seq_types, node_type_attn_weights
