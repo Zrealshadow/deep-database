@@ -1,5 +1,5 @@
 from utils.logger import ModernLogger
-
+import random
 import torch
 import math
 import argparse
@@ -23,8 +23,6 @@ from model.aida import construct_default_AIDAXFormer
 
 setup_torch()
 
-device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
-
 parser = argparse.ArgumentParser()
 
 # Dataset and cache
@@ -32,6 +30,8 @@ parser.add_argument('--tf_cache_dir', type=str, required=True,
                     help='TensorFrame cache directory')
 parser.add_argument('--db_name', type=str, required=True, help='Database name')
 parser.add_argument('--task_name', type=str, required=True, help='Task name')
+parser.add_argument("--device", type=str, default="auto",
+                    help="Device to use for training. Use 'auto' to randomly select from available GPUs.")
 
 # Sampling settings
 parser.add_argument('--validation_ratio', type=float,
@@ -39,8 +39,10 @@ parser.add_argument('--validation_ratio', type=float,
 parser.add_argument('--test_ratio', type=float,
                     default=1.0, help='Test sampling ratio')
 parser.add_argument('--num_neighbors', nargs='+', type=int,
-                    default=[64, 32], help='Neighbor sampling sizes')
-parser.add_argument('--batch_size', type=int, default=256, help='Batch size')
+                    default=[64, 64], help='Neighbor sampling sizes')
+parser.add_argument('--sample_strategy', type=str, default='last',
+                    choices=['last', 'uniform'], help ='Neighbor sampling strategy')
+parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
 
 # Model parameters
 parser.add_argument('--base_encoder', type=str, default=None,
@@ -84,6 +86,21 @@ logger = ModernLogger(
     rich_tracebacks=False
 )
 
+# Device selection with auto-random feature
+if args.device == "auto":
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        selected_gpu = random.randint(0, num_gpus - 1)
+        device = torch.device(f"cuda:{selected_gpu}")
+        logger.info(f"Auto-selected GPU {selected_gpu} from {num_gpus} available GPUs")
+    else:
+        device = torch.device("cpu")
+        logger.warning("No GPUs available, using CPU")
+else:
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    if not torch.cuda.is_available() and args.device.startswith("cuda"):
+        logger.warning(f"CUDA not available, falling back to CPU")
+        
 # Extract arguments for readability
 cache_dir = args.tf_cache_dir
 db_name = args.db_name
@@ -93,6 +110,7 @@ task_name = args.task_name
 validation_ratio = args.validation_ratio
 test_ratio = args.test_ratio
 num_neighbors = args.num_neighbors
+sample_strategy = args.sample_strategy
 batch_size = args.batch_size
 
 # Model parameters
@@ -142,12 +160,13 @@ data, col_stats_dict = build_pyg_hetero_graph(
 logger.section(f"Task: {task.task_type.value}")
 task_info = f"Database: {db_name}\n"
 task_info += f"Task: {task_name}\n"
-# task_info += f"Device: {device}\n"
+task_info += f"Device: {device}\n"
 task_info += f"Base Encoder: {args.base_encoder if args.base_encoder else 'Shared Transformer'}\n"
 # task_info += f"Channels: {channels}, Out Channels: {out_channels}\n"
 # task_info += f"Feature Layers: {feat_layer_num}, Graph Layers: {graph_layer_num}\n"
 # task_info += f"Dropout: {dropout}\n"
 # task_info += f"Batch Size: {batch_size}, Learning Rate: {lr}\n"
+task_info += f"Sampling Strategy: {sample_strategy}, Neighbors: {num_neighbors}\n"
 task_info += f"Epochs: {num_epochs}, Early Stop: {early_stop_threshold}"
 logger.info_panel("Configuration", task_info)
 
@@ -189,7 +208,7 @@ for split, sample_ratio, table in [
         data,
         num_neighbors=num_neighbors,
         time_attr="time",
-        temporal_strategy="last",
+        temporal_strategy=sample_strategy,
         input_nodes=table_input.nodes,
         input_time=table_input.time,
         transform=table_input.transform,
@@ -385,7 +404,7 @@ loader = NeighborLoader(
     data,
     num_neighbors=num_neighbors,
     time_attr="time",
-    temporal_strategy="last",
+    temporal_strategy=sample_strategy,
     input_nodes=table_input.nodes,
     input_time=table_input.time,
     transform=table_input.transform,

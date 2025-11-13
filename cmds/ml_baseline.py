@@ -1,7 +1,7 @@
 import torch_frame
 import argparse
 import time
-
+import pandas as pd
 from torch_frame.gbdt import LightGBM, CatBoost
 from torch_frame.typing import Metric
 from sklearn.metrics import mean_absolute_error, roc_auc_score
@@ -17,7 +17,7 @@ parser.add_argument("--data_dir", type=str, required=True,
                     help="Path to the data directory.")
 parser.add_argument("--trials", type=int, default=10,
                     help="Number of trials for model training.")
-parser.add_argument("--method", type=str, choices=["lgb", "catboost"],
+parser.add_argument("--method", type=str, choices=["lgb", "catboost", "xgboost"],
                     default="lgb", help="Method to use for training.")
 parser.add_argument("--verbose", action="store_true", default=False,
                     help="Enable verbose logging.")
@@ -26,12 +26,15 @@ args = parser.parse_args()
 # Initialize logger
 logger = ModernLogger(
     name="ML_Baseline",
-    level="info" if args.verbose else "critical"
+    level="info" if args.verbose else "critical",
+    rich_tracebacks=False
 )
 
 data_dir = args.data_dir
 
 table_data = TableData.load_from_dir(data_dir)
+
+
 
 # Display task information
 logger.section(f"Task: {table_data.task_type.value}")
@@ -60,6 +63,8 @@ elif args.method == "catboost":
         task_type=task_type_,
         metric=tune_metrics,
     )
+else:
+    raise ValueError(f"Unsupported method: {args.method}")
 
 logger.info("Starting hyperparameter tuning...")
 start_time = time.time()

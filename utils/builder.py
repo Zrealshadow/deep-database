@@ -255,7 +255,8 @@ def build_pyg_hetero_graph(
                 cache_dir, f"{table_name}.pt")
         )
 
-        print(f"-----> Materialize {table_name} Tensor Frame")
+        if verbose:
+            print(f"-----> Materialize {table_name} Tensor Frame")
         dataset = TFDataset(
             df=df,
             col_to_stype=col_to_stype,
@@ -297,6 +298,6 @@ def build_pyg_hetero_graph(
     data.validate()
     end_cpu_time = time.time()
     cpu_time_cost = end_cpu_time - start_cpu_time
-    print(
-        f"Build pyg hetero graph takes {cpu_time_cost:.6f} seconds")
+    if verbose:
+        print(f"Build pyg hetero graph takes {cpu_time_cost:.6f} seconds")
     return data, col_stats_dict
