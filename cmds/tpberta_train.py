@@ -252,8 +252,10 @@ def train_tpberta(
     # Convert data format
     data_dir_path = Path(data_dir)
     dataset_name = data_dir_path.name
-    temp_dir = data_dir_path.parent / f"{dataset_name}_tpberta_temp"
-    temp_dir.mkdir(exist_ok=True)
+    
+    # Create temp directory in current directory (relative path)
+    temp_dir = Path(f"./{dataset_name}_tpberta_temp")
+    temp_dir.mkdir(parents=True, exist_ok=True)
     
     csv_path, task_type, split_info = convert_tabledata_to_tpberta_format(data_dir, temp_dir)
     
