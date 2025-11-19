@@ -38,6 +38,25 @@ from utils.logger import ModernLogger
 logger = ModernLogger(name="tpberta_train", level="info")
 
 
+# Args class for build_default_model (like original code)
+class Args:
+    def __init__(self, pretrain_dir, max_position_embeddings, max_feature_length, 
+                 max_numerical_token, max_categorical_token, feature_map, batch_size):
+        # base_model_dir is only needed for MTL pre-training, not for fine-tuning
+        # For fine-tuning, we use pretrain_dir
+        self.base_model_dir = None  # Not used in fine-tuning
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = 5
+        self.max_seq_length = 512
+        self.max_feature_length = max_feature_length
+        self.max_numerical_token = max_numerical_token
+        self.max_categorical_token = max_categorical_token
+        self.feature_map = feature_map
+        self.batch_size = batch_size
+        self.pretrain_dir = str(pretrain_dir)  # pre-trained TPBerta dir (like original code)
+        self.model_suffix = "pytorch_models/best"
+
+
 def check_upper_num(x: str):
     """Check if string has multiple uppercase letters"""
     x1, x2 = list(x), list(x.lower())
@@ -259,44 +278,33 @@ def train_tpberta(
     
     csv_path, task_type, split_info = convert_tabledata_to_tpberta_format(data_dir, temp_dir)
     
-    # Setup paths (must be set via environment variables)
-    if pretrain_dir is None:
-        pretrain_dir = os.environ.get("TPBERTA_PRETRAIN_DIR")
-        if not pretrain_dir:
-            raise ValueError("TPBERTA_PRETRAIN_DIR environment variable must be set")
-    
-    base_model_dir = os.environ.get("TPBERTA_BASE_MODEL_DIR")
-    if not base_model_dir:
-        raise ValueError("TPBERTA_BASE_MODEL_DIR environment variable must be set")
-    
-    # Prepare data config
-    class Args:
-        def __init__(self):
-            self.base_model_dir = base_model_dir
-            self.max_position_embeddings = max_position_embeddings
-            self.type_vocab_size = 5
-            self.max_seq_length = 512
-            self.max_feature_length = max_feature_length
-            self.max_numerical_token = max_numerical_token
-            self.max_categorical_token = max_categorical_token
-            self.feature_map = feature_map
-            self.batch_size = batch_size
-            self.pretrain_dir = pretrain_dir
-            self.model_suffix = "pytorch_models/best"
-    
-    args = Args()
+    # pretrain_dir must be set (assumed to exist)
+    pretrain_path = Path(pretrain_dir)
     
     # Calculate train_ratio
     train_val_size = split_info['train_size'] + split_info['val_size']
     train_ratio = split_info['train_size'] / train_val_size if train_val_size > 0 else 0.8
     
-    # Create data config
-    data_config = DataConfig.from_default(
-        args,
+    # Create data config using from_pretrained (like original code)
+    # This loads data_config.json and tokenizer from pretrain_dir (tp-joint)
+    data_config = DataConfig.from_pretrained(
+        pretrain_path,
         data_dir=temp_dir,
+        batch_size=batch_size,
         train_ratio=train_ratio,
         preproc_type='lm',
         pre_train=False
+    )
+    
+    # Prepare args for build_default_model (like original code)
+    args = Args(
+        pretrain_path,
+        max_position_embeddings,
+        max_feature_length,
+        max_numerical_token,
+        max_categorical_token,
+        feature_map,
+        batch_size
     )
     
     # Load dataset
@@ -313,20 +321,13 @@ def train_tpberta(
     logger.info(f"  Task type: {dataset.task_type.value}")
     logger.info(f"  Num classes: {dataset.n_classes}")
     
-    # Build model
+    # Build model (like original code)
     logger.info("Building TP-BERTa model...")
-    if pretrain_dir:
-        args.pretrain_dir = pretrain_dir
-        model_config, model = build_default_model(
-            args, data_config, dataset.n_classes, device, pretrain=True
-        )
-        logger.info(f"Loaded pre-trained model from {pretrain_dir}")
-    else:
-        args.pretrain_dir = None
-        model_config, model = build_default_model(
-            args, data_config, dataset.n_classes, device, pretrain=False, initialization='lm'
-        )
-        logger.info("Using base RoBERTa model (no pre-training)")
+    # args.pretrain_dir is already set above
+    model_config, model = build_default_model(
+        args, data_config, dataset.n_classes, device, pretrain=True
+    )  # use pre-trained weights & configs (like original code)
+    logger.info(f"Loaded pre-trained model from {pretrain_dir}")
     
     # Freeze encoder if requested
     if freeze_encoder:
