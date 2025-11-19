@@ -51,8 +51,8 @@ DATA_DIRS=(
 # Default data source (first one)
 DATA_SOURCE="${DATA_DIRS[0]}"
 
-# Result directory
-RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/tpberta_outputs}"
+# Result directory (save all results here)
+RESULT_DIR="${RESULT_DIR:-/home/naili/sharing-embedding-table/result_raw_from_server}"
 
 # Training parameters (reduced for testing)
 MAX_EPOCHS="${MAX_EPOCHS:-5}"      # Reduced for quick test
@@ -120,7 +120,8 @@ python "$PROJECT_ROOT/cmds/tpberta_train.py" \
     --max_epochs "$MAX_EPOCHS" \
     --early_stop "$EARLY_STOP" \
     --batch_size "$BATCH_SIZE" \
-    --lr "$LEARNING_RATE"
+    --lr "$LEARNING_RATE" \
+    --freeze_encoder
 
 echo ""
 echo "=========================================="

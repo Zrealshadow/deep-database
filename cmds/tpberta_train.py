@@ -17,6 +17,7 @@ import os
 import sys
 import argparse
 import json
+import copy
 import pandas as pd
 import numpy as np
 import shutil
@@ -25,6 +26,7 @@ from typing import Optional
 
 import torch
 from tqdm import tqdm
+import scipy.special
 from sklearn.metrics import mean_absolute_error, roc_auc_score, mean_squared_error
 
 # TP-BERTa imports
@@ -364,6 +366,7 @@ def train_tpberta(
     best_metric = -np.inf
     final_test_metric = 0
     no_improvement = 0
+    best_model_state = None  # Store best model state
     
     metric_key = {
         'regression': 'rmse',
@@ -464,6 +467,11 @@ def train_tpberta(
         if val_metric * scale > best_metric * scale:
             best_metric = val_metric
             no_improvement = 0
+            # Save best model state (deep copy)
+            if isinstance(model, torch.nn.DataParallel):
+                best_model_state = copy.deepcopy(model.module.state_dict())
+            else:
+                best_model_state = copy.deepcopy(model.state_dict())
         else:
             no_improvement += 1
         
@@ -508,6 +516,7 @@ def train_tpberta(
     output_dir = result_dir / dataset_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Save results.json
     results = {
         'best_val_metric': best_metric,
         'final_test_metric': final_test_metric,
@@ -518,12 +527,88 @@ def train_tpberta(
         'freeze_encoder': freeze_encoder,
         'lr': lr,
         'num_epochs_trained': epoch + 1,
+        'batch_size': batch_size,
+        'max_epochs': max_epochs,
+        'early_stop': early_stop,
+        'weight_decay': weight_decay,
+        'lamb': lamb,
+        'task_type': task_type,
+        'dataset_name': dataset_name,
     }
     
     with open(output_dir / "results.json", 'w') as f:
         json.dump(results, f, indent=2)
     
+    # Save predictions (test set)
+    np.save(output_dir / "test_predictions.npy", test_preds)
+    np.save(output_dir / "test_targets.npy", test_targets)
+    
+    # Save predictions as CSV for easy viewing
+    if dataset.is_regression:
+        pred_df = pd.DataFrame({
+            'target': test_targets,
+            'prediction': test_preds
+        })
+    elif dataset.task_type.value == 'binclass':
+        pred_probs = scipy.special.expit(test_preds)  # Convert logits to probabilities
+        pred_df = pd.DataFrame({
+            'target': test_targets,
+            'prediction': pred_probs
+        })
+    else:  # multiclass
+        pred_probs = scipy.special.softmax(test_preds, axis=1)
+        pred_df = pd.DataFrame({
+            'target': test_targets,
+            **{f'class_{i}_prob': pred_probs[:, i] for i in range(pred_probs.shape[1])},
+            'predicted_class': pred_probs.argmax(axis=1)
+        })
+    pred_df.to_csv(output_dir / "test_predictions.csv", index=False)
+    
+    # Save training history
+    history = {
+        'train_losses': tr_task_losses,
+        'val_metrics': ev_metrics,
+        'tr_reg_losses': tr_reg_losses if lamb > 0 else [],
+    }
+    with open(output_dir / "training_history.json", 'w') as f:
+        json.dump(history, f, indent=2)
+    
+    # Save best model weights (restore best model state first)
+    if best_model_state is not None:
+        if isinstance(model, torch.nn.DataParallel):
+            model.module.load_state_dict(best_model_state)
+        else:
+            model.load_state_dict(best_model_state)
+        logger.info("Restored best model state for saving")
+    
+    best_model_path = output_dir / "best_model.pth"
+    if isinstance(model, torch.nn.DataParallel):
+        torch.save(model.module.state_dict(), best_model_path)
+    else:
+        torch.save(model.state_dict(), best_model_path)
+    
+    # Save model config
+    config_info = {
+        'model_config': model_config.to_dict() if hasattr(model_config, 'to_dict') else str(model_config),
+        'data_config': {
+            'num_cont_token': data_config.num_cont_token,
+            'num_cat_token': data_config.num_cat_token,
+            'max_feature_length': data_config.max_feature_length,
+            'max_seq_length': data_config.max_seq_length,
+        },
+        'pretrain_dir': str(pretrain_dir),
+    }
+    with open(output_dir / "model_config.json", 'w') as f:
+        json.dump(config_info, f, indent=2, default=str)
+    
     logger.info(f"Results saved to: {output_dir}")
+    logger.info(f"  - results.json: Training results and metrics")
+    logger.info(f"  - test_predictions.npy: Test set predictions (numpy)")
+    logger.info(f"  - test_predictions.csv: Test set predictions (CSV)")
+    logger.info(f"  - test_targets.npy: Test set ground truth")
+    logger.info(f"  - training_history.json: Training history")
+    logger.info(f"  - best_model.pth: Best model weights")
+    logger.info(f"  - model_config.json: Model configuration")
     logger.info(f"Best Val {metric_key}: {best_metric:.4f}")
     logger.info(f"Final Test {metric_key}: {final_test_metric:.4f}")
     

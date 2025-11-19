@@ -50,8 +50,8 @@ DATA_DIRS=(
   "flatten-table"
 )
 
-# Result directory
-RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/tpberta_outputs}"
+# Result directory (save all results here)
+RESULT_DIR="${RESULT_DIR:-/home/naili/sharing-embedding-table/result_raw_from_server}"
 
 # Training parameters
 MAX_EPOCHS="${MAX_EPOCHS:-200}"
@@ -128,7 +128,8 @@ run_tpberta() {
         --max_epochs "$MAX_EPOCHS" \
         --early_stop "$EARLY_STOP" \
         --batch_size "$BATCH_SIZE" \
-        --lr "$LEARNING_RATE"
+        --lr "$LEARNING_RATE" \
+        --freeze_encoder
 }
 
 # ============================================
