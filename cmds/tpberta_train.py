@@ -397,18 +397,28 @@ def train_tpberta(
             logits, outputs = model(**batch)
             y = labels.float()
             
+            # Ensure logits and y have matching shapes
+            # logits shape: [batch_size, 1] or [batch_size]
+            # y shape: [batch_size]
+            if logits.dim() == 2 and logits.size(1) == 1:
+                # logits is [batch_size, 1], squeeze last dimension
+                logits = logits.squeeze(-1)
+            elif logits.dim() == 1:
+                # logits is already [batch_size], keep as is
+                pass
+            else:
+                # Unexpected shape, try to flatten
+                logits = logits.view(-1)
+                y = y.view(-1)
+            
             # Task loss
             # Note: This code supports binclass and regression tasks
             if dataset.is_regression:
-                # Regression: logits shape [batch_size, 1] -> squeeze to [batch_size]
-                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
-                task_loss = torch.nn.functional.mse_loss(logits.squeeze(-1), y)
+                # Regression: logits and y should both be [batch_size]
+                task_loss = torch.nn.functional.mse_loss(logits, y)
             elif dataset.task_type.value == 'binclass':
-                # Binary classification: logits shape [batch_size, 1] -> squeeze to [batch_size]
-                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
-                task_loss = torch.nn.functional.binary_cross_entropy_with_logits(
-                    logits.squeeze(-1), y
-                )
+                # Binary classification: logits and y should both be [batch_size]
+                task_loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
             else:  # multiclass (not used in your data, but kept for compatibility)
                 task_loss = torch.nn.functional.cross_entropy(
                     logits, y.long()
@@ -446,8 +456,14 @@ def train_tpberta(
                 if dataset.is_multiclass:
                     val_preds.append(logits.cpu())
                 else:
-                    # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
-                    val_preds.append(logits.squeeze(-1).cpu())
+                    # Ensure logits shape is [batch_size] for binclass/regression
+                    if logits.dim() == 2 and logits.size(1) == 1:
+                        logits = logits.squeeze(-1)
+                    elif logits.dim() == 1:
+                        pass  # Already correct shape
+                    else:
+                        logits = logits.view(-1)
+                    val_preds.append(logits.cpu())
                 val_targets.append(labels.cpu())
         
         val_preds = torch.cat(val_preds).numpy()
@@ -500,8 +516,14 @@ def train_tpberta(
             if dataset.is_multiclass:
                 test_preds.append(logits.cpu())
             else:
-                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
-                test_preds.append(logits.squeeze(-1).cpu())
+                # Ensure logits shape is [batch_size] for binclass/regression
+                if logits.dim() == 2 and logits.size(1) == 1:
+                    logits = logits.squeeze(-1)
+                elif logits.dim() == 1:
+                    pass  # Already correct shape
+                else:
+                    logits = logits.view(-1)
+                test_preds.append(logits.cpu())
             test_targets.append(labels.cpu())
     
     test_preds = torch.cat(test_preds).numpy()
