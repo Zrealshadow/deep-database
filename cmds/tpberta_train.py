@@ -331,6 +331,17 @@ def train_tpberta(
     )  # use pre-trained weights & configs (like original code)
     logger.info(f"Loaded pre-trained model from {pretrain_dir}")
     
+    # Memory optimization: For large feature sets, DataParallel may cause OOM
+    # If model is wrapped in DataParallel and we have memory issues, unwrap it
+    if isinstance(model, torch.nn.DataParallel):
+        n_features = dataset.n_num_features + (dataset.n_cat_features or 0) + (dataset.n_str_features or 0)
+        if n_features > 200:  # Large feature set
+            logger.warning(f"Large feature set ({n_features} features) detected. "
+                         f"Consider using smaller batch_size (<= 4) to avoid OOM.")
+            # Optionally unwrap DataParallel for single GPU (uncomment if needed):
+            # logger.info("Unwrapping DataParallel to reduce memory usage...")
+            # model = model.module
+    
     # Freeze encoder if requested
     if freeze_encoder:
         logger.info("Freezing TP-BERTa encoder (only training head)...")

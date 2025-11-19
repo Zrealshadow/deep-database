@@ -56,7 +56,7 @@ RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/tpberta_outputs}"
 # Training parameters
 MAX_EPOCHS="${MAX_EPOCHS:-200}"
 EARLY_STOP="${EARLY_STOP:-50}"
-BATCH_SIZE="${BATCH_SIZE:-64}"
+BATCH_SIZE="${BATCH_SIZE:-4}"      # Reduced for large feature sets (some datasets have 500+ features)
 LEARNING_RATE="${LEARNING_RATE:-1e-5}"
 
 # ============================================
