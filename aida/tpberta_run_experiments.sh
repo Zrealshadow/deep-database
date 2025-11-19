@@ -6,6 +6,28 @@
 set -e  # Exit on error
 
 # ============================================
+# Logging Setup
+# ============================================
+
+# Create logs directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/logs}"
+mkdir -p "$LOG_DIR"
+
+# Generate log file name with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+LOG_FILE="$LOG_DIR/tpberta_experiments_${TIMESTAMP}.log"
+
+# Redirect all output to log file AND console
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+echo "=========================================="
+echo "Logging to: $LOG_FILE"
+echo "=========================================="
+echo ""
+
+# ============================================
 # Configuration
 # ============================================
 
@@ -19,9 +41,7 @@ export TPBERTA_PRETRAIN_DIR="${TPBERTA_PRETRAIN_DIR:-$TPBERTA_ROOT/checkpoints/t
 export TPBERTA_BASE_MODEL_DIR="${TPBERTA_BASE_MODEL_DIR:-$TPBERTA_ROOT/checkpoints/roberta-base}"
 export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 
-# Project root (for data and results)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Project root (already set above for logging)
 
 # Data source directories (hard coded like exam.sh)
 DATA_DIRS=(
@@ -194,4 +214,5 @@ echo "All TP-BERTa experiments completed!"
 echo "=========================================="
 echo ""
 echo "Results saved to: $RESULT_DIR"
+echo "Log saved to: $LOG_FILE"
 

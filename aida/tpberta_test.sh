@@ -6,6 +6,29 @@
 set -e  # Exit on error
 
 # ============================================
+# Logging Setup
+# ============================================
+
+# Create logs directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/logs}"
+mkdir -p "$LOG_DIR"
+
+# Generate log file name with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+TEST_DATASET="${1:-avito-ad-ctr}"
+LOG_FILE="$LOG_DIR/tpberta_test_${TEST_DATASET}_${TIMESTAMP}.log"
+
+# Redirect all output to log file AND console
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+echo "=========================================="
+echo "Logging to: $LOG_FILE"
+echo "=========================================="
+echo ""
+
+# ============================================
 # Configuration
 # ============================================
 
@@ -16,9 +39,7 @@ export TPBERTA_PRETRAIN_DIR="${TPBERTA_PRETRAIN_DIR:-$TPBERTA_ROOT/checkpoints/t
 export TPBERTA_BASE_MODEL_DIR="${TPBERTA_BASE_MODEL_DIR:-$TPBERTA_ROOT/checkpoints/roberta-base}"
 export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 
-# Project root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Project root (already set above for logging)
 
 # Data source directories (hard coded like exam.sh)
 DATA_DIRS=(
@@ -39,8 +60,8 @@ EARLY_STOP="${EARLY_STOP:-3}"      # Reduced for quick test
 BATCH_SIZE="${BATCH_SIZE:-64}"
 LEARNING_RATE="${LEARNING_RATE:-1e-5}"
 
-# Default test dataset (can be overridden by argument)
-TEST_DATASET="${1:-avito-ad-ctr}"
+# Test dataset (already set above for logging)
+# TEST_DATASET is set at line 20 from command line argument
 
 # ============================================
 # Main
@@ -105,5 +126,6 @@ echo ""
 echo "=========================================="
 echo "Test completed!"
 echo "Results saved to: $RESULT_DIR/$TEST_DATASET/results.json"
+echo "Log saved to: $LOG_FILE"
 echo "=========================================="
 
