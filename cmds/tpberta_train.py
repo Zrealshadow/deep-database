@@ -314,7 +314,9 @@ def train_tpberta(
     if len(data_loaders) == 0 or len(datasets) == 0:
         raise ValueError(f"Failed to load dataset {dataset_name}")
     
-    data_loader = data_loaders[0]
+    # data_loaders is a list of tuples: [(dataloader_dict, task_type), ...]
+    # Extract the dataloader dictionary from the first tuple
+    data_loader, _ = data_loaders[0]
     dataset = datasets[0]
     
     logger.info(f"Dataset loaded: {dataset_name}")
