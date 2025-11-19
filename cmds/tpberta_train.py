@@ -344,21 +344,24 @@ def train_tpberta(
             # logger.info("Unwrapping DataParallel to reduce memory usage...")
             # model = model.module
     
+    # Get the actual model (unwrap DataParallel if needed)
+    actual_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+    
     # Freeze encoder if requested
     if freeze_encoder:
         logger.info("Freezing TP-BERTa encoder (only training head)...")
-        for param in model.tpberta.parameters():
+        for param in actual_model.tpberta.parameters():
             param.requires_grad = False
         # Setup optimizer (only head parameters)
         optimizer = torch.optim.AdamW(
-            model.classifier.parameters(),
+            actual_model.classifier.parameters(),
             lr=lr,
             weight_decay=weight_decay
         )
         logger.info(f"Optimizer: Only head parameters (lr={lr})")
     else:
         # Setup optimizer (all parameters)
-        optimizer = make_tpberta_optimizer(model, lr=lr, weight_decay=weight_decay)
+        optimizer = make_tpberta_optimizer(actual_model, lr=lr, weight_decay=weight_decay)
         logger.info(f"Optimizer: All parameters (lr={lr})")
     
     # Training loop
@@ -513,7 +516,8 @@ def train_tpberta(
     result_dir = Path(result_dir)
     result_dir.mkdir(parents=True, exist_ok=True)
     
-    output_dir = result_dir / dataset_name
+    # Create tpberta subfolder, then dataset subfolder
+    output_dir = result_dir / "tpberta" / dataset_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Save results.json

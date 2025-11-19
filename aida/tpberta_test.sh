@@ -126,7 +126,7 @@ python "$PROJECT_ROOT/cmds/tpberta_train.py" \
 echo ""
 echo "=========================================="
 echo "Test completed!"
-echo "Results saved to: $RESULT_DIR/$TEST_DATASET/results.json"
+echo "Results saved to: $RESULT_DIR/tpberta/$TEST_DATASET/"
 echo "Log saved to: $LOG_FILE"
 echo "=========================================="
 
