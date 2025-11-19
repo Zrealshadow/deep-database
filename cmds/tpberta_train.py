@@ -372,19 +372,23 @@ def train_tpberta(
         
         for batch in tqdm(data_loader['train'], desc=f"Epoch {epoch+1}", leave=False):
             batch = {k: v.to(device) for k, v in batch.items()}
+            labels = batch.pop('labels')
             
             optimizer.zero_grad()
             logits, outputs = model(**batch)
-            y = batch['y'].float()
+            y = labels.float()
             
             # Task loss
+            # Note: This code supports binclass and regression tasks
             if dataset.is_regression:
+                # Regression: logits shape [batch_size, 1] -> squeeze to [batch_size]
                 task_loss = torch.nn.functional.mse_loss(logits.squeeze(), y)
             elif dataset.task_type.value == 'binclass':
+                # Binary classification: logits shape [batch_size, 1] -> squeeze to [batch_size]
                 task_loss = torch.nn.functional.binary_cross_entropy_with_logits(
                     logits.squeeze(), y
                 )
-            else:  # multiclass
+            else:  # multiclass (not used in your data, but kept for compatibility)
                 task_loss = torch.nn.functional.cross_entropy(
                     logits, y.long()
                 )
@@ -414,14 +418,26 @@ def train_tpberta(
         with torch.no_grad():
             for batch in data_loader['val']:
                 batch = {k: v.to(device) for k, v in batch.items()}
+                labels = batch.pop('labels')
                 logits, _ = model(**batch)
-                val_preds.append(logits.squeeze().cpu())
-                val_targets.append(batch['y'].cpu())
+                # For binclass and regression: logits shape [batch_size, 1] -> squeeze to [batch_size]
+                # For multiclass: logits shape [batch_size, n_classes] -> keep as is
+                if dataset.is_multiclass:
+                    val_preds.append(logits.cpu())
+                else:
+                    val_preds.append(logits.squeeze().cpu())
+                val_targets.append(labels.cpu())
         
         val_preds = torch.cat(val_preds).numpy()
         val_targets = torch.cat(val_targets).numpy()
         
-        val_metrics = calculate_metrics(val_preds, val_targets, dataset.task_type.value)
+        val_metrics = calculate_metrics(
+            val_targets,
+            val_preds,
+            dataset.task_type.value,
+            'logits' if not dataset.is_regression else None,
+            dataset.y_info
+        )
         val_metric = val_metrics[metric_key] * scale
         
         ev_task_losses.append(0.0)
@@ -450,14 +466,26 @@ def train_tpberta(
     with torch.no_grad():
         for batch in data_loader['test']:
             batch = {k: v.to(device) for k, v in batch.items()}
+            labels = batch.pop('labels')
             logits, _ = model(**batch)
-            test_preds.append(logits.squeeze().cpu())
-            test_targets.append(batch['y'].cpu())
+            # For binclass and regression: logits shape [batch_size, 1] -> squeeze to [batch_size]
+            # For multiclass: logits shape [batch_size, n_classes] -> keep as is
+            if dataset.is_multiclass:
+                test_preds.append(logits.cpu())
+            else:
+                test_preds.append(logits.squeeze().cpu())
+            test_targets.append(labels.cpu())
     
     test_preds = torch.cat(test_preds).numpy()
     test_targets = torch.cat(test_targets).numpy()
     
-    test_metrics_dict = calculate_metrics(test_preds, test_targets, dataset.task_type.value)
+    test_metrics_dict = calculate_metrics(
+        test_targets,
+        test_preds,
+        dataset.task_type.value,
+        'logits' if not dataset.is_regression else None,
+        dataset.y_info
+    )
     final_test_metric = test_metrics_dict[metric_key] * scale
     
     # Save results
