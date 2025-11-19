@@ -3,7 +3,12 @@
 
 set -e  # 遇到错误立即退出
 
-TPBERTA_DIR="../tp-berta"
+# Get script directory and project root (like exam.sh)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# TP-BERTa directory (relative to project root, like exam.sh)
+TPBERTA_DIR="${TPBERTA_DIR:-$PROJECT_ROOT/../tp-berta}"
 CHECKPOINTS_DIR="$TPBERTA_DIR/checkpoints"
 
 echo "=========================================="

@@ -20,8 +20,15 @@ export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Data directory
-DATA_DIR_ROOT="${DATA_DIR_ROOT:-$PROJECT_ROOT/data/dfs-flatten-table}"
+# Data source directories (hard coded like exam.sh)
+DATA_DIRS=(
+  "fit-best-table"
+  "fit-medium-table" 
+  "flatten-table"
+)
+
+# Default data source (first one)
+DATA_SOURCE="${DATA_DIRS[0]}"
 
 # Result directory
 RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/tpberta_outputs}"
@@ -46,19 +53,29 @@ echo ""
 echo "Configuration:"
 echo "  Dataset: $TEST_DATASET"
 echo "  TPBERTA_ROOT: $TPBERTA_ROOT"
-echo "  DATA_DIR: $DATA_DIR_ROOT/$TEST_DATASET"
 echo "  RESULT_DIR: $RESULT_DIR"
 echo "  MAX_EPOCHS: $MAX_EPOCHS (reduced for testing)"
 echo "  EARLY_STOP: $EARLY_STOP (reduced for testing)"
 echo ""
 
+# Try to find dataset in any data source (hard coded like exam.sh)
+DATA_DIR=""
+for DATA_SOURCE in "${DATA_DIRS[@]}"; do
+    DATA_PATH="/home/lingze/embedding_fusion/data/${DATA_SOURCE}/${TEST_DATASET}"
+    if [ -d "$DATA_PATH" ]; then
+        DATA_DIR="$DATA_PATH"
+        echo "  Found dataset in: $DATA_SOURCE"
+        echo "  DATA_DIR: $DATA_DIR"
+        break
+    fi
+done
+
 # Check dataset exists
-DATA_DIR="${DATA_DIR_ROOT}/${TEST_DATASET}"
-if [ ! -d "$DATA_DIR" ]; then
-    echo "❌ Error: Dataset not found: $DATA_DIR"
+if [ -z "$DATA_DIR" ]; then
+    echo "❌ Error: Dataset not found in any data source: $TEST_DATASET"
+    echo "   Searched in: ${DATA_DIRS[@]}"
     exit 1
 fi
-
 if [ ! -f "$DATA_DIR/train.csv" ] || [ ! -f "$DATA_DIR/val.csv" ] || [ ! -f "$DATA_DIR/test.csv" ]; then
     echo "❌ Error: Missing CSV files in: $DATA_DIR"
     exit 1

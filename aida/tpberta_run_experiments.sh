@@ -23,8 +23,12 @@ export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Data directory root (adjust if your data is in a different location)
-DATA_DIR_ROOT="${DATA_DIR_ROOT:-$PROJECT_ROOT/data/dfs-flatten-table}"
+# Data source directories (hard coded like exam.sh)
+DATA_DIRS=(
+  "fit-best-table"
+  "fit-medium-table" 
+  "flatten-table"
+)
 
 # Result directory
 RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/tpberta_outputs}"
@@ -69,38 +73,37 @@ REGRESSION_DATASETS=(
 # Helper Functions
 # ============================================
 
-# Function to check if dataset exists
+# Function to check if dataset exists (hard coded like exam.sh)
 check_dataset() {
     local dataset=$1
-    local data_dir="${DATA_DIR_ROOT}/${dataset}"
+    local data_source=$2
+    local data_path="/home/lingze/embedding_fusion/data/${data_source}/${dataset}"
     
-    if [ ! -d "$data_dir" ]; then
-        echo "⚠️  Dataset not found: $data_dir"
+    if [ ! -d "$data_path" ]; then
         return 1
     fi
     
-    if [ ! -f "$data_dir/train.csv" ] || [ ! -f "$data_dir/val.csv" ] || [ ! -f "$data_dir/test.csv" ]; then
-        echo "⚠️  Missing CSV files in: $data_dir"
+    if [ ! -f "$data_path/train.csv" ] || [ ! -f "$data_path/val.csv" ] || [ ! -f "$data_path/test.csv" ]; then
         return 1
     fi
     
-    if [ ! -f "$data_dir/target_col.txt" ]; then
-        echo "⚠️  Missing target_col.txt in: $data_dir"
+    if [ ! -f "$data_path/target_col.txt" ]; then
         return 1
     fi
     
     return 0
 }
 
-# Function to run TP-BERTa experiment
+# Function to run TP-BERTa experiment (hard coded like exam.sh)
 run_tpberta() {
     local dataset=$1
-    local data_dir="${DATA_DIR_ROOT}/${dataset}"
+    local data_source=$2
+    local data_path="/home/lingze/embedding_fusion/data/${data_source}/${dataset}"
     
-    echo "  Running TP-BERTa on: $dataset"
+    echo "  Running TP-BERTa on: $dataset (${data_source})"
     
     python "$PROJECT_ROOT/cmds/tpberta_train.py" \
-        --data_dir "$data_dir" \
+        --data_dir "$data_path" \
         --result_dir "$RESULT_DIR" \
         --max_epochs "$MAX_EPOCHS" \
         --early_stop "$EARLY_STOP" \
@@ -119,7 +122,7 @@ echo ""
 echo "Configuration:"
 echo "  TPBERTA_ROOT: $TPBERTA_ROOT"
 echo "  TPBERTA_PRETRAIN_DIR: $TPBERTA_PRETRAIN_DIR"
-echo "  DATA_DIR_ROOT: $DATA_DIR_ROOT"
+echo "  Data Sources: ${DATA_DIRS[@]}"
 echo "  RESULT_DIR: $RESULT_DIR"
 echo "  MAX_EPOCHS: $MAX_EPOCHS"
 echo "  EARLY_STOP: $EARLY_STOP"
@@ -148,37 +151,42 @@ if [ ! -f "$TPBERTA_PRETRAIN_DIR/pytorch_models/best/pytorch_model.bin" ]; then
     echo ""
 fi
 
-# Process Classification Datasets
-echo "=========================================="
-echo "Classification Tasks"
-echo "=========================================="
-echo ""
-
-for dataset in "${CLASSIFICATION_DATASETS[@]}"; do
-    if check_dataset "$dataset"; then
-        run_tpberta "$dataset"
-        echo ""
-    else
-        echo "  ⏭️  Skipping: $dataset"
-        echo ""
-    fi
-done
-
-echo ""
-echo "=========================================="
-echo "Regression Tasks"
-echo "=========================================="
-echo ""
-
-# Process Regression Datasets
-for dataset in "${REGRESSION_DATASETS[@]}"; do
-    if check_dataset "$dataset"; then
-        run_tpberta "$dataset"
-        echo ""
-    else
-        echo "  ⏭️  Skipping: $dataset"
-        echo ""
-    fi
+# Process all datasets from all data sources (hard coded like exam.sh)
+for DATA_SOURCE in "${DATA_DIRS[@]}"; do
+    echo ""
+    echo "=========================================="
+    echo "Processing ${DATA_SOURCE} datasets..."
+    echo "=========================================="
+    echo ""
+    
+    # Process Classification Datasets
+    echo "Classification Tasks (${DATA_SOURCE}):"
+    echo ""
+    
+    for dataset in "${CLASSIFICATION_DATASETS[@]}"; do
+        if check_dataset "$dataset" "$DATA_SOURCE"; then
+            run_tpberta "$dataset" "$DATA_SOURCE"
+            echo ""
+        else
+            echo "  ⏭️  Skipping ${dataset} (not found in ${DATA_SOURCE})"
+            echo ""
+        fi
+    done
+    
+    echo ""
+    echo "Regression Tasks (${DATA_SOURCE}):"
+    echo ""
+    
+    # Process Regression Datasets
+    for dataset in "${REGRESSION_DATASETS[@]}"; do
+        if check_dataset "$dataset" "$DATA_SOURCE"; then
+            run_tpberta "$dataset" "$DATA_SOURCE"
+            echo ""
+        else
+            echo "  ⏭️  Skipping ${dataset} (not found in ${DATA_SOURCE})"
+            echo ""
+        fi
+    done
 done
 
 echo "=========================================="
