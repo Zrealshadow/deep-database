@@ -229,8 +229,8 @@ def convert_tabledata_to_tpberta_format(
 
 def train_tpberta(
     data_dir: str,
+    pretrain_dir: str,
     result_dir: str = "./tpberta_outputs",
-    pretrain_dir: Optional[str] = None,
     freeze_encoder: bool = False,  # New parameter: freeze encoder or not
     max_epochs: int = 200,
     early_stop: int = 50,
@@ -519,10 +519,13 @@ def main():
     
     args = parser.parse_args()
     
+    # Get pretrain_dir from args or environment variable
+    pretrain_dir = args.pretrain_dir or os.environ.get("TPBERTA_PRETRAIN_DIR")
+    
     train_tpberta(
         data_dir=args.data_dir,
         result_dir=args.result_dir,
-        pretrain_dir=args.pretrain_dir,
+        pretrain_dir=pretrain_dir,
         freeze_encoder=args.freeze_encoder,
         max_epochs=args.max_epochs,
         early_stop=args.early_stop,
