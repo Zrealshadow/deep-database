@@ -401,11 +401,13 @@ def train_tpberta(
             # Note: This code supports binclass and regression tasks
             if dataset.is_regression:
                 # Regression: logits shape [batch_size, 1] -> squeeze to [batch_size]
-                task_loss = torch.nn.functional.mse_loss(logits.squeeze(), y)
+                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
+                task_loss = torch.nn.functional.mse_loss(logits.squeeze(-1), y)
             elif dataset.task_type.value == 'binclass':
                 # Binary classification: logits shape [batch_size, 1] -> squeeze to [batch_size]
+                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
                 task_loss = torch.nn.functional.binary_cross_entropy_with_logits(
-                    logits.squeeze(), y
+                    logits.squeeze(-1), y
                 )
             else:  # multiclass (not used in your data, but kept for compatibility)
                 task_loss = torch.nn.functional.cross_entropy(
@@ -444,7 +446,8 @@ def train_tpberta(
                 if dataset.is_multiclass:
                     val_preds.append(logits.cpu())
                 else:
-                    val_preds.append(logits.squeeze().cpu())
+                    # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
+                    val_preds.append(logits.squeeze(-1).cpu())
                 val_targets.append(labels.cpu())
         
         val_preds = torch.cat(val_preds).numpy()
@@ -497,7 +500,8 @@ def train_tpberta(
             if dataset.is_multiclass:
                 test_preds.append(logits.cpu())
             else:
-                test_preds.append(logits.squeeze().cpu())
+                # Use squeeze(-1) to only remove the last dimension, avoiding issues with batch_size=1
+                test_preds.append(logits.squeeze(-1).cpu())
             test_targets.append(labels.cpu())
     
     test_preds = torch.cat(test_preds).numpy()
