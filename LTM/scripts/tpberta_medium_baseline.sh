@@ -125,7 +125,7 @@ train_dataset_model() {
     mkdir -p "$output_dir"
     
     # Run training
-    if python "$PROJECT_ROOT/LTM/train.py" \
+    if python "$PROJECT_ROOT/train.py" \
         --data_dir "$input_dir" \
         --output_dir "$output_dir" \
         --target_col_txt "$target_col_txt"; then

@@ -58,7 +58,7 @@ run_model() {
     echo ""
     
     # Run the embedding generation script
-    if python "$PROJECT_ROOT/LTM/process_relbench.py" --model "$model"; then
+    if python "$PROJECT_ROOT/process_relbench.py" --model "$model"; then
         echo ""
         echo "  ✅ Completed: $model"
         echo ""

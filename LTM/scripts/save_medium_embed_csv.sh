@@ -121,7 +121,7 @@ process_dataset_model() {
     mkdir -p "$output_dir"
     
     # Run preprocessing with specified model
-    if python "$PROJECT_ROOT/LTM/process_tables.py" \
+    if python "$PROJECT_ROOT/process_tables.py" \
         --input_dir "$input_dir" \
         --output_dir "$output_dir" \
         --model "$model"; then
