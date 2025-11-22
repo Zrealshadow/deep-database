@@ -1,16 +1,41 @@
 from utils.data import DatabaseFactory
 
 db_name = "event"
-cache_dir = "/home/lingze/.cache/relbench/rel-event"
-db = DatabaseFactory.get_db(db_name,
-                            cache_dir=cache_dir,
-                            upto_test_timestamp=False,
-                            with_text_compress=True)
-dataset = DatabaseFactory.get_dataset(db_name, cache_dir)
 
-task_name = "user-repeat"
-task = DatabaseFactory.get_task(db_name, task_name, dataset)
+tasks = [
+    ("hm", "user-churn", "rel-hm"),
+    ("event", "user-repeat", "rel-event"),
+    ("trial", "study-outcome", "rel-trial"),
+    ("ratebeer", "user-active", "ratebeer"),
+    ("avito", "user-clicks", "rel-avito"),
 
-entity_table = task.entity_table
+    ("hm", "item-sales", "rel-hm"),
+    ("event", "user-attendace", "rel-event"),
+    ("trial", "site-success", "rel-trial"),
+    ("ratebeer", "beer-positive", "ratebeer"),
+    ("avito", "ad-ctr", "rel-avito")
+]
 
-print(db.table_dict[entity_table])
+cache_dir_root = "/home/lingze/.cache/relbench/"
+for ele in tasks:
+    db_name = ele[0]
+    task_name = ele[1]
+    cache_dir_db_name = ele[2]
+    cache_dir = cache_dir_root + cache_dir_db_name
+
+    db = DatabaseFactory.get_db(db_name,
+                                cache_dir=cache_dir,
+                                upto_test_timestamp=False,
+                                with_text_compress=True)
+    dataset = DatabaseFactory.get_dataset(db_name, cache_dir)
+    task = DatabaseFactory.get_task(db_name, task_name, dataset)
+    entity_table = task.entity_table
+    used_df = db.table_dict[entity_table]
+
+    # process_csv_rows_to_embeddings(
+    #     csv_rows=test_csv_rows,
+    #     pretrain_dir=pretrain_dir,
+    #     delimiter=";",
+    #     device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
+    # )
+
