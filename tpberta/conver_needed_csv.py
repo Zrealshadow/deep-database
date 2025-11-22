@@ -35,7 +35,12 @@ for ele in tasks:
     dataset = DatabaseFactory.get_dataset(db_name, cache_dir)
     task = DatabaseFactory.get_task(db_name, task_name, dataset)
     entity_table = task.entity_table
-    used_df = db.table_dict[entity_table]
+    # Table object has .df attribute which is a pandas DataFrame
+    used_df = db.table_dict[entity_table].df
+
+    print(f"Entity table: {entity_table}")
+    print(f"DataFrame shape: {used_df.shape}")
+    print(f"DataFrame columns: {used_df.columns.tolist()}")
 
     embeddings = _get_tpberta_embeddings(
         df=used_df,
