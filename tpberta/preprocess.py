@@ -4,7 +4,6 @@ TP-BERTa Preprocessing Module
 Converts CSV rows (semicolon-separated strings) to embedding strings.
 """
 
-import sys
 import tempfile
 import shutil
 import argparse
@@ -19,7 +18,6 @@ import json
 from bin import build_default_model
 from lib import DataConfig
 from lib.data_utils import prepare_tpberta_loaders
-from bin.tpberta_modeling import TPBertaForClassification, RobertaConfig
 
 
 class ModelArgs:
@@ -405,7 +403,6 @@ def convert_to_tpberta_format(
 
 def main():
     """Main function to convert TableData format to TP-BERTa format with embeddings."""
-    import os
 
     parser = argparse.ArgumentParser(
         description="Convert TableData format to TP-BERTa format with embeddings"
