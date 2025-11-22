@@ -1,36 +1,36 @@
 #!/bin/bash
 
-# TP-BERTa Preprocessing Test Script
+# TP-BERTa Preprocessing Script
 # Usage: ./generate_medium_tpbert_table.sh [dataset_name]
+#   If dataset_name is provided, process only that dataset
+#   Otherwise, process all datasets
 
 set -e  # Exit on error
 
 # ============================================
-# Logging Setup
-# ============================================
-
-# Create logs directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LOG_DIR="/home/naili/sharing-embedding-table/logs"
-mkdir -p "$LOG_DIR"
-
-# Generate log file name with timestamp
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-TEST_DATASET="${1:-avito-ad-ctr}"
-LOG_FILE="$LOG_DIR/generate_tpbert_table_${TEST_DATASET}_${TIMESTAMP}.log"
-
-# Redirect all output to log file AND console
-exec > >(tee -a "${LOG_FILE}") 2>&1
-
-echo "=========================================="
-echo "Logging to: $LOG_FILE"
-echo "=========================================="
-echo ""
-
-# ============================================
 # Configuration
 # ============================================
+
+# Data directory root (full path)
+DATA_DIR_ROOT="/home/lingze/embedding_fusion/data/fit-medium-table"
+
+# List of datasets to process
+DATA_LIST=(
+    "avito-user-clicks"
+    "avito-ad-ctr"
+    "event-user-repeat"
+    "event-user-attendance"
+    "ratebeer-beer-positive"
+    "ratebeer-place-positive"
+    "ratebeer-user-active"
+    "trial-site-success"
+    "trial-study-outcome"
+    "hm-item-sales"
+    "hm-user-churn"
+)
+
+# Check if a specific dataset is provided
+SPECIFIC_DATASET="${1:-}"
 
 # TP-BERTa paths (hard coded, server path)
 TPBERTA_ROOT="/home/naili/tp-berta"
@@ -39,20 +39,107 @@ export TPBERTA_PRETRAIN_DIR="$TPBERTA_ROOT/checkpoints/tp-joint"
 export TPBERTA_BASE_MODEL_DIR="$TPBERTA_ROOT/checkpoints/roberta-base"
 export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 
-# Data source directories (hard coded like exam.sh)
-DATA_DIRS=(
-  "fit-medium-table" 
-)
-
-# Default data source (first one)
-DATA_SOURCE="${DATA_DIRS[0]}"
-
 # Output directory for TP-BERTa format files (hard coded)
 OUTPUT_BASE_DIR="/home/naili/sharing-embedding-table/data/tpberta_table"
-OUTPUT_DIR="$OUTPUT_BASE_DIR/$TEST_DATASET"
 
-# Test dataset (already set above for logging)
-# TEST_DATASET is set at line 20 from command line argument
+# Logging setup
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOG_DIR="/home/naili/sharing-embedding-table/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+
+# Determine datasets to process
+if [ -n "$SPECIFIC_DATASET" ]; then
+    # Process only the specified dataset
+    DATASETS_TO_PROCESS=("$SPECIFIC_DATASET")
+    LOG_FILE="$LOG_DIR/generate_tpbert_table_${SPECIFIC_DATASET}_${TIMESTAMP}.log"
+    echo "=========================================="
+    echo "TP-BERTa Preprocessing - Single Dataset"
+    echo "Dataset: $SPECIFIC_DATASET"
+else
+    # Process all datasets
+    DATASETS_TO_PROCESS=("${DATA_LIST[@]}")
+    LOG_FILE="$LOG_DIR/generate_tpbert_table_all_${TIMESTAMP}.log"
+    echo "=========================================="
+    echo "TP-BERTa Preprocessing - All Datasets"
+fi
+
+# Redirect all output to log file AND console
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+echo "Logging to: $LOG_FILE"
+echo "=========================================="
+echo ""
+
+# Set CUDA_VISIBLE_DEVICES to use only one GPU (avoid DataParallel)
+export CUDA_VISIBLE_DEVICES=0
+
+# ============================================
+# Function to process a single dataset
+# ============================================
+
+process_dataset() {
+    local dataset=$1
+    local input_dir="${DATA_DIR_ROOT}/${dataset}"
+    local output_dir="${OUTPUT_BASE_DIR}/${dataset}"
+    
+    echo ""
+    echo "=========================================="
+    echo "Processing Dataset: $dataset"
+    echo "=========================================="
+    echo "  INPUT_DIR: $input_dir"
+    echo "  OUTPUT_DIR: $output_dir"
+    echo ""
+    
+    # Check dataset exists
+    if [ ! -d "$input_dir" ]; then
+        echo "  ⚠️  Warning: Dataset directory not found: $input_dir"
+        echo "  Skipping..."
+        return
+    fi
+    
+    # Check required files exist
+    if [ ! -f "$input_dir/train.csv" ] || [ ! -f "$input_dir/val.csv" ] || [ ! -f "$input_dir/test.csv" ]; then
+        echo "  ⚠️  Warning: Missing CSV files in: $input_dir"
+        echo "  Skipping..."
+        return
+    fi
+    
+    if [ ! -f "$input_dir/target_col.txt" ]; then
+        echo "  ⚠️  Warning: Missing target_col.txt in: $input_dir"
+        echo "  Skipping..."
+        return
+    fi
+    
+    # Create output directory
+    mkdir -p "$output_dir"
+    
+    # Run preprocessing
+    python "$PROJECT_ROOT/tpberta/preprocess.py" \
+        --input_dir "$input_dir" \
+        --output_dir "$output_dir"
+    
+    echo ""
+    echo "  ✅ Completed: $dataset"
+    echo "     Output saved to: $output_dir"
+}
+
+# ============================================
+# Main - Loop through datasets to process
+# ============================================
+
+for dataset in "${DATASETS_TO_PROCESS[@]}"; do
+    process_dataset "$dataset"
+done
+
+echo ""
+echo "=========================================="
+echo "All Datasets Processing Completed!"
+echo "=========================================="
+echo "Results saved to: $OUTPUT_BASE_DIR"
+echo "Log saved to: $LOG_FILE"
+echo "=========================================="
 
 # ============================================
 # Main
