@@ -54,27 +54,24 @@ class EmbeddingDataset(Dataset):
         }
 
 
-class PredictionHead(nn.Module):
-    """Simple MLP prediction head."""
+class TPBertaHead(nn.Module):
+    """TP-BERTa prediction head (matches original TPBertaHead structure)."""
     
-    def __init__(self, input_dim: int, hidden_dims: List[int] = [256, 128], 
-                 output_dim: int = 1, dropout: float = 0.2):
+    def __init__(self, input_dim: int, output_dim: int = 1, dropout: float = 0.1):
         super().__init__()
-        
-        layers = []
-        prev_dim = input_dim
-        
-        for hidden_dim in hidden_dims:
-            layers.append(nn.Linear(prev_dim, hidden_dim))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(dropout))
-            prev_dim = hidden_dim
-        
-        layers.append(nn.Linear(prev_dim, output_dim))
-        self.network = nn.Sequential(*layers)
+        # TP-BERTa: Linear(input_dim -> input_dim) -> Tanh -> Linear(input_dim -> output_dim)
+        self.dense = nn.Linear(input_dim, input_dim)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.out_proj = nn.Linear(input_dim, output_dim)
     
     def forward(self, x):
-        return self.network(x)
+        x = self.dropout1(x)
+        x = self.dense(x)
+        x = torch.tanh(x)
+        x = self.dropout2(x)
+        x = self.out_proj(x)
+        return x
 
 
 def set_random_seed(seed: int):
@@ -156,8 +153,7 @@ def train_prediction_head(
     data_dir: str,
     output_dir: str,
     target_col_txt_path: Optional[str] = None,
-    hidden_dims: List[int] = [256, 128],
-    dropout: float = 0.2,
+    dropout: float = 0.1,
     batch_size: int = 256,
     learning_rate: float = 0.001,
     num_epochs: int = 200,
@@ -175,8 +171,7 @@ def train_prediction_head(
         data_dir: Directory containing train.csv, val.csv, test.csv (each with columns: embedding, target)
         output_dir: Directory to save results
         target_col_txt_path: Path to target_col.txt (if None, auto-detect from parent dir)
-        hidden_dims: Hidden layer dimensions for prediction head
-        dropout: Dropout rate
+        dropout: Dropout rate (default: 0.1)
         batch_size: Batch size
         learning_rate: Learning rate
         num_epochs: Maximum number of epochs
@@ -227,15 +222,13 @@ def train_prediction_head(
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
     # Create model
-    model = PredictionHead(
+    model = TPBertaHead(
         input_dim=embedding_dim,
-        hidden_dims=hidden_dims,
         output_dim=1,
         dropout=dropout
     ).to(device)
-    
-    print(f"Model architecture: Input={embedding_dim}, Hidden={hidden_dims}, Output=1")
-    
+    print(f"Model architecture: TP-BERTa head (Input={embedding_dim} -> {embedding_dim} -> 1)")
+
     # Setup loss and optimizer
     if task_type == "binclass":
         criterion = nn.BCEWithLogitsLoss()
@@ -245,20 +238,20 @@ def train_prediction_head(
         criterion = nn.MSELoss()
         metric_fn = mean_squared_error
         higher_is_better = False
-    
+
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    
+
     # Training loop
     best_val_metric = -np.inf if higher_is_better else np.inf
     best_model_state = None
     no_improvement = 0
     train_losses = []
     val_metrics = []
-    
+
     print(f"\nStarting training for {num_epochs} epochs...")
     print(f"Task: {task_type}, Device: {device}")
     print("=" * 60)
-    
+
     for epoch in range(num_epochs):
         # Training
         model.train()
@@ -266,45 +259,45 @@ def train_prediction_head(
         for batch in train_loader:
             embeddings = batch['embedding'].to(device)
             labels = batch['label'].squeeze().to(device)
-            
+
             optimizer.zero_grad()
             logits = model(embeddings).squeeze()
             loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
-            
+
             epoch_loss += loss.item()
-        
+
         avg_loss = epoch_loss / len(train_loader)
         train_losses.append(avg_loss)
-        
+
         # Validation
         model.eval()
         val_preds = []
         val_targets = []
-        
+
         with torch.no_grad():
             for batch in val_loader:
                 embeddings = batch['embedding'].to(device)
                 labels = batch['label'].squeeze().cpu().numpy()
-                
+
                 logits = model(embeddings).squeeze().cpu().numpy()
-                
+
                 if task_type == "binclass":
                     probs = 1 / (1 + np.exp(-logits))  # sigmoid
                     val_preds.extend(probs)
                 else:
                     val_preds.extend(logits)
-                
+
                 val_targets.extend(labels)
-        
+
         val_metric = metric_fn(val_targets, val_preds)
         val_metrics.append(val_metric)
-        
+
         # Check for improvement
         is_better = (higher_is_better and val_metric > best_val_metric) or \
                    (not higher_is_better and val_metric < best_val_metric)
-        
+
         if is_better:
             best_val_metric = val_metric
             best_model_state = model.state_dict().copy()
@@ -313,37 +306,37 @@ def train_prediction_head(
         else:
             no_improvement += 1
             print(f"Epoch {epoch+1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f}")
-        
+
         # Early stopping
         if no_improvement >= early_stop:
             print(f"\nEarly stopping at epoch {epoch+1}")
             break
-    
+
     # Load best model and evaluate on test set
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
-    
+
     model.eval()
     test_preds = []
     test_targets = []
-    
+
     with torch.no_grad():
         for batch in test_loader:
             embeddings = batch['embedding'].to(device)
             labels = batch['label'].squeeze().cpu().numpy()
-            
+
             logits = model(embeddings).squeeze().cpu().numpy()
-            
+
             if task_type == "binclass":
                 probs = 1 / (1 + np.exp(-logits))  # sigmoid
                 test_preds.extend(probs)
             else:
                 test_preds.extend(logits)
-            
+
             test_targets.extend(labels)
-    
+
     test_metric = metric_fn(test_targets, test_preds)
-    
+
     # Save results
     results = {
         'best_val_metric': float(best_val_metric),
@@ -354,27 +347,27 @@ def train_prediction_head(
         'train_losses': train_losses,
         'val_metrics': val_metrics,
     }
-    
+
     with open(output_dir / "results.json", 'w') as f:
         json.dump(results, f, indent=2)
-    
+
     # Save predictions
     np.save(output_dir / "test_predictions.npy", np.array(test_preds))
     np.save(output_dir / "test_targets.npy", np.array(test_targets))
-    
+
     print("\n" + "=" * 60)
     print("TRAINING COMPLETE")
     print("=" * 60)
     print(f"Best Val {metric_fn.__name__}: {best_val_metric:.6f}")
     print(f"Test {metric_fn.__name__}: {test_metric:.6f}")
-    
+
     return results
 
 
 def main():
     """Main function to train prediction head from command line."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description="Train prediction head on TP-BERTa embeddings"
     )
@@ -397,17 +390,10 @@ def main():
         help="Path to target_col.txt (auto-detect if None)"
     )
     parser.add_argument(
-        "--hidden_dims",
-        type=int,
-        nargs="+",
-        default=[256, 128],
-        help="Hidden layer dimensions (default: 256 128)"
-    )
-    parser.add_argument(
         "--dropout",
         type=float,
-        default=0.2,
-        help="Dropout rate (default: 0.2)"
+        default=0.1,
+        help="Dropout rate (default: 0.1)"
     )
     parser.add_argument(
         "--batch_size",
@@ -418,8 +404,8 @@ def main():
     parser.add_argument(
         "--lr",
         type=float,
-        default=0.01,
-        help="Learning rate (default: 0.001)"
+        default=0.005,
+        help="Learning rate (default: 0.005)"
     )
     parser.add_argument(
         "--max_epochs",
@@ -445,15 +431,14 @@ def main():
         default=42,
         help="Random seed for reproducibility (default: 42)"
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
         results = train_prediction_head(
             data_dir=args.data_dir,
             output_dir=args.output_dir,
             target_col_txt_path=args.target_col_txt,
-            hidden_dims=args.hidden_dims,
             dropout=args.dropout,
             batch_size=args.batch_size,
             learning_rate=args.lr,
