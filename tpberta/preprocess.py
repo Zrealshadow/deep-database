@@ -17,26 +17,15 @@ import torch
 import base64
 import json
 
-# Add tp-berta to path (assuming it's in the parent directory of sharing-embedding-table)
-tpberta_root = Path(__file__).resolve().parent.parent.parent.parent / "tp-berta"
-if tpberta_root.exists():
-    sys.path.insert(0, str(tpberta_root))
-
-# TP-BERTa imports (will work if tp-berta is in sys.path)
-try:
-    from bin import build_default_model
-    from lib import DataConfig
-    from lib.data_utils import prepare_tpberta_loaders
-    from bin.tpberta_modeling import TPBertaForClassification, RobertaConfig
-except ImportError as e:
-    raise ImportError(
-        f"Failed to import TP-BERTa modules. Make sure tp-berta directory is in the correct location. "
-        f"Error: {e}"
-    )
+from bin import build_default_model
+from lib import DataConfig
+from lib.data_utils import prepare_tpberta_loaders
+from bin.tpberta_modeling import TPBertaForClassification, RobertaConfig
 
 
 class ModelArgs:
     """Arguments class for building TP-BERTa model."""
+
     def __init__(self, pretrain_dir, max_position_embeddings, max_feature_length,
                  max_numerical_token, max_categorical_token, feature_map, batch_size):
         self.base_model_dir = None
@@ -53,12 +42,12 @@ class ModelArgs:
 
 
 def process_csv_rows_to_embeddings(
-    csv_rows: List[str],
-    pretrain_dir: str,
-    feature_names_file: Optional[str] = None,
-    delimiter: str = ";",
-    output_format: str = "comma_separated",  # Default: comma_separated (matches input format)
-    device: Optional[str] = None,
+        csv_rows: List[str],
+        pretrain_dir: str,
+        feature_names_file: Optional[str] = None,
+        delimiter: str = ";",
+        output_format: str = "comma_separated",  # Default: comma_separated (matches input format)
+        device: Optional[str] = None,
 ) -> List[str]:
     """
     Process CSV rows (semicolon-separated strings) to embedding strings.
@@ -78,21 +67,21 @@ def process_csv_rows_to_embeddings(
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
-    
+
     # Parse CSV rows into DataFrame
     rows_data = []
     for row in csv_rows:
         values = row.strip().split(delimiter)
         rows_data.append(values)
-    
+
     # Create DataFrame (assume last column is label)
     if not rows_data:
         return []
-    
+
     num_cols = len(rows_data[0])
     col_names = [f"feature_{i}" for i in range(num_cols - 1)] + ["label"]
     df = pd.DataFrame(rows_data, columns=col_names)
-    
+
     # Convert to TP-BERTa format and get embeddings
     embeddings = _get_tpberta_embeddings(
         df=df,
@@ -100,7 +89,7 @@ def process_csv_rows_to_embeddings(
         feature_names_file=feature_names_file,
         device=device,
     )
-    
+
     # Convert embeddings to string format (default: comma_separated)
     embedding_strings = []
     for emb in embeddings:
@@ -115,15 +104,15 @@ def process_csv_rows_to_embeddings(
             embedding_strings.append(emb_b64)
         else:
             raise ValueError(f"Unknown output_format: {output_format}. Use 'comma_separated' or 'base64'")
-    
+
     return embedding_strings
 
 
 def _get_tpberta_embeddings(
-    df: pd.DataFrame,
-    pretrain_dir: str,
-    feature_names_file: Optional[str] = None,
-    device: torch.device = None,
+        df: pd.DataFrame,
+        pretrain_dir: str,
+        feature_names_file: Optional[str] = None,
+        device: torch.device = None,
 ) -> np.ndarray:
     """
     Get TP-BERTa embeddings for a DataFrame.
@@ -145,13 +134,13 @@ def _get_tpberta_embeddings(
     # Create temporary directory for TP-BERTa processing
     # TP-BERTa data loaders need to read from filesystem, so we save DataFrame to temp CSV
     temp_dir = Path(tempfile.mkdtemp())
-    
+
     try:
         # Save DataFrame as CSV
         dataset_name = "temp_dataset"
         csv_path = temp_dir / f"{dataset_name}.csv"
         df.to_csv(csv_path, index=False)
-        
+
         # Generate feature_names.json if not provided
         if feature_names_file is None or not Path(feature_names_file).exists():
             feature_names_file = temp_dir / "feature_names.json"
@@ -159,7 +148,7 @@ def _get_tpberta_embeddings(
         else:
             # Copy to temp dir
             shutil.copy(feature_names_file, temp_dir / "feature_names.json")
-        
+
         # Load pre-trained model
         pretrain_path = Path(pretrain_dir)
         data_config = DataConfig.from_pretrained(
@@ -170,7 +159,7 @@ def _get_tpberta_embeddings(
             preproc_type='lm',
             pre_train=False
         )
-        
+
         # Determine task type from label
         label_col = df.columns[-1]
         label_values = df[label_col].dropna().unique()
@@ -180,20 +169,20 @@ def _get_tpberta_embeddings(
             task_type = "regression"
         else:
             task_type = "binclass"  # default
-        
+
         # Prepare data loaders
         data_loaders, datasets = prepare_tpberta_loaders(
-            [dataset_name], 
-            data_config, 
+            [dataset_name],
+            data_config,
             tt=task_type
         )
-        
+
         if len(data_loaders) == 0:
             raise ValueError("Failed to prepare data loaders")
-        
+
         data_loader, _ = data_loaders[0]
         dataset = datasets[0]
-        
+
         # Build model (encoder only, no head needed for embeddings)
         args = ModelArgs(
             pretrain_path,
@@ -204,23 +193,23 @@ def _get_tpberta_embeddings(
             feature_map="feature_names.json",
             batch_size=32
         )
-        
+
         model_config, model = build_default_model(
             args, data_config, dataset.n_classes, device, pretrain=True
         )
-        
+
         # Handle DataParallel: if model is wrapped, access via .module
         actual_model = model.module if isinstance(model, torch.nn.DataParallel) else model
-        
+
         # Extract embeddings (use CLS token from encoder output)
         actual_model.eval()
         all_embeddings = []
-        
+
         with torch.no_grad():
             for batch in data_loader['train']:
                 batch = {k: v.to(device) for k, v in batch.items()}
                 labels = batch.pop('labels', None)
-                
+
                 # Get encoder output
                 outputs = actual_model.tpberta(**batch)
                 # Use pooled output (CLS token)
@@ -229,14 +218,14 @@ def _get_tpberta_embeddings(
                 else:
                     # Fallback: use first token (CLS)
                     embeddings = outputs.last_hidden_state[:, 0, :]
-                
+
                 all_embeddings.append(embeddings.cpu().numpy())
-        
+
         # Concatenate all embeddings
         final_embeddings = np.vstack(all_embeddings)
-        
+
         return final_embeddings
-        
+
     finally:
         # Cleanup
         if temp_dir.exists():
@@ -246,7 +235,7 @@ def _get_tpberta_embeddings(
 def _generate_feature_names(df: pd.DataFrame, output_file: Path):
     """Generate feature_names.json from DataFrame."""
     feature_name_dict = {}
-    
+
     for col in df.columns[:-1]:  # Skip label column
         temp = col
         # Handle underscores
@@ -258,20 +247,20 @@ def _generate_feature_names(df: pd.DataFrame, output_file: Path):
         # Handle hyphens
         if '-' in temp:
             temp = ' '.join(temp.lower().split('-'))
-        
+
         feature_name_dict[col] = temp.lower()
-    
+
     with open(output_file, 'w') as f:
         json.dump(feature_name_dict, f, indent=4)
 
 
 def convert_to_tpberta_format(
-    input_dir: str,
-    output_dir: str,
-    target_col: Optional[str] = None,
-    task_type: Optional[str] = None,
-    pretrain_dir: Optional[str] = None,
-    device: Optional[str] = None,
+        input_dir: str,
+        output_dir: str,
+        target_col: Optional[str] = None,
+        task_type: Optional[str] = None,
+        pretrain_dir: Optional[str] = None,
+        device: Optional[str] = None,
 ) -> str:
     """
     Convert TableData format to TP-BERTa format with embeddings.
@@ -295,7 +284,7 @@ def convert_to_tpberta_format(
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Get pretrain_dir from parameter or environment variable
     if pretrain_dir is None:
         import os
@@ -310,11 +299,11 @@ def convert_to_tpberta_format(
                     "pretrain_dir not provided and TPBERTA_PRETRAIN_DIR not set. "
                     "Please provide pretrain_dir or set TPBERTA_PRETRAIN_DIR environment variable."
                 )
-    
+
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
-    
+
     # Load target column info from target_col.txt
     target_col_file = input_dir / "target_col.txt"
     if target_col is None or task_type is None:
@@ -323,14 +312,14 @@ def convert_to_tpberta_format(
                 f"target_col.txt not found in {input_dir}. "
                 f"Please provide target_col and task_type, or create target_col.txt"
             )
-        
+
         with open(target_col_file, 'r') as f:
             lines = f.readlines()
             if target_col is None:
                 target_col = lines[0].strip()
             if task_type is None:
                 task_type = lines[1].strip() if len(lines) > 1 else "BINARY_CLASSIFICATION"
-    
+
     # Map TaskType to TP-BERTa task type
     task_type_map = {
         "BINARY_CLASSIFICATION": "binclass",
@@ -338,46 +327,39 @@ def convert_to_tpberta_format(
         "MULTICLASS_CLASSIFICATION": "multiclass"
     }
     tpberta_task_type = task_type_map.get(task_type, "binclass")
-    
+
     # Load all splits
     train_df = pd.read_csv(input_dir / "train.csv")
     val_df = pd.read_csv(input_dir / "val.csv")
     test_df = pd.read_csv(input_dir / "test.csv")
-    
+
     # Verify target column exists
     if target_col not in train_df.columns:
         raise ValueError(
             f"Target column '{target_col}' not found in CSV. "
             f"Available columns: {list(train_df.columns)}"
         )
-    
+
     # Make sure target column is last
     all_columns = [col for col in train_df.columns if col != target_col] + [target_col]
     train_df = train_df[all_columns]
     val_df = val_df[all_columns]
     test_df = test_df[all_columns]
-    
-    # Store split sizes
-    split_info = {
-        'train_size': len(train_df),
-        'val_size': len(val_df),
-        'test_size': len(test_df)
-    }
-    
+
     # Generate feature_names.json (needed for embedding generation)
     combined_df = pd.concat([train_df, val_df, test_df], ignore_index=True)
     feature_names_file = output_dir / "feature_names.json"
     _generate_feature_names(combined_df, feature_names_file)
-    
+
     print(f"🔄 Generating TP-BERTa embeddings...")
     print(f"   Device: {device}")
     print(f"   Pretrain dir: {pretrain_dir}")
-    
+
     # Generate embeddings for each split
     def process_split(df, split_name):
         """Process a single split and return embeddings + targets."""
         print(f"   Processing {split_name} split ({len(df)} rows)...")
-        
+
         # Get embeddings
         embeddings = _get_tpberta_embeddings(
             df=df,
@@ -385,60 +367,65 @@ def convert_to_tpberta_format(
             feature_names_file=str(feature_names_file),
             device=device,
         )
-        
+
         # Convert embeddings to comma-separated strings
         embedding_strings = []
         for emb in embeddings:
             emb_str = ",".join([str(x) for x in emb.flatten()])
             embedding_strings.append(emb_str)
-        
+
         # Get targets
         targets = df[target_col].values
-        
+
         return embedding_strings, targets
-    
-    # Process all splits
+
+    # Process all splits separately
     train_embeddings, train_targets = process_split(train_df, "train")
     val_embeddings, val_targets = process_split(val_df, "val")
     test_embeddings, test_targets = process_split(test_df, "test")
-    
-    # Combine all splits
-    all_embeddings = train_embeddings + val_embeddings + test_embeddings
-    all_targets = np.concatenate([train_targets, val_targets, test_targets])
-    
-    # Create output DataFrame with 2 columns: embedding, target
-    output_df = pd.DataFrame({
-        'embedding': all_embeddings,
-        'target': all_targets
-    })
-    
-    # Save output CSV
+
+    # Save each split as separate CSV file
     dataset_name = input_dir.name
-    output_csv = output_dir / f"{dataset_name}.csv"
-    output_df.to_csv(output_csv, index=False)
-    
-    # Save split info
-    split_info_file = output_dir / "split_info.json"
-    with open(split_info_file, 'w') as f:
-        json.dump(split_info, f, indent=2)
-    
+
+    train_output_df = pd.DataFrame({
+        'embedding': train_embeddings,
+        'target': train_targets
+    })
+    train_csv = output_dir / "train.csv"
+    train_output_df.to_csv(train_csv, index=False)
+
+    val_output_df = pd.DataFrame({
+        'embedding': val_embeddings,
+        'target': val_targets
+    })
+    val_csv = output_dir / "val.csv"
+    val_output_df.to_csv(val_csv, index=False)
+
+    test_output_df = pd.DataFrame({
+        'embedding': test_embeddings,
+        'target': test_targets
+    })
+    test_csv = output_dir / "test.csv"
+    test_output_df.to_csv(test_csv, index=False)
+
     print(f"✅ Converted to TP-BERTa format with embeddings:")
     print(f"   Input: {input_dir}")
     print(f"   Output: {output_dir}")
-    print(f"   CSV: {output_csv} (2 columns: embedding, target)")
+    print(f"   Train CSV: {train_csv} ({len(train_output_df)} rows, 2 columns: embedding, target)")
+    print(f"   Val CSV:   {val_csv} ({len(val_output_df)} rows, 2 columns: embedding, target)")
+    print(f"   Test CSV:  {test_csv} ({len(test_output_df)} rows, 2 columns: embedding, target)")
     print(f"   Feature names: {feature_names_file}")
-    print(f"   Split info: {split_info_file}")
     print(f"   Target column: {target_col}")
     print(f"   Task type: {tpberta_task_type}")
-    print(f"   Total rows: {len(output_df)}")
-    
-    return str(output_csv)
+    print(f"   Total rows: {len(train_output_df) + len(val_output_df) + len(test_output_df)}")
+
+    return str(train_csv)
 
 
 def main():
     """Main function to convert TableData format to TP-BERTa format with embeddings."""
     import os
-    
+
     parser = argparse.ArgumentParser(
         description="Convert TableData format to TP-BERTa format with embeddings"
     )
@@ -479,9 +466,9 @@ def main():
         default=None,
         help="Device to use (cuda/cpu, default: auto-detect)"
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
         output_csv = convert_to_tpberta_format(
             input_dir=args.input_dir,
@@ -497,10 +484,9 @@ def main():
         print(f"\n❌ Error: {e}")
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 
 if __name__ == "__main__":
     exit(main())
-
