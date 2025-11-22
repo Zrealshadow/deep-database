@@ -12,7 +12,7 @@ set -e  # Exit on error
 # Create logs directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LOG_DIR="${LOG_DIR:-$PROJECT_ROOT/logs}"
+LOG_DIR="/home/naili/sharing-embedding-table/logs"
 mkdir -p "$LOG_DIR"
 
 # Generate log file name with timestamp
@@ -31,6 +31,13 @@ echo ""
 # ============================================
 # Configuration
 # ============================================
+
+# TP-BERTa paths (hard coded, server path)
+TPBERTA_ROOT="/home/naili/tp-berta"
+export TPBERTA_ROOT="$TPBERTA_ROOT"
+export TPBERTA_PRETRAIN_DIR="$TPBERTA_ROOT/checkpoints/tp-joint"
+export TPBERTA_BASE_MODEL_DIR="$TPBERTA_ROOT/checkpoints/roberta-base"
+export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 
 # Data source directories (hard coded like exam.sh)
 DATA_DIRS=(
