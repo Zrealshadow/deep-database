@@ -10,21 +10,58 @@ import argparse
 import traceback
 from pathlib import Path
 from typing import Optional
-import numpy as np
 import pandas as pd
 import torch
 
-# Import unified embedding interface
 from LTM.get_embeddings import get_embeddings
 from LTM.models.utils import generate_feature_names
+
+
+def process_split(
+        df: pd.DataFrame,
+        split_name: str,
+        target_col: str,
+        model: str,
+        pretrain_dir: Optional[str],
+        feature_names_file: str,
+        device: str,
+        batch_size: int,
+        task_prefix: str,
+):
+    """Process a single split and return embeddings + targets."""
+    print(f"   Processing {split_name} split ({len(df)} rows)...")
+
+    # Prepare feature DataFrame (without target column)
+    feature_df = df.drop(columns=[target_col])
+
+    # Get embeddings using unified interface
+    embeddings = get_embeddings(
+        df=feature_df,
+        model=model,
+        pretrain_dir=pretrain_dir,
+        feature_names_file=feature_names_file,
+        device=device,
+        has_label=False,  # We already separated features from target
+        batch_size=batch_size,
+        task_prefix=task_prefix,
+    )
+
+    # Convert embeddings to comma-separated strings
+    embedding_strings = []
+    for emb in embeddings:
+        emb_str = ",".join([str(x) for x in emb.flatten()])
+        embedding_strings.append(emb_str)
+
+    # Get targets
+    targets = df[target_col].values
+
+    return embedding_strings, targets
 
 
 def preprocess(
         input_dir: str,
         output_dir: str,
         model: str = "tpberta",
-        target_col: Optional[str] = None,
-        task_type: Optional[str] = None,
         device: Optional[str] = None,
         batch_size: int = 32,
         task_prefix: str = "search_document",
@@ -42,8 +79,6 @@ def preprocess(
         input_dir: Directory containing train.csv, val.csv, test.csv, and target_col.txt
         output_dir: Output directory for embedding format files
         model: Embedding model to use ("tpberta", "nomic", or "bge")
-        target_col: Target column name (if None, read from target_col.txt)
-        task_type: Task type (if None, read from target_col.txt)
         device: Device to use (default: "cuda" if available, else "cpu")
         batch_size: Batch size for text models (nomic, bge)
         task_prefix: Task prefix for nomic model ("search_document", "search_query", etc.)
@@ -72,22 +107,12 @@ def preprocess(
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Load target column info from target_col.txt
+    # Load target column info from target_col.txt (assumed to exist)
     target_col_file = input_dir / "target_col.txt"
-    if target_col is None or task_type is None:
-        if not target_col_file.exists():
-            raise FileNotFoundError(
-                f"target_col.txt not found in {input_dir}. "
-                f"Please provide target_col and task_type, or create target_col.txt"
-            )
-
-        with open(target_col_file, 'r') as f:
-            lines = f.readlines()
-            if target_col is None:
-                target_col = lines[0].strip()
-            if task_type is None:
-                task_type = lines[1].strip() if len(lines) > 1 else "BINARY_CLASSIFICATION"
-
+    with open(target_col_file, 'r') as f:
+        lines = f.readlines()
+        target_col = lines[0].strip()
+        task_type = lines[1].strip() if len(lines) > 1 else "BINARY_CLASSIFICATION"
 
     # Load all splits
     train_df = pd.read_csv(input_dir / "train.csv")
@@ -117,41 +142,40 @@ def preprocess(
     if pretrain_dir:
         print(f"   Pretrain dir: {pretrain_dir}")
 
-    # Generate embeddings for each split
-    def process_split(df, split_name):
-        """Process a single split and return embeddings + targets."""
-        print(f"   Processing {split_name} split ({len(df)} rows)...")
-
-        # Prepare feature DataFrame (without target column)
-        feature_df = df.drop(columns=[target_col])
-
-        # Get embeddings using unified interface
-        embeddings = get_embeddings(
-            df=feature_df,
-            model=model,
-            pretrain_dir=pretrain_dir,
-            feature_names_file=str(feature_names_file),
-            device=device,
-            has_label=False,  # We already separated features from target
-            batch_size=batch_size,
-            task_prefix=task_prefix,
-        )
-
-        # Convert embeddings to comma-separated strings
-        embedding_strings = []
-        for emb in embeddings:
-            emb_str = ",".join([str(x) for x in emb.flatten()])
-            embedding_strings.append(emb_str)
-
-        # Get targets
-        targets = df[target_col].values
-
-        return embedding_strings, targets
-
     # Process all splits separately
-    train_embeddings, train_targets = process_split(train_df, "train")
-    val_embeddings, val_targets = process_split(val_df, "val")
-    test_embeddings, test_targets = process_split(test_df, "test")
+    train_embeddings, train_targets = process_split(
+        df=train_df,
+        split_name="train",
+        target_col=target_col,
+        model=model,
+        pretrain_dir=pretrain_dir,
+        feature_names_file=str(feature_names_file),
+        device=device,
+        batch_size=batch_size,
+        task_prefix=task_prefix,
+    )
+    val_embeddings, val_targets = process_split(
+        df=val_df,
+        split_name="val",
+        target_col=target_col,
+        model=model,
+        pretrain_dir=pretrain_dir,
+        feature_names_file=str(feature_names_file),
+        device=device,
+        batch_size=batch_size,
+        task_prefix=task_prefix,
+    )
+    test_embeddings, test_targets = process_split(
+        df=test_df,
+        split_name="test",
+        target_col=target_col,
+        model=model,
+        pretrain_dir=pretrain_dir,
+        feature_names_file=str(feature_names_file),
+        device=device,
+        batch_size=batch_size,
+        task_prefix=task_prefix,
+    )
 
     # Save each split as separate CSV file
     dataset_name = input_dir.name
@@ -217,19 +241,7 @@ def main():
         choices=["tpberta", "nomic", "bge"],
         help="Embedding model to use: tpberta, nomic, or bge (default: tpberta)"
     )
-    parser.add_argument(
-        "--target_col",
-        type=str,
-        default=None,
-        help="Target column name (if not provided, read from target_col.txt)"
-    )
-    parser.add_argument(
-        "--task_type",
-        type=str,
-        default=None,
-        help="Task type: BINARY_CLASSIFICATION, REGRESSION, or MULTICLASS_CLASSIFICATION "
-             "(if not provided, read from target_col.txt)"
-    )
+
     parser.add_argument(
         "--device",
         type=str,
@@ -256,8 +268,6 @@ def main():
             input_dir=args.input_dir,
             output_dir=args.output_dir,
             model=args.model,
-            target_col=args.target_col,
-            task_type=args.task_type,
             device=args.device,
             batch_size=args.batch_size,
             task_prefix=args.task_prefix,

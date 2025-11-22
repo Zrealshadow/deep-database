@@ -9,6 +9,7 @@ import hashlib
 import numpy as np
 import pandas as pd
 from typing import Optional, Union
+import torch
 
 from LTM.models.nomic import get_nomic_embeddings
 from LTM.models.bge import get_bge_embeddings

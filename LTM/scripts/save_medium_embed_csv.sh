@@ -44,7 +44,7 @@ export PYTHONPATH="$PROJECT_ROOT:$TPBERTA_ROOT:$PYTHONPATH"
 OUTPUT_BASE_DIR="/home/naili/sharing-embedding-table/data/tpberta_table"
 
 # Models to run for each dataset
-MODELS=("tpberta" "nomic" "bge")
+MODELS=("nomic" "bge" "tpberta")
 
 # Logging setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

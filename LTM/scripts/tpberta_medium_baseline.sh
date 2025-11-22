@@ -17,7 +17,7 @@ INPUT_DATA_DIR_ROOT="/home/naili/sharing-embedding-table/data/tpberta_table"
 ORIGINAL_DATA_DIR_ROOT="/home/lingze/embedding_fusion/data/fit-medium-table"
 
 # Models to train (should match models used in preprocessing)
-MODELS=("tpberta" "nomic" "bge")
+MODELS=("nomic" "bge" "tpberta")
 
 # List of datasets to train
 DATA_LIST=(
