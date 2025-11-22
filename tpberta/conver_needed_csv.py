@@ -8,7 +8,7 @@ tasks = [
     ("avito", "user-clicks", "rel-avito"),
 
     ("hm", "item-sales", "rel-hm"),
-    ("event", "user-attendace", "rel-event"),
+    ("event", "user-attendance", "rel-event"),
     ("trial", "site-success", "rel-trial"),
     ("ratebeer", "beer-positive", "ratebeer"),
     ("avito", "ad-ctr", "rel-avito")
