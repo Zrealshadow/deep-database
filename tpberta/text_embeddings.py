@@ -215,7 +215,6 @@ def get_embeddings(
         feature_names_file: Optional path to feature_names.json. If None, will auto-generate
                            for TP-BERTa (temporary file, cleaned up after use).
                            For nomic/bge, if provided, uses standardized feature names as keys.
-        text_format: Text format for text models ("key_value", "simple", "json_like")
         batch_size: Batch size for text models
         task_prefix: Task prefix for nomic model ("search_document", "search_query", etc.)
     
