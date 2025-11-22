@@ -68,10 +68,7 @@ TARGET_COL_TXT="$ORIGINAL_DATA_DIR/target_col.txt"
 
 # Output directory for training results
 RESULT_DIR="/home/naili/sharing-embedding-table/result_raw_from_server"
-OUTPUT_BASE_DIR="$RESULT_DIR/tpberta_head/$TEST_DATASET"
-
-# Learning rates to test
-LEARNING_RATES=(0.001 0.005 0.01 0.05 0.1)
+OUTPUT_DIR="$RESULT_DIR/tpberta_head/$TEST_DATASET"
 
 # Test dataset (already set above for logging)
 # TEST_DATASET is set at line 20 from command line argument
@@ -87,9 +84,9 @@ echo ""
 echo "Configuration:"
 echo "  Dataset: $TEST_DATASET"
 echo "  INPUT_DIR: $INPUT_DIR"
-echo "  OUTPUT_BASE_DIR: $OUTPUT_BASE_DIR"
+echo "  OUTPUT_DIR: $OUTPUT_DIR"
 echo "  TARGET_COL_TXT: $TARGET_COL_TXT"
-echo "  Learning rates to test: ${LEARNING_RATES[@]}"
+echo "  (Using default training parameters from train.py)"
 echo ""
 
 # Check input directory exists
@@ -110,53 +107,33 @@ if [ ! -f "$TARGET_COL_TXT" ]; then
     exit 1
 fi
 
-# Create base output directory
-mkdir -p "$OUTPUT_BASE_DIR"
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
 
 # Set CUDA_VISIBLE_DEVICES to use only one GPU
 export CUDA_VISIBLE_DEVICES=0
 
-# Test different learning rates
+# Run training
 echo "=========================================="
-echo "Testing Multiple Learning Rates"
+echo "Running TP-BERTa Medium Baseline Training"
 echo "=========================================="
 echo ""
+echo "Input:  $INPUT_DIR"
+echo "Output: $OUTPUT_DIR"
+echo ""
 
-for LR in "${LEARNING_RATES[@]}"; do
-    echo ""
-    echo "=========================================="
-    echo "Testing Learning Rate: $LR"
-    echo "=========================================="
-    
-    # Create output directory for this learning rate
-    OUTPUT_DIR="$OUTPUT_BASE_DIR/lr_${LR}"
-    mkdir -p "$OUTPUT_DIR"
-    
-    echo "Input:  $INPUT_DIR"
-    echo "Output: $OUTPUT_DIR"
-    echo "Learning Rate: $LR"
-    echo ""
-    
-    python "$PROJECT_ROOT/tpberta/train.py" \
-        --data_dir "$INPUT_DIR" \
-        --output_dir "$OUTPUT_DIR" \
-        --target_col_txt "$TARGET_COL_TXT" \
-        --lr "$LR"
-    
-    echo ""
-    echo "✅ Completed LR=$LR"
-    echo "   Results saved to: $OUTPUT_DIR"
-done
+python "$PROJECT_ROOT/tpberta/train.py" \
+    --data_dir "$INPUT_DIR" \
+    --output_dir "$OUTPUT_DIR" \
+    --target_col_txt "$TARGET_COL_TXT"
 
 echo ""
 echo "=========================================="
-echo "All Learning Rate Tests Completed!"
-echo "=========================================="
-echo "Results saved to: $OUTPUT_BASE_DIR"
-echo "  Each learning rate has its own subdirectory:"
-for LR in "${LEARNING_RATES[@]}"; do
-    echo "    - lr_${LR}/"
-done
+echo "Training completed!"
+echo "Results saved to: $OUTPUT_DIR"
+echo "  - results.json (training metrics)"
+echo "  - test_predictions.npy"
+echo "  - test_targets.npy"
 echo "Log saved to: $LOG_FILE"
 echo "=========================================="
 
