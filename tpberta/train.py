@@ -118,11 +118,6 @@ def train_prediction_head(
     
     data_dir = Path(data_dir)
     
-    # Auto-detect target_col.txt path
-    if target_col_txt_path is None:
-        target_col_txt_path = data_dir.parent / "target_col.txt"  # Go up one level to find original data dir
-    
-    # Load task type from target_col.txt (always exists)
     with open(target_col_txt_path, 'r') as f:
         lines = f.readlines()
         task_type_str = lines[1].strip()

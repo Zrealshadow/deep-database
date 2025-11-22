@@ -43,15 +43,32 @@ export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 INPUT_BASE_DIR="/home/naili/sharing-embedding-table/data/tpberta_table"
 INPUT_DIR="$INPUT_BASE_DIR/$TEST_DATASET"
 
+# Data source directories (hard coded like generate_medium_tpbert_table.sh)
+DATA_DIRS=(
+  "fit-medium-table"
+)
+
+# Find original data directory to get target_col.txt
+ORIGINAL_DATA_DIR=""
+for DATA_SOURCE in "${DATA_DIRS[@]}"; do
+    DATA_PATH="/home/lingze/embedding_fusion/data/${DATA_SOURCE}/${TEST_DATASET}"
+    if [ -d "$DATA_PATH" ]; then
+        ORIGINAL_DATA_DIR="$DATA_PATH"
+        break
+    fi
+done
+
+if [ -z "$ORIGINAL_DATA_DIR" ]; then
+    echo "❌ Error: Original data directory not found for dataset: $TEST_DATASET"
+    echo "   Searched in: ${DATA_DIRS[@]}"
+    exit 1
+fi
+
+TARGET_COL_TXT="$ORIGINAL_DATA_DIR/target_col.txt"
+
 # Output directory for training results
 RESULT_DIR="/home/naili/sharing-embedding-table/result_raw_from_server"
 OUTPUT_DIR="$RESULT_DIR/tpberta_head/$TEST_DATASET"
-
-# Training parameters
-MAX_EPOCHS="${MAX_EPOCHS:-200}"
-EARLY_STOP="${EARLY_STOP:-10}"
-BATCH_SIZE="${BATCH_SIZE:-256}"
-LEARNING_RATE="${LEARNING_RATE:-0.001}"
 
 # Test dataset (already set above for logging)
 # TEST_DATASET is set at line 20 from command line argument
@@ -68,10 +85,8 @@ echo "Configuration:"
 echo "  Dataset: $TEST_DATASET"
 echo "  INPUT_DIR: $INPUT_DIR"
 echo "  OUTPUT_DIR: $OUTPUT_DIR"
-echo "  MAX_EPOCHS: $MAX_EPOCHS"
-echo "  EARLY_STOP: $EARLY_STOP"
-echo "  BATCH_SIZE: $BATCH_SIZE"
-echo "  LEARNING_RATE: $LEARNING_RATE"
+echo "  TARGET_COL_TXT: $TARGET_COL_TXT"
+echo "  (Using default training parameters from train.py)"
 echo ""
 
 # Check input directory exists
@@ -84,6 +99,11 @@ fi
 if [ ! -f "$INPUT_DIR/train.csv" ] || [ ! -f "$INPUT_DIR/val.csv" ] || [ ! -f "$INPUT_DIR/test.csv" ]; then
     echo "❌ Error: Missing CSV files in: $INPUT_DIR"
     echo "   Required: train.csv, val.csv, test.csv"
+    exit 1
+fi
+
+if [ ! -f "$TARGET_COL_TXT" ]; then
+    echo "❌ Error: target_col.txt not found: $TARGET_COL_TXT"
     exit 1
 fi
 
@@ -105,10 +125,7 @@ export CUDA_VISIBLE_DEVICES=0
 python "$PROJECT_ROOT/tpberta/train.py" \
     --data_dir "$INPUT_DIR" \
     --output_dir "$OUTPUT_DIR" \
-    --max_epochs "$MAX_EPOCHS" \
-    --early_stop "$EARLY_STOP" \
-    --batch_size "$BATCH_SIZE" \
-    --lr "$LEARNING_RATE"
+    --target_col_txt "$TARGET_COL_TXT"
 
 echo ""
 echo "=========================================="
