@@ -1,129 +1,151 @@
-# TP-BERTa Package
+# LTM (Learning Tabular Models)
 
-This package provides preprocessing and training functionality for TP-BERTa models.
+Unified interface for extracting embeddings and training prediction heads. Supports TP-BERTa, Nomic, and BGE.
 
-## Structure
+## Quick Start
 
-- `preprocess.py`: Converts CSV rows to embedding strings
-- `train.py`: Trains prediction head on preprocessed embeddings
-- `__init__.py`: Package initialization
-
-## Usage
-
-### 1. Preprocessing: CSV Rows → Embedding Strings
-
-```python
-from LTM.preprocess import process_csv_rows_to_embeddings
-
-# CSV rows as semicolon-separated strings
-csv_rows = [
-    "1.5;category_a;text_value;0",  # features;label
-    "2.3;category_b;text_value;1",
-    # ...
-]
-
-# Process to embedding strings
-embeddings = process_csv_rows_to_embeddings(
-    csv_rows=csv_rows,
-    pretrain_dir="/path/to/pretrained/tpberta",
-    delimiter=";",
-    output_format="base64",  # or "comma_separated"
-)
-
-# embeddings is a list of strings (base64-encoded embeddings)
-```
-
-### 2. Integration with generate_table_data.py
-
-Add `--tpberta_format` flag when generating table data:
+### 1. Generate Embeddings for RelBench (.npy)
 
 ```bash
-export TPBERTA_PRETRAIN_DIR=/path/to/pretrained/tpberta
-
-python cmds/generate_table_data.py \
-    --dbname event \
-    --task_name user-attendance \
-    --table_output_dir ./data \
-    --tpberta_format
+cd LTM/scripts
+./save_embed_numpy.sh
 ```
 
-This will:
-1. Generate regular TableData format (CSV files, .pt files)
-2. Process CSV rows through TP-BERTa encoder
-3. Save embeddings to `{output_dir}/tpberta_embeddings/`:
-   - `train_embeddings.csv`
-   - `val_embeddings.csv`
-   - `test_embeddings.csv`
+**Output Structure**:
+```
+data/tpberta_relbench/
+├── nomic/
+│   ├── hm_user-churn_data.npy
+│   ├── avito_user-clicks_data.npy
+│   └── ...
+├── bge/
+│   ├── hm_user-churn_data.npy
+│   └── ...
+└── tpberta/
+    ├── hm_user-churn_data.npy
+    └── ...
+```
 
-Each embedding CSV has columns: `['embedding', 'label']` where `embedding` is a base64-encoded string.
+**Logs**: `logs/run_embeddings_{timestamp}.log`
 
-### 3. Training Prediction Head
+---
+
+### 2. Preprocess Medium Tables (CSV)
+
+```bash
+cd LTM/scripts
+./save_medium_embed_csv.sh              # All
+./save_medium_embed_csv.sh avito-user-clicks  # Single
+```
+
+**Input Structure**:
+```
+data/fit-medium-table/
+├── avito-user-clicks/
+│   ├── train.csv
+│   ├── val.csv
+│   ├── test.csv
+│   └── target_col.txt
+└── ...
+```
+
+**Output Structure**:
+```
+data/tpberta_table/
+├── nomic/
+│   ├── avito-user-clicks/
+│   │   ├── train.csv          # embedding, target
+│   │   ├── val.csv
+│   │   ├── test.csv
+│   │   └── feature_names.json
+│   └── ...
+├── bge/
+│   └── ...
+└── tpberta/
+    └── ...
+```
+
+**Datasets**: avito-user-clicks, avito-ad-ctr, event-user-repeat, event-user-attendance, ratebeer-beer-positive, ratebeer-place-positive, ratebeer-user-active, trial-site-success, trial-study-outcome, hm-item-sales, hm-user-churn
+
+---
+
+### 3. Train Prediction Head
+
+```bash
+cd LTM/scripts
+./tpberta_medium_baseline.sh            # All
+./tpberta_medium_baseline.sh avito-user-clicks  # Single
+```
+
+**Input Structure**:
+```
+data/tpberta_table/
+├── nomic/
+│   └── avito-user-clicks/     # From step 2
+│       ├── train.csv
+│       ├── val.csv
+│       └── test.csv
+└── ...
+```
+
+**Output Structure**:
+```
+result_raw_from_server/
+├── nomic_head/
+│   ├── avito-user-clicks/
+│   │   ├── results.json       # metrics
+│   │   ├── test_predictions.npy
+│   │   └── test_targets.npy
+│   └── ...
+├── bge_head/
+│   └── ...
+└── tpberta_head/
+    └── ...
+```
+
+---
+
+## Python API
+
+### Extract Embeddings
 
 ```python
-from LTM.train import train_prediction_head
+from LTM import get_embeddings
+import pandas as pd
 
-results = train_prediction_head(
-    embedding_csv_path="./data/tpberta_embeddings/train_embeddings.csv",
-    output_dir="./results/prediction_head",
-    embedding_dim=768,  # TP-BERTa hidden size
-    embedding_format="base64",
-    task_type="binclass",  # or "regression"
-    hidden_dims=[256, 128],
-    dropout=0.2,
-    batch_size=64,
-    learning_rate=1e-3,
-    num_epochs=200,
-    early_stop=50,
-)
+df = pd.read_csv("data.csv")
+
+# TP-BERTa
+emb = get_embeddings(df, model="tpberta", pretrain_dir="...", has_label=False)
+
+# Nomic
+emb = get_embeddings(df, model="nomic", task_prefix="classification", batch_size=32)
+
+# BGE
+emb = get_embeddings(df, model="bge", batch_size=32)
 ```
 
-Or from command line:
+---
 
-```python
-# Create a simple training script
-from LTM.train import train_prediction_head
-import sys
+## Environment Variables
 
-if __name__ == "__main__":
-    train_prediction_head(
-        embedding_csv_path=sys.argv[1],
-        output_dir=sys.argv[2],
-        embedding_dim=int(sys.argv[3]),
-        task_type=sys.argv[4] if len(sys.argv) > 4 else "binclass",
-    )
+```bash
+export TPBERTA_ROOT="/home/naili/tp-berta"
+export TPBERTA_PRETRAIN_DIR="$TPBERTA_ROOT/checkpoints/tp-joint"
+export TPBERTA_BASE_MODEL_DIR="$TPBERTA_ROOT/checkpoints/roberta-base"
+export PYTHONPATH="$PROJECT_ROOT:$TPBERTA_ROOT:$PYTHONPATH"
+export CUDA_VISIBLE_DEVICES=0
 ```
 
-## Data Format
+---
 
-### Input CSV Format (for preprocessing)
+## Models
 
-Each row is a semicolon-separated string:
-```
-feature1;feature2;feature3;...;label
-```
+| Model | Type | Config |
+|-------|------|--------|
+| **TP-BERTa** | Table transformer | Requires `TPBERTA_PRETRAIN_DIR` |
+| **Nomic** | Text embedding | Task prefix: `"classification"`, `"search_document"`, etc. |
+| **BGE** | Text embedding | No special config |
 
-Example:
-```
-1.5;category_a;some text;0
-2.3;category_b;other text;1
-```
-
-### Output Embedding CSV Format
-
-After preprocessing, embeddings are saved as CSV with columns:
-- `embedding`: Base64-encoded embedding string
-- `label`: Target label
-
-## Requirements
-
-- TP-BERTa pretrained model directory (set via `TPBERTA_PRETRAIN_DIR` env var)
-- PyTorch
-- pandas, numpy
-- scikit-learn (for metrics)
-
-## Notes
-
-- Embeddings are extracted from the CLS token (pooled output) of TP-BERTa encoder
-- The encoder is frozen during preprocessing (only forward pass)
-- Prediction head is a simple MLP that can be trained separately
+---
 
