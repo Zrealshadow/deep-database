@@ -19,8 +19,8 @@ from sklearn.metrics import roc_auc_score, mean_squared_error, mean_absolute_err
 
 class EmbeddingDataset(Dataset):
     """Dataset for loading embedding strings and labels."""
-    
-    def __init__(self, embedding_strings: List[str], labels: np.ndarray, 
+
+    def __init__(self, embedding_strings: List[str], labels: np.ndarray,
                  embedding_dim: Optional[int] = None):
         """
         Args:
@@ -30,24 +30,24 @@ class EmbeddingDataset(Dataset):
         """
         self.embedding_strings = embedding_strings
         self.labels = labels
-        
+
         # Auto-detect embedding dimension from first embedding
         if embedding_dim is None and len(embedding_strings) > 0:
             self.embedding_dim = len(embedding_strings[0].split(","))
         else:
             self.embedding_dim = embedding_dim
-    
+
     def __len__(self):
         return len(self.embedding_strings)
-    
+
     def __getitem__(self, idx):
         # Parse comma-separated embedding string
         embedding = np.array([float(x) for x in self.embedding_strings[idx].split(",")])
-        
+
         # Ensure correct dimension
         if self.embedding_dim is not None and len(embedding) != self.embedding_dim:
             raise ValueError(f"Embedding dimension mismatch: expected {self.embedding_dim}, got {len(embedding)}")
-        
+
         return {
             'embedding': torch.FloatTensor(embedding),
             'label': torch.FloatTensor([self.labels[idx]])
@@ -56,7 +56,7 @@ class EmbeddingDataset(Dataset):
 
 class TPBertaHead(nn.Module):
     """TP-BERTa prediction head (matches original TPBertaHead structure)."""
-    
+
     def __init__(self, input_dim: int, output_dim: int = 1, dropout: float = 0.1):
         super().__init__()
         # TP-BERTa: Linear(input_dim -> input_dim) -> Tanh -> Linear(input_dim -> output_dim)
@@ -64,7 +64,7 @@ class TPBertaHead(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.out_proj = nn.Linear(input_dim, output_dim)
-    
+
     def forward(self, x):
         x = self.dropout1(x)
         x = self.dense(x)
@@ -106,31 +106,31 @@ def load_embedding_data(data_dir: Path):
     train_csv = data_dir / "train.csv"
     val_csv = data_dir / "val.csv"
     test_csv = data_dir / "test.csv"
-    
+
     if not train_csv.exists():
         raise FileNotFoundError(f"train.csv not found in {data_dir}")
     if not val_csv.exists():
         raise FileNotFoundError(f"val.csv not found in {data_dir}")
     if not test_csv.exists():
         raise FileNotFoundError(f"test.csv not found in {data_dir}")
-    
+
     train_df = pd.read_csv(train_csv)
     train_strings = train_df['embedding'].tolist()
     train_labels = train_df['target'].values
-    
+
     val_df = pd.read_csv(val_csv)
     val_strings = val_df['embedding'].tolist()
     val_labels = val_df['target'].values
-    
+
     test_df = pd.read_csv(test_csv)
     test_strings = test_df['embedding'].tolist()
     test_labels = test_df['target'].values
-    
+
     print(f"  Train: {len(train_strings)} rows")
     print(f"  Val: {len(val_strings)} rows")
     print(f"  Test: {len(test_strings)} rows")
     print(f"Data split: Train={len(train_strings)}, Val={len(val_strings)}, Test={len(test_strings)}")
-    
+
     return (train_strings, train_labels, val_strings, val_labels, test_strings, test_labels)
 
 
@@ -141,7 +141,7 @@ def check_data_distribution(train_labels, val_labels, test_labels, task_type: st
     print(f"\nData distribution:")
     print(f"  Total samples: {len(all_labels)}")
     for label, count in zip(unique_labels, counts):
-        print(f"  Label {label}: {count} ({count/len(all_labels)*100:.1f}%)")
+        print(f"  Label {label}: {count} ({count / len(all_labels) * 100:.1f}%)")
     if task_type == "binclass" and len(unique_labels) == 2:
         pos_ratio = counts[1] / len(all_labels) if len(counts) > 1 else 0
         print(f"  Positive class ratio: {pos_ratio:.3f}")
@@ -150,16 +150,16 @@ def check_data_distribution(train_labels, val_labels, test_labels, task_type: st
 
 
 def train_prediction_head(
-    data_dir: str,
-    output_dir: str,
-    target_col_txt_path: Optional[str] = None,
-    dropout: float = 0.1,
-    batch_size: int = 256,
-    learning_rate: float = 0.001,
-    num_epochs: int = 200,
-    early_stop: int = 10,
-    device: Optional[str] = None,
-    seed: int = 42,
+        data_dir: str,
+        output_dir: str,
+        target_col_txt_path: Optional[str] = None,
+        dropout: float = 0.1,
+        batch_size: int = 256,
+        learning_rate: float = 0.001,
+        num_epochs: int = 200,
+        early_stop: int = 10,
+        device: Optional[str] = None,
+        seed: int = 42,
 ) -> dict:
     """
     Train prediction head on preprocessed embedding data.
@@ -184,43 +184,43 @@ def train_prediction_head(
     """
     # Set random seeds for reproducibility
     set_random_seed(seed)
-    
+
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
-    
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     data_dir = Path(data_dir)
-    
+
     # Load task type
     task_type = load_task_type(target_col_txt_path)
-    
+
     # Load data from separate CSV files
     print(f"Loading embedding data from {data_dir}...")
     train_strings, train_labels, val_strings, val_labels, test_strings, test_labels = load_embedding_data(data_dir)
-    
+
     # Create datasets (auto-detect embedding_dim)
     train_dataset = EmbeddingDataset(train_strings, train_labels, None)
     val_dataset = EmbeddingDataset(val_strings, val_labels, train_dataset.embedding_dim)
     test_dataset = EmbeddingDataset(test_strings, test_labels, train_dataset.embedding_dim)
-    
+
     # Use detected embedding dimension
     embedding_dim = train_dataset.embedding_dim
     print(f"Detected embedding dimension: {embedding_dim}")
-    
+
     # Check data distribution
     check_data_distribution(train_labels, val_labels, test_labels, task_type)
-    
+
     # Set generator for DataLoader reproducibility
     generator = torch.Generator()
     generator.manual_seed(seed)
-    
+
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=generator)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-    
+
     # Create model
     model = TPBertaHead(
         input_dim=embedding_dim,
@@ -296,20 +296,20 @@ def train_prediction_head(
 
         # Check for improvement
         is_better = (higher_is_better and val_metric > best_val_metric) or \
-                   (not higher_is_better and val_metric < best_val_metric)
+                    (not higher_is_better and val_metric < best_val_metric)
 
         if is_better:
             best_val_metric = val_metric
             best_model_state = model.state_dict().copy()
             no_improvement = 0
-            print(f"Epoch {epoch+1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f} *")
+            print(f"Epoch {epoch + 1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f} *")
         else:
             no_improvement += 1
-            print(f"Epoch {epoch+1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f}")
+            print(f"Epoch {epoch + 1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f}")
 
         # Early stopping
         if no_improvement >= early_stop:
-            print(f"\nEarly stopping at epoch {epoch+1}")
+            print(f"\nEarly stopping at epoch {epoch + 1}")
             break
 
     # Load best model and evaluate on test set
@@ -458,4 +458,3 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-
