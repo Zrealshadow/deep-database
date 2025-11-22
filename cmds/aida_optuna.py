@@ -21,8 +21,12 @@ from relbench.base import TaskType
 from model.base import construct_stype_encoder_dict, default_stype_encoder_cls_kwargs
 from utils.resource import get_text_embedder_cfg
 from utils.data import TableData
+from utils.logger import ModernLogger
 
 device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
+
+# Initialize logger
+logger = ModernLogger(name="aida_optuna", level="info")
 
 
 def deactivate_dropout(net: torch.nn.Module):
@@ -132,15 +136,13 @@ def get_model_class(model_name):
 def train_final_model(best_params_dict, model_name, table_data, is_regression, evaluate_matric_func, higher_is_better):
     """Train the final model with best hyperparameters (matching dnn_baseline_table_data.py config)"""
 
-    print("\n" + "=" * 50)
-    print("FINAL TRAINING WITH BEST HYPERPARAMETERS")
-    print("=" * 50)
-    print("Training configuration (from dnn_baseline_table_data.py):")
-    print("  num_epochs: 200")
-    print("  early_stop_threshold: 10")
-    print("  batch_size: 256")
-    print("  lr: 0.001")
-    print("  max_round_epoch: 20")
+    logger.section("FINAL TRAINING WITH BEST HYPERPARAMETERS")
+    logger.info("Training configuration (from dnn_baseline_table_data.py):")
+    logger.info("  num_epochs: 200")
+    logger.info("  early_stop_threshold: 10")
+    logger.info("  batch_size: 256")
+    logger.info("  lr: 0.001")
+    logger.info("  max_round_epoch: 20")
 
     final_train_start = time.time()
 
@@ -187,7 +189,7 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
         final_best_model_state = None
 
         # Training loop
-        print("\nTraining...")
+        logger.info("Training...")
         for epoch in range(final_num_epochs):
             final_net.train()
             loss_accum = 0
@@ -223,11 +225,11 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
             else:
                 final_patience += 1
                 if final_patience > final_early_stop_threshold:
-                    print(f"  Early stopped at epoch {epoch}")
+                    logger.info(f"  Early stopped at epoch {epoch}")
                     break
 
             if (epoch + 1) % 10 == 0:
-                print(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
+                logger.info(f"  Epoch {epoch + 1}: val_metric={val_metric:.4f}")
 
         # Training ends here
         final_train_end = time.time()
@@ -238,7 +240,7 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
             final_net.load_state_dict(final_best_model_state)
 
         # Inference on test set
-        print(f"\nRunning inference on test set...")
+        logger.info(f"Running inference on test set...")
         inference_start = time.time()
         
         test_logits, _, test_pred_hat = test(
@@ -248,11 +250,11 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
         inference_end = time.time()
         inference_time_seconds = inference_end - inference_start
 
-        print(f"\n✅ Final training completed!")
-        print(f"   Best validation metric: {final_best_val_metric:.6f}")
-        print(f"   Test metric: {test_metric:.6f}")
-        print(f"   Training time: {final_train_time_seconds:.2f} seconds ({final_train_time_seconds / 3600:.2f} hours)")
-        print(f"   Inference time: {inference_time_seconds:.2f} seconds")
+        logger.success(f"Final training completed!")
+        logger.info(f"   Best validation metric: {final_best_val_metric:.6f}")
+        logger.info(f"   Test metric: {test_metric:.6f}")
+        logger.info(f"   Training time: {final_train_time_seconds:.2f} seconds ({final_train_time_seconds / 3600:.2f} hours)")
+        logger.info(f"   Inference time: {inference_time_seconds:.2f} seconds")
 
         return {
             "final_best_val_metric": final_best_val_metric,
@@ -262,7 +264,7 @@ def train_final_model(best_params_dict, model_name, table_data, is_regression, e
         }
 
     except Exception as e:
-        print(f"\n❌ Final training failed: {str(e)}")
+        logger.error(f"Final training failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return None
@@ -440,7 +442,7 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
             
             # Early stopping (only if not pruned by Hyperband)
             if patience > early_stop_threshold:
-                print(f"  Early stopping at epoch {epoch+1} (patience={patience})")
+                logger.info(f"  Early stopping at epoch {epoch+1} (patience={patience})")
                 break
 
         # Return validation performance for hyperparameter optimization
@@ -450,8 +452,8 @@ def model_selection(trial, table_data, is_regression, evaluate_matric_func, high
         # This is normal pruning behavior, not an error
         raise  # Re-raise to let Optuna handle it properly
     except Exception as e:
-        print(f"Trial failed with error: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
+        logger.error(f"Trial failed with error: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         return float('inf') if not higher_is_better else float('-inf')
@@ -477,15 +479,17 @@ def main():
     start_time = time.time()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Extract dataset name from data_dir
-    dataset_name = Path(args.data_dir).name
+    # Extract dataset name and data source from data_dir
+    data_path = Path(args.data_dir)
+    dataset_name = data_path.name
+    data_source = data_path.parent.name  # e.g., "fit-best-table", "fit-medium-table", "flatten-table"
 
     # Set default study name if not provided
     if args.study_name is None:
         args.study_name = f"{args.model.lower()}_hyperopt"
 
     # Load data
-    print(f"Loading data from {args.data_dir}")
+    logger.info(f"Loading data from {args.data_dir}")
     table_data = TableData.load_from_dir(args.data_dir)
 
     if not table_data.is_materialize:
@@ -502,16 +506,16 @@ def main():
         higher_is_better = True
         is_regression = False
 
-    print(f"Model: {args.model}")
-    print(f"Task type: {table_data.task_type}")
-    print(f"Optimization direction: {'maximize' if higher_is_better else 'minimize'}")
+    logger.info(f"Model: {args.model}")
+    logger.info(f"Task type: {table_data.task_type}")
+    logger.info(f"Optimization direction: {'maximize' if higher_is_better else 'minimize'}")
 
     # Use HyperbandPruner and in-memory storage (no database file)
     pruner = optuna.pruners.HyperbandPruner()
     direction = "maximize" if higher_is_better else "minimize"
 
     # Use in-memory storage (no files created)
-    print(f"Using in-memory storage (no database file will be created)")
+    logger.info(f"Using in-memory storage (no database file will be created)")
 
     study = optuna.create_study(
         study_name=args.study_name,
@@ -522,20 +526,20 @@ def main():
     # Print search space based on model
     # Display search space based on model and task type
     if args.model.lower() == "mlp":
-        print(f"Search space (q-zero): channels={QZeroMLP.channel_choices}, "
+        logger.info(f"Search space (q-zero): channels={QZeroMLP.channel_choices}, "
               f"num_layers={QZeroMLP.blocks_choices}, "
               f"hidden_dims=per-layer from {QZeroMLP.channel_choices}")
     elif args.model.lower() == "resnet":
-        print(f"Search space (q-zero): channels={QZeroResNet.channel_choices}, "
+        logger.info(f"Search space (q-zero): channels={QZeroResNet.channel_choices}, "
               f"num_layers={QZeroResNet.blocks_choices}, "
               f"block_widths=per-layer from {QZeroResNet.channel_choices}")
     elif args.model.lower() in ["fttransformer", "fttrans"]:
-        print(f"Search space (original): channels=[64,128,256,512], "
+        logger.info(f"Search space (original): channels=[64,128,256,512], "
               f"num_layers=[2,8]")
     else:
-        print(f"Unknown model: {args.model}")
+        logger.error(f"Unknown model: {args.model}")
 
-    print(f"Starting hyperparameter optimization with {args.n_trials} trials...")
+    logger.info(f"Starting hyperparameter optimization with {args.n_trials} trials...")
 
     # Run optimization
     study.optimize(
@@ -549,18 +553,17 @@ def main():
     selection_time_seconds = selection_end_time - start_time
 
     # Print model selection results
-    print("\n" + "=" * 50)
-    print("HYPERPARAMETER OPTIMIZATION RESULTS")
-    print("=" * 50)
-    print(f"Number of finished trials: {len(study.trials)}")
-    print(f"Number of pruned trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])}")
-    print(f"Number of complete trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])}")
-    print(f"Model selection time: {selection_time_seconds:.2f} seconds ({selection_time_seconds / 3600:.2f} hours)")
+    logger.section("HYPERPARAMETER OPTIMIZATION RESULTS")
+    logger.info(f"Number of finished trials: {len(study.trials)}")
+    logger.info(f"Number of pruned trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED])}")
+    logger.info(f"Number of complete trials: {len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])}")
+    logger.info(f"Model selection time: {selection_time_seconds:.2f} seconds ({selection_time_seconds / 3600:.2f} hours)")
 
     # Prepare result data
     result_data = {
         "timestamp": timestamp,
         "dataset": dataset_name,
+        "data_source": data_source,
         "architecture": args.model,
         "n_trials": args.n_trials,
         "n_completed": len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]),
@@ -579,15 +582,15 @@ def main():
     best_params_dict = None
     if study.trials:
         best_trial = study.best_trial
-        print(f"\nBest trial:")
-        print(f"  Value: {best_trial.value:.6f}")
-        print(f"  Params:")
+        logger.info(f"Best trial:")
+        logger.info(f"  Value: {best_trial.value:.6f}")
+        logger.info(f"  Params:")
         for key, value in best_trial.params.items():
-            print(f"    {key}: {value}")
+            logger.info(f"    {key}: {value}")
 
-        print(f"\nBest hyperparameters for {args.model}:")
+        logger.info(f"Best hyperparameters for {args.model}:")
         for key, value in best_trial.params.items():
-            print(f"  {key}: {value}")
+            logger.info(f"  {key}: {value}")
 
         result_data["best_val_metric"] = f"{best_trial.value:.6f}"
         result_data["best_params"] = str(best_trial.params)
@@ -615,9 +618,7 @@ def main():
     total_time_seconds = total_end_time - start_time
     result_data["total_time_seconds"] = f"{total_time_seconds:.2f}"
 
-    print(f"\n{'=' * 50}")
-    print(f"TOTAL TIME: {total_time_seconds:.2f} seconds ({total_time_seconds / 3600:.2f} hours)")
-    print(f"{'=' * 50}")
+    logger.section(f"TOTAL TIME: {total_time_seconds:.2f} seconds ({total_time_seconds / 3600:.2f} hours)")
 
     # Save results to CSV
     output_csv = Path(args.output_csv)
@@ -632,8 +633,8 @@ def main():
             writer.writeheader()
         writer.writerow(result_data)
 
-    print(f"\n✅ Results appended to: {output_csv}")
-    print(f"   Dataset: {dataset_name}, Model: {args.model}, Time: {total_time_seconds:.2f}s")
+    logger.success(f"Results appended to: {output_csv}")
+    logger.info(f"   Dataset: {dataset_name}, Model: {args.model}, Time: {total_time_seconds:.2f}s")
 
 
 if __name__ == "__main__":
