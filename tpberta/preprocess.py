@@ -209,8 +209,11 @@ def _get_tpberta_embeddings(
             args, data_config, dataset.n_classes, device, pretrain=True
         )
         
+        # Handle DataParallel: if model is wrapped, access via .module
+        actual_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+        
         # Extract embeddings (use CLS token from encoder output)
-        model.eval()
+        actual_model.eval()
         all_embeddings = []
         
         with torch.no_grad():
@@ -219,7 +222,7 @@ def _get_tpberta_embeddings(
                 labels = batch.pop('labels', None)
                 
                 # Get encoder output
-                outputs = model.tpberta(**batch)
+                outputs = actual_model.tpberta(**batch)
                 # Use pooled output (CLS token)
                 if hasattr(outputs, 'pooler_output') and outputs.pooler_output is not None:
                     embeddings = outputs.pooler_output

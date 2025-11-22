@@ -110,6 +110,9 @@ echo "Input:  $INPUT_DIR"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
+# Set CUDA_VISIBLE_DEVICES to use only one GPU (avoid DataParallel)
+export CUDA_VISIBLE_DEVICES=0
+
 python "$PROJECT_ROOT/tpberta/preprocess.py" \
     --input_dir "$INPUT_DIR" \
     --output_dir "$OUTPUT_DIR" \
