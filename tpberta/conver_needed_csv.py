@@ -1,4 +1,9 @@
+import numpy as np
+import os
+from pathlib import Path
+from tpberta.preprocess import _get_tpberta_embeddings
 from utils.data import DatabaseFactory
+
 
 tasks = [
     ("hm", "user-churn", "rel-hm"),
@@ -13,8 +18,9 @@ tasks = [
     ("ratebeer", "beer-positive", "ratebeer"),
     ("avito", "ad-ctr", "rel-avito")
 ]
-
+pretrain_dir = "/home/naili/tp-berta/checkpoints/tp-joint"
 cache_dir_root = "/home/lingze/.cache/relbench/"
+
 for ele in tasks:
     db_name = ele[0]
     task_name = ele[1]
@@ -30,10 +36,22 @@ for ele in tasks:
     task = DatabaseFactory.get_task(db_name, task_name, dataset)
     entity_table = task.entity_table
     used_df = db.table_dict[entity_table]
-    #
-    # process_csv_rows_to_embeddings(
-    #     csv_rows=test_csv_rows,
-    #     pretrain_dir=pretrain_dir,
-    #     delimiter=";",
-    #     device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
-    # )
+
+    embeddings = _get_tpberta_embeddings(
+        df=used_df,
+        pretrain_dir=pretrain_dir,
+        has_label=False,  # No label column
+        device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
+    )
+
+    print(f"\nOutput embeddings shape: {embeddings.shape}")
+    print(f"Output embeddings dtype: {embeddings.dtype}")
+
+    # Save to numpy array file: {db_name}_{task_name}_data.npy
+    output_dir = Path("/home/naili/sharing-embedding-table/data/tpberta_relbench")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_filename = f"{db_name}_{task_name}_data.npy"
+    output_path = output_dir / output_filename
+    np.save(output_path, embeddings)
+    print(f"Embeddings saved to: {output_path}")
+
