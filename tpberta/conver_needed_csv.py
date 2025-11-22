@@ -2,6 +2,7 @@ import numpy as np
 import os
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 from tpberta import get_embeddings
 from utils.data import DatabaseFactory
 
@@ -43,7 +44,7 @@ def main():
     print(f"Using embedding model: {model}")
     print()
     
-    for ele in TASKS:
+    for ele in tqdm(TASKS, desc="Processing tasks"):
         db_name = ele[0]
         task_name = ele[1]
         cache_dir_db_name = ele[2]

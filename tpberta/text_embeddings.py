@@ -16,6 +16,8 @@ import torch.nn.functional as F
 from typing import Optional, Union
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
+
 
 # Import TP-BERTa function
 from tpberta.preprocess import _get_tpberta_embeddings
@@ -132,8 +134,10 @@ def _get_nomic_embeddings(
     prefix = f"{task_prefix}:"
     texts = _dataframe_to_texts(df, format=text_format, prefix=prefix, feature_names_map=feature_names_map)
     
-    # Encode in batches
+    # Encode in batches with progress bar
     all_embeddings = []
+    num_batches = (len(texts) + batch_size - 1) // batch_size
+    pbar = tqdm(total=num_batches, desc="Encoding texts", unit="batch")
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i:i + batch_size]
         batch_embeddings = model.encode(
@@ -143,6 +147,8 @@ def _get_nomic_embeddings(
             show_progress_bar=False
         )
         all_embeddings.append(batch_embeddings)
+        pbar.update(1)
+    pbar.close()
     
     # Concatenate all batches
     embeddings = torch.cat(all_embeddings, dim=0)
@@ -211,8 +217,10 @@ def _get_bge_embeddings(
     # Convert DataFrame to texts (no prefix needed for BGE)
     texts = _dataframe_to_texts(df, format=text_format, prefix=None, feature_names_map=feature_names_map)
     
-    # Encode in batches
+    # Encode in batches with progress bar
     all_embeddings = []
+    num_batches = (len(texts) + batch_size - 1) // batch_size
+    pbar = tqdm(total=num_batches, desc="Encoding texts", unit="batch")
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i:i + batch_size]
         batch_embeddings = model.encode(
@@ -222,6 +230,8 @@ def _get_bge_embeddings(
             show_progress_bar=False
         )
         all_embeddings.append(batch_embeddings)
+        pbar.update(1)
+    pbar.close()
     
     # Concatenate all batches
     embeddings = torch.cat(all_embeddings, dim=0)
