@@ -1,21 +1,42 @@
 import os
-from tpberta.preprocess import process_csv_rows_to_embeddings
+import pandas as pd
+import numpy as np
+from tpberta.preprocess import _get_tpberta_embeddings
 
-"conda activate /home/naili/miniconda3/envs/deepdb"
-
+# Set pretrain directory
 pretrain_dir = "/home/naili/tp-berta/checkpoints/tp-joint"
 
-test_csv_rows = [
-    "25;male;engineer;50000;1",
-    "30;female;teacher;45000;0",
-    "35;male;doctor;80000;1",
-]
+# Create test DataFrame (no label column)
+test_df = pd.DataFrame({
+    'age': [25, 30, 35],
+    'gender': ['male', 'female', 'male'],
+    'occupation': ['engineer', 'teacher', 'doctor'],
+    'salary': [50000, 45000, 80000]
+})
 
-embedding_strings = process_csv_rows_to_embeddings(
-    csv_rows=test_csv_rows,
+print(f"Input DataFrame shape: {test_df.shape}")
+print(f"Input DataFrame columns: {test_df.columns.tolist()}")
+print(f"\nInput DataFrame:\n{test_df}")
+
+# Get embeddings (has_label=False since no label column)
+embeddings = _get_tpberta_embeddings(
+    df=test_df,
     pretrain_dir=pretrain_dir,
-    delimiter=";",
+    has_label=False,  # No label column
     device="cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu",
 )
+
+print(f"\nOutput embeddings shape: {embeddings.shape}")
+print(f"Output embeddings dtype: {embeddings.dtype}")
+
+# Save to numpy array file
+output_path = "test_embeddings.npy"
+np.save(output_path, embeddings)
+print(f"\nEmbeddings saved to: {output_path}")
+
+# Optionally, also save as CSV for inspection
+output_csv = "test_embeddings.csv"
+pd.DataFrame(embeddings).to_csv(output_csv, index=False)
+print(f"Embeddings also saved as CSV to: {output_csv}")
 
 
