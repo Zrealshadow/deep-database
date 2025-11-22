@@ -64,7 +64,7 @@ def preprocess(
         model: str = "tpberta",
         device: Optional[str] = None,
         batch_size: int = 32,
-        task_prefix: str = "search_document",
+        task_prefix: str = "classification",
 ) -> str:
     """
     Offline preprocessing: Convert TableData format to embedding format.
@@ -81,7 +81,7 @@ def preprocess(
         model: Embedding model to use ("tpberta", "nomic", or "bge")
         device: Device to use (default: "cuda" if available, else "cpu")
         batch_size: Batch size for text models (nomic, bge)
-        task_prefix: Task prefix for nomic model ("search_document", "search_query", etc.)
+        task_prefix: Task prefix for nomic model ("classification", "search_query", etc.)
     
     Returns:
         Path to output directory
@@ -257,8 +257,8 @@ def main():
     parser.add_argument(
         "--task_prefix",
         type=str,
-        default="search_document",
-        help="Task prefix for nomic model (default: search_document)"
+        default="classification",
+        help="Task prefix for nomic model (default: classification)"
     )
 
     args = parser.parse_args()

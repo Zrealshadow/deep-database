@@ -28,7 +28,7 @@ def get_embeddings(
         # Text model specific
         batch_size: int = 32,
         # Nomic specific
-        task_prefix: str = "search_document",
+        task_prefix: str = "classification",
         # BGE specific (no additional params needed)
 ) -> np.ndarray:
     """
@@ -49,7 +49,7 @@ def get_embeddings(
                            for TP-BERTa (temporary file, cleaned up after use).
                            For nomic/bge, if provided, uses standardized feature names as keys.
         batch_size: Batch size for text models
-        task_prefix: Task prefix for nomic model ("search_document", "search_query", etc.)
+        task_prefix: Task prefix for nomic model ("classification", "search_query", etc.)
     
     Returns:
         numpy array of embeddings [N, embedding_dim]
@@ -59,7 +59,7 @@ def get_embeddings(
         embeddings = get_embeddings(df, model="tpberta", pretrain_dir="...")
         
         # Nomic
-        embeddings = get_embeddings(df, model="nomic", task_prefix="search_document")
+        embeddings = get_embeddings(df, model="nomic", task_prefix="classification")
         
         # BGE
         embeddings = get_embeddings(df, model="bge")

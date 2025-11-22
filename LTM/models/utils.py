@@ -16,7 +16,7 @@ def dataframe_to_texts(df: pd.DataFrame, feature_names_map=None, prefix=None):
     Args:
         df: Input DataFrame
         feature_names_map: Optional dict mapping original column names to standardized names
-        prefix: Optional prefix to add to each text (e.g., "search_document:")
+        prefix: Optional prefix to add to each text (e.g., "classification:")
     
     Returns:
         List of text strings, one per row

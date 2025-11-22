@@ -18,7 +18,7 @@ from LTM.models.utils import dataframe_to_texts
 
 def get_nomic_embeddings(
         df: pd.DataFrame,
-        task_prefix: str = "search_document",
+        task_prefix: str = "classification",
         batch_size: int = 32,
         device: Optional[Union[str, torch.device]] = None,
         feature_names_file: Optional[str] = None,
