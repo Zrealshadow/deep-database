@@ -4,12 +4,31 @@ import torch.nn as nn
 
 class MLP(nn.Module):
 
-    def __init__(self, ninput, nlayers, nhid, dropout, noutput=1):
+    def __init__(self, ninput, nlayers, nhid, dropout, noutput=1, normalization='batch_norm'):
+        """
+        MLP with configurable normalization.
+
+        Args:
+            ninput: Input dimension
+            nlayers: Number of hidden layers
+            nhid: Hidden dimension
+            dropout: Dropout probability
+            noutput: Output dimension
+            normalization: Type of normalization ('batch', 'layer', or None)
+        """
         super().__init__()
         layers = list()
         for i in range(nlayers):
             layers.append(nn.Linear(ninput, nhid))
-            layers.append(nn.BatchNorm1d(nhid))
+
+            # Add normalization layer based on the argument
+            if normalization == 'batch_norm':
+                layers.append(nn.BatchNorm1d(nhid))
+            elif normalization == 'layer_norm':
+                layers.append(nn.LayerNorm(nhid))
+            elif normalization is not None:
+                raise ValueError(f"normalization must be 'batch', 'layer', or None, got {normalization}")
+
             layers.append(nn.ReLU())
             layers.append(nn.Dropout(p=dropout))
             ninput = nhid

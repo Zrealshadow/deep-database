@@ -30,12 +30,13 @@ class DeepFMModel(torch.nn.Module):
         noutput (int): Number of output dimensions (typically 1 for regression/binary classification).
     """
 
-    def __init__(self, nfield, nemb, mlp_layers, mlp_hid, dropout, noutput):
+    def __init__(self, nfield, nemb, mlp_layers, mlp_hid, dropout, noutput, normalization: str, reduce_dim: bool = True):
         super().__init__()
-        self.linear = torch.nn.Linear(nemb, 1)
-        self.fm = FactorizationMachine(reduce_dim=True, normalize=True)
+        self.linear = torch.nn.Linear(nemb, noutput)
+        self.fm = FactorizationMachine(reduce_dim=reduce_dim, normalize=True)
         self.mlp_ninput = nfield*nemb
-        self.mlp = MLP(self.mlp_ninput, mlp_layers, mlp_hid, dropout, noutput)
+        self.mlp = MLP(self.mlp_ninput, mlp_layers, mlp_hid,
+                       dropout, noutput, normalization)
 
     def forward(self, x):
         """
@@ -43,7 +44,7 @@ class DeepFMModel(torch.nn.Module):
         :return:    y of size B, Regression and Classification (+sigmoid)
         """
         x_emb = x     # B*F*E
-        x_linear = torch.mean(self.linear(x_emb), axis=1) # B * 1
+        x_linear = torch.mean(self.linear(x_emb), axis=1)  # B * 1
         x_fm = self.fm(x_emb).unsqueeze(-1)               # B * 1
         x_mlp = self.mlp(x_emb.view(-1, self.mlp_ninput))  # B * 1
         # print(x_linear, x_fm, x_mlp)
@@ -51,6 +52,10 @@ class DeepFMModel(torch.nn.Module):
         # B * 1
         return y
 
+    def reset_parameters(self):
+        torch.nn.init.xavier_uniform_(self.linear.weight)
+        torch.nn.init.zeros_(self.linear.bias)
+        self.mlp.reset_parameters()
 
 class DeepFM(torch.nn.Module):
     """DeepFM model for tabular data with automatic feature encoding.
@@ -81,6 +86,7 @@ class DeepFM(torch.nn.Module):
         col_names_dict: Dict[stype, List[str]],
         stype_encoder_dict: Optional[Dict[stype, StypeEncoder]] = None,
         dropout_prob: float = 0.2,
+        normalization: str = "layer_norm",
         # additional parameters for xDeepFM
         feat_channels: Optional[int] = None,
     ):
@@ -116,7 +122,7 @@ class DeepFM(torch.nn.Module):
         )
 
         self.reset_parameters()
-        
+
     def forward(self, x: TensorFrame) -> torch.Tensor:
         r"""Transforming :class:`TensorFrame` object into output prediction.
 
@@ -135,9 +141,4 @@ class DeepFM(torch.nn.Module):
     def reset_parameters(self):
         """Reset model parameters"""
         self.encoder.reset_parameters()
-        torch.nn.init.xavier_uniform_(self.deepfm.linear.weight)
-        torch.nn.init.zeros_(self.deepfm.linear.bias)
-        self.deepfm.mlp.reset_parameters()
-        
-        
-        
+        self.deepfm.reset_parameters()

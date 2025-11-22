@@ -1,6 +1,6 @@
 import unittest
 import torch
-from model.relationConv import AttentionHeteroConv, SharedMessagePassingConv
+from model.layer.relationConv import AttentionHeteroConv, SharedMessagePassingConv
 
 
 class TestSharedMessagePassingConv(unittest.TestCase):

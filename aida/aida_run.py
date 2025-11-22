@@ -39,14 +39,14 @@ parser.add_argument('--validation_ratio', type=float,
 parser.add_argument('--test_ratio', type=float,
                     default=1.0, help='Test sampling ratio')
 parser.add_argument('--num_neighbors', nargs='+', type=int,
-                    default=[64, 64], help='Neighbor sampling sizes')
+                    default=[128, 128], help='Neighbor sampling sizes')
 parser.add_argument('--sample_strategy', type=str, default='last',
-                    choices=['last', 'uniform'], help ='Neighbor sampling strategy')
+                    choices=['last', 'uniform'], help='Neighbor sampling strategy')
 parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
 
 # Model parameters
 parser.add_argument('--base_encoder', type=str, default=None,
-                    choices=['mlp', 'tabm', 'dfm', 'resnet', 'fttrans'],
+                    choices=['mlp', 'tabm', 'dfm', 'resnet', 'fttrans', 'armnet'],
                     help='Base encoder type for entity table')
 parser.add_argument('--channels', type=int, default=128,
                     help='Hidden dimension')
@@ -56,8 +56,18 @@ parser.add_argument('--dropout', type=float, default=0.3,
                     help='Dropout probability')
 parser.add_argument('--feat_layer_num', type=int, default=1,
                     help='Number of feature layers')
-parser.add_argument('--graph_layer_num', type=int,
-                    default=2, help='Number of graph layers')
+parser.add_argument('--feat_nhead', type=int, default=1,
+                    help='Number of attention heads in feature layers')
+parser.add_argument('--relation_layer_num', type=int,
+                    default=2, help='Number of relation layers')
+parser.add_argument('--relation_aggr', type=str,
+                    default='sum', help='Relation aggregation method')
+
+# Model ablation options
+parser.add_argument('--deactivate_fusion_module', action='store_true',
+                    default=False, help='Deactivate fusion module')
+parser.add_argument('--deactivate_relation_module', action='store_true',
+                    default=False, help='Deactivate relation layers')
 
 # Training parameters
 parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
@@ -66,7 +76,7 @@ parser.add_argument('--num_epochs', type=int, default=500,
 parser.add_argument('--early_stop_threshold', type=int,
                     default=10, help='Early stopping patience')
 parser.add_argument('--max_round_epoch', type=int,
-                    default=10, help='Max batches per epoch')
+                    default=50, help='Max batches per epoch')
 parser.add_argument('--no_need_test', action='store_false',
                     default=True, help='Skip test during training')
 
@@ -90,9 +100,10 @@ logger = ModernLogger(
 if args.device == "auto":
     if torch.cuda.is_available():
         num_gpus = torch.cuda.device_count()
-        selected_gpu = random.randint(0, num_gpus - 1)
+        selected_gpu = random.randint(0, num_gpus - 2)  # Exclude the last GPU
         device = torch.device(f"cuda:{selected_gpu}")
-        logger.info(f"Auto-selected GPU {selected_gpu} from {num_gpus} available GPUs")
+        logger.info(
+            f"Auto-selected GPU {selected_gpu} from {num_gpus} available GPUs")
     else:
         device = torch.device("cpu")
         logger.warning("No GPUs available, using CPU")
@@ -100,7 +111,7 @@ else:
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     if not torch.cuda.is_available() and args.device.startswith("cuda"):
         logger.warning(f"CUDA not available, falling back to CPU")
-        
+
 # Extract arguments for readability
 cache_dir = args.tf_cache_dir
 db_name = args.db_name
@@ -118,7 +129,9 @@ channels = args.channels
 out_channels = args.out_channels
 dropout = args.dropout
 feat_layer_num = args.feat_layer_num
-graph_layer_num = args.graph_layer_num
+feat_nhead = args.feat_nhead
+relation_layer_num = args.relation_layer_num
+relation_aggr = args.relation_aggr
 
 # Training parameters
 lr = args.lr
@@ -127,6 +140,8 @@ early_stop_threshold = args.early_stop_threshold
 max_round_epoch = args.max_round_epoch
 no_need_test = args.no_need_test
 
+deactive_relation_layer = args.deactivate_relation_module
+deactive_fusion_layer = args.deactivate_fusion_module
 
 db = DatabaseFactory.get_db(
     db_name=db_name,
@@ -157,19 +172,21 @@ data, col_stats_dict = build_pyg_hetero_graph(
 )
 
 # Display task information
-logger.section(f"Task: {task.task_type.value}")
-task_info = f"Database: {db_name}\n"
-task_info += f"Task: {task_name}\n"
-task_info += f"Device: {device}\n"
-task_info += f"Base Encoder: {args.base_encoder if args.base_encoder else 'Shared Transformer'}\n"
+# logger.section(f"Task: {task.task_type.value}")
+# task_info = f"Database: {db_name}\n"
+# task_info += f"Task: {task_name}\n"
+# task_info += f"Device: {device}\n"
+# task_info += f"Base Encoder: {args.base_encoder if args.base_encoder else 'Shared Transformer'}\n"
 # task_info += f"Channels: {channels}, Out Channels: {out_channels}\n"
-# task_info += f"Feature Layers: {feat_layer_num}, Graph Layers: {graph_layer_num}\n"
 # task_info += f"Dropout: {dropout}\n"
 # task_info += f"Batch Size: {batch_size}, Learning Rate: {lr}\n"
-task_info += f"Sampling Strategy: {sample_strategy}, Neighbors: {num_neighbors}\n"
-task_info += f"Epochs: {num_epochs}, Early Stop: {early_stop_threshold}"
-logger.info_panel("Configuration", task_info)
+# task_info += f"Sampling Strategy: {sample_strategy}, Neighbors: {num_neighbors}\n"
+# task_info += f"Epochs: {num_epochs}, Early Stop: {early_stop_threshold}"
+# logger.info_panel("Configuration", task_info)
 
+# logger.print("Deactivate status: ")
+# logger.print(f"  Relation Layer: {deactive_relation_layer}")
+# logger.print(f"  Fusion Layer: {deactive_fusion_layer}")
 
 specific_table_encoder = None
 if args.base_encoder:
@@ -183,8 +200,12 @@ net = construct_default_AIDAXFormer(
     channels=channels,
     out_channels=out_channels,
     feat_layer_num=feat_layer_num,
-    graph_layer_num=graph_layer_num,
+    feat_nhead=feat_nhead,
+    relation_layer_num=relation_layer_num,
+    relation_aggr=relation_aggr,
     dropout_prob=dropout,
+    deactivate_fusion_module=deactive_fusion_layer,
+    deactivate_relation_module=deactive_relation_layer,
     specific_table_encoder=specific_table_encoder
 )
 net.reset_parameters()
@@ -302,13 +323,12 @@ val_metrics_log = []
 for epoch in range(num_epochs):
     loss_accum = count_accum = 0
     net.train()
-    
+
     if verbose:
         progress, task_id = logger.tmp_progress(
             total=min(len(data_loader_dict["train"]), max_round_epoch + 1),
             description=f"Epoch {epoch}"
         )
-
 
         progress.start()
 
@@ -330,10 +350,10 @@ for epoch in range(num_epochs):
         step_loss.append(loss.item())
         loss_accum += loss.item()
         count_accum += 1
-        
+
         if verbose:
             progress.update(task_id, advance=1)
-    
+
     if verbose:
         progress.stop()
 
@@ -344,7 +364,6 @@ for epoch in range(num_epochs):
     val_metric = evaluate_metric_func(val_pred_hat, val_logits)
     val_metrics_log.append(val_metric)
 
-    
     logger.info(
         f"Epoch: {epoch} => Train Loss: {train_loss:.6f}, Val {evaluate_metric_func.__name__}: {val_metric:.6f} | Patience: {patience}/{early_stop_threshold}")
 

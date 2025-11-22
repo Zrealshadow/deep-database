@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AIDA Model Experiments - Neighbor Size and Sampling Strategy Validation
-# Usage: ./run_aida_neighbor_size.sh [base_encoder]
+# AIDA Model Experiments - Relation Aggregation and Graph Layer Number Validation
+# Usage: ./run_aida_relation_args.sh [base_encoder]
 
 # Note: Not using 'set -e' to allow continuation after CUDA OOM errors
 
@@ -10,7 +10,7 @@ BASE_ENCODER=${1:-""}
 # Define datasets with their configurations
 # Format: "db_name|tf_cache_dir|task_name"
 CLASSIFICATION_DATASETS=(
-    # "hm|data/hm-tensor-frame|user-churn"
+    "hm|data/hm-tensor-frame|user-churn"
     # "event|data/rel-event-tensor-frame|user-repeat"
     # "trial|data/rel-trial-tensor-frame|study-outcome"
     "avito|data/rel-avito-tensor-frame|user-clicks"
@@ -28,44 +28,23 @@ REGRESSION_DATASETS=(
 # Combine all datasets
 ALL_DATASETS=("${CLASSIFICATION_DATASETS[@]}" "${REGRESSION_DATASETS[@]}")
 
-# Define neighbor sizes to test
-NEIGHBORS_1HOP=(
-    "8"
-    "16"
-    "32"
-    "64"
-    "128"
-    "256"
-)
-
-NEIGHBORS_2HOP=(
-    "8 8"
-    "16 16"
-    "32 32"
-    "64 64"
-    "128 128"
-    "256 256"
-)
-
-NEIGHBORS_3HOP=(
-    "8 8 8"
-    "16 16 16"
-    "32 32 32"
-)
-
-NEIGHBORS_4HOP=(
-    # "8 8 8 8"
-    # "16 16 16 16"
-)
-
-# Combine all neighbor configurations
-ALL_NEIGHBORS=("${NEIGHBORS_1HOP[@]}" "${NEIGHBORS_2HOP[@]}" "${NEIGHBORS_3HOP[@]}" "${NEIGHBORS_4HOP[@]}")
-
-# Define sampling strategies to test
-SAMPLE_STRATEGIES=("last" "uniform")
+# Define relation aggregation methods
+AGGRS=("sum" "mean" "max" "min")
+# Relation number of layers
+LAYERS=(1 2 3)
 
 # Common arguments
-COMMON_ARGS="--no_need_test"
+COMMON_ARGS="--no_need_test --num_neighbors 256 256"
+
+# Demo commands:
+# python -m aida.aida_run \
+#     --db_name hm \
+#     --tf_cache_dir data/hm-tensor-frame \
+#     --task_name user-churn \
+#     --early_stop_threshold 5 \
+#     --no_need_test \
+#     --relation_aggr sum \
+#     --relation_layer_num 2
 
 # Add base encoder if provided
 if [ -n "$BASE_ENCODER" ]; then
@@ -95,19 +74,27 @@ for dataset_config in "${ALL_DATASETS[@]}"; do
         EARLY_STOP=10
     fi
 
-    # Loop through all sampling strategies
-    for strategy in "${SAMPLE_STRATEGIES[@]}"; do
-        # Loop through all neighbor configurations
-        for neighbors in "${ALL_NEIGHBORS[@]}"; do
+    # Loop through all relation aggregation methods
+    for aggr in "${AGGRS[@]}"; do
+        # Loop through all graph layer numbers
+        for layer in "${LAYERS[@]}"; do
+            echo "=========================================="
+            echo "Running Experiment:"
+            echo "  Database: $DB_NAME"
+            echo "  Task: $TASK_NAME"
+            echo "  Relation Aggregation: $aggr"
+            echo "  Graph Layers: $layer"
+            echo "=========================================="
+
             # Run the experiment, continue even if it fails (e.g., CUDA OOM)
             python -m aida.aida_run \
                 --db_name "$DB_NAME" \
                 --tf_cache_dir "$TF_CACHE_DIR" \
                 --task_name "$TASK_NAME" \
-                --num_neighbors $neighbors \
-                --sample_strategy "$strategy" \
                 --early_stop_threshold $EARLY_STOP \
-                $COMMON_ARGS || echo "FAILED: DB=$DB_NAME, Task=$TASK_NAME, Neighbors=[$neighbors], Strategy=$strategy"
+                --relation_aggr "$aggr" \
+                --relation_layer_num $layer \
+                $COMMON_ARGS || echo "FAILED: DB=$DB_NAME, Task=$TASK_NAME, Aggr=$aggr, Layers=$layer"
         done
     done
 done

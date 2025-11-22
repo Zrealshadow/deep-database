@@ -7,6 +7,7 @@ from model.encoder import (
     ResNetEncoder,
     FTTransEncoder,
     DFMEncoder,
+    ARMNetEncoder,
 )
 
 
@@ -40,7 +41,7 @@ class TestBuildEncoder(unittest.TestCase):
 
     def test_build_transformer_encoder(self):
         """Test building FTTransEncoder."""
-        encoder = build_encoder("transformer", channels=64, num_layers=2, num_heads=4, dropout=0.2)
+        encoder = build_encoder("fttrans", channels=64, num_layers=2, num_heads=4, dropout=0.2)
         self.assertIsInstance(encoder, FTTransEncoder)
         self.assertEqual(encoder.channels, 64)
         self.assertEqual(encoder.num_heads, 4)
@@ -57,10 +58,17 @@ class TestBuildEncoder(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_encoder("invalid", channels=32, num_layers=2)
 
+    def test_build_armnet_encoder(self):
+        """Test building ARMNetEncoder."""
+        encoder = build_encoder("armnet", channels=64, num_layers=2, nfield=10, nhid=32, alpha=1.7, dropout=0.2)
+        self.assertIsInstance(encoder, ARMNetEncoder)
+        self.assertEqual(encoder.channels, 64)
+        self.assertEqual(encoder.nhid, 32)
+
     def test_all_encoders_forward(self):
         """Test that all built encoders can forward."""
         x = torch.randn(4, 10, 32)
-        encoder_types = ["dfm", "tabm", "mlp", "resnet", "transformer"]
+        encoder_types = ["dfm", "tabm", "mlp", "resnet", "fttrans"]
 
         for enc_type in encoder_types:
             encoder = build_encoder(enc_type, channels=32, num_layers=2)
@@ -69,6 +77,14 @@ class TestBuildEncoder(unittest.TestCase):
                 output = encoder(x)
             self.assertEqual(output.shape, (4, 32),
                            f"build_encoder('{enc_type}') output shape mismatch")
+
+        # Test ARMNet separately since it requires nfield
+        encoder = build_encoder("armnet", channels=32, num_layers=2, nfield=10, nhid=16)
+        encoder.eval()
+        with torch.no_grad():
+            output = encoder(x)
+        self.assertEqual(output.shape, (4, 32),
+                       f"build_encoder('armnet') output shape mismatch")
 
 
 class TestDFMEncoder(unittest.TestCase):
@@ -246,6 +262,77 @@ class TestFTTransEncoder(unittest.TestCase):
             FTTransEncoder(channels=65, num_layers=2, num_heads=4)
 
 
+class TestARMNetEncoder(unittest.TestCase):
+    """Test suite for ARMNetEncoder."""
+
+    def test_forward_shape(self):
+        """Test that forward pass produces correct output shape."""
+        encoder = ARMNetEncoder(channels=64, num_layers=3, nfield=10, nhid=32, alpha=1.7, dropout=0.2)
+        encoder.eval()
+
+        # Input: [batch_size, num_fields, channels]
+        x = torch.randn(8, 10, 64)
+
+        with torch.no_grad():
+            output = encoder(x)
+
+        # Output: [batch_size, channels]
+        self.assertEqual(output.shape, (8, 64))
+
+    def test_different_alpha_values(self):
+        """Test ARMNet with different alpha values for sparsity control."""
+        x = torch.randn(4, 5, 32)
+
+        # Test with alpha=1.0 (softmax)
+        encoder_softmax = ARMNetEncoder(channels=32, num_layers=2, nfield=5, nhid=16, alpha=1.0, dropout=0.1)
+        encoder_softmax.eval()
+        with torch.no_grad():
+            output1 = encoder_softmax(x)
+        self.assertEqual(output1.shape, (4, 32))
+
+        # Test with alpha=1.5 (entmax-1.5)
+        encoder_entmax = ARMNetEncoder(channels=32, num_layers=2, nfield=5, nhid=16, alpha=1.5, dropout=0.1)
+        encoder_entmax.eval()
+        with torch.no_grad():
+            output2 = encoder_entmax(x)
+        self.assertEqual(output2.shape, (4, 32))
+
+    def test_different_nhid_values(self):
+        """Test ARMNet with different nhid (number of hidden neurons) values."""
+        x = torch.randn(4, 8, 32)
+
+        for nhid in [16, 32, 64]:
+            encoder = ARMNetEncoder(channels=32, num_layers=2, nfield=8, nhid=nhid, alpha=1.7, dropout=0.1)
+            encoder.eval()
+            with torch.no_grad():
+                output = encoder(x)
+            self.assertEqual(output.shape, (4, 32))
+
+    def test_backward(self):
+        """Test backward pass."""
+        encoder = ARMNetEncoder(channels=32, num_layers=2, nfield=5, nhid=16, alpha=1.7, dropout=0.1)
+        x = torch.randn(4, 5, 32, requires_grad=True)
+
+        output = encoder(x)
+        loss = output.sum()
+        loss.backward()
+
+        self.assertIsNotNone(x.grad)
+
+    def test_sparse_attention_output(self):
+        """Test that sparse attention mechanism works correctly."""
+        encoder = ARMNetEncoder(channels=32, num_layers=2, nfield=5, nhid=16, alpha=1.7, dropout=0.0)
+        encoder.eval()
+
+        x = torch.randn(2, 5, 32)
+
+        with torch.no_grad():
+            output = encoder(x)
+
+        # Check output is finite
+        self.assertTrue(torch.isfinite(output).all())
+
+
 class TestEncoderAPI(unittest.TestCase):
     """Test that all encoders follow the same API."""
 
@@ -271,6 +358,7 @@ class TestEncoderAPI(unittest.TestCase):
         MLPEncoder(channels=32, num_layers=2, dropout=0.1)
         ResNetEncoder(channels=32, num_layers=2, dropout=0.1)
         FTTransEncoder(channels=32, num_layers=2, num_heads=4, dropout=0.1)
+        ARMNetEncoder(channels=32, num_layers=2, nfield=10, nhid=16, alpha=1.7, dropout=0.1)
 
     def test_all_same_output_shape(self):
         """Test that all encoders output [batch, channels]."""
@@ -282,6 +370,7 @@ class TestEncoderAPI(unittest.TestCase):
             MLPEncoder(channels=32, num_layers=2, dropout=0.1),
             ResNetEncoder(channels=32, num_layers=2, dropout=0.1),
             FTTransEncoder(channels=32, num_layers=2, num_heads=4, dropout=0.1),
+            ARMNetEncoder(channels=32, num_layers=2, nfield=10, nhid=16, alpha=1.7, dropout=0.1),
         ]
 
         for encoder in encoders:

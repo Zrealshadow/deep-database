@@ -1,4 +1,5 @@
 
+from model.layer.fusion_layer import FusionLayer
 from torch_geometric.data import HeteroData
 from relbench.modeling.nn import HeteroTemporalEncoder
 
@@ -392,7 +393,7 @@ class AIDAXFormer(torch.nn.Module):
         self.temporal_encoder = temporal_encoder
 
         self.relation_module = relation_module
-        self.fusion_mododule = fusion_module
+        self.fusion_module = fusion_module
 
         self.head = torch.nn.Linear(channels, out_channels)
 
@@ -400,8 +401,13 @@ class AIDAXFormer(torch.nn.Module):
         self.feat_encoder.reset_parameters()
         self.table_encoder.reset_parameters()
         self.temporal_encoder.reset_parameters()
-        self.relation_module.reset_parameters()
-        # self.fusion_mododule.reset_parameters()
+
+        if self.relation_module is not None:
+            self.relation_module.reset_parameters()
+
+        if self.fusion_module is not None:
+            self.fusion_module.reset_parameters()
+
         torch.nn.init.xavier_uniform_(self.head.weight)
         torch.nn.init.zeros_(self.head.bias)
 
@@ -409,6 +415,7 @@ class AIDAXFormer(torch.nn.Module):
         self,
         batch: HeteroData,
         entity_table: NodeType,
+        require_attn_weights: bool = False,
     ):
         seed_time = batch[entity_table].seed_time
         x_dict = self.feat_encoder(batch.tf_dict)
@@ -422,25 +429,81 @@ class AIDAXFormer(torch.nn.Module):
         for node_type, rel_time in rel_time_dict.items():
             x_dict[node_type] = x_dict[node_type] + rel_time
 
-        x_dict = self.relation_module(
-            x_dict,
-            batch.edge_index_dict,
+        if self.relation_module is not None:
+            x_dict = self.relation_module(
+                x_dict,
+                batch.edge_index_dict,
+            )
+
+        if self.fusion_module is not None:
+            entity_node_feat, seq_types, attn_weights = self.fusion_module(
+                x_dict,
+                batch.edge_index_dict,
+                entity_table,
+                require_attn_weights=require_attn_weights,
+            )
+        else:
+            entity_node_feat, seq_types, attn_weights = x_dict[entity_table], None, None
+
+        return self.head(entity_node_feat[:seed_time.size(0)])
+
+    @torch.no_grad()
+    def get_attn_weights(
+        self,
+        batch: HeteroData,
+        entity_table: NodeType,
+        require_attn_weights: bool = True,
+    ):  
+        
+        if not self.fusion_module:
+            raise ValueError("Fusion module is not defined when constructing the model.")
+
+        seed_time = batch[entity_table].seed_time
+        x_dict = self.feat_encoder(batch.tf_dict)
+        # {table: (B, feat_channels)}
+        x_dict = self.table_encoder(x_dict)
+
+        rel_time_dict = self.temporal_encoder(
+            seed_time, batch.time_dict, batch.batch_dict
         )
 
-        return self.head(x_dict[entity_table][:seed_time.size(0)])
+        for node_type, rel_time in rel_time_dict.items():
+            x_dict[node_type] = x_dict[node_type] + rel_time
+
+        if self.relation_module is not None:
+            x_dict = self.relation_module(
+                x_dict,
+                batch.edge_index_dict,
+            )
+
+        assert self.fusion_module is not None, "Fusion module is required to get attention weights."
+
+        tokens, seq_types, attn_weights = self.fusion_module.get_tokens(
+            x_dict,
+            batch.edge_index_dict,
+            entity_table,
+            require_attn_weights=require_attn_weights,
+        )
+        # [B,seq_len, out_channels]
+        return tokens, seq_types, attn_weights
+
 
 # --------------- Helper functions---------------- #
+
 def construct_default_AIDAXFormer(
     data: HeteroData,
     node_to_col_stats: Dict[str, Dict[str, StatType]],
     channels: int,
     out_channels: int,
     feat_layer_num: int = 2,
-    graph_layer_num: int = 2,
-    feat_nhead: int = 4,
+    relation_layer_num: int = 2,
+    feat_nhead: int = 1,
     graph_nhead: int = 1,
+    relation_aggr: str = "sum",
     dropout_prob: float = 0.1,
     specific_table_encoder: Dict[str, str] = None,
+    deactivate_relation_module: bool = False,
+    deactivate_fusion_module: bool = False,
 ) -> AIDAXFormer:
 
     table_col_names_dict = {
@@ -456,12 +519,19 @@ def construct_default_AIDAXFormer(
 
     if specific_table_encoder is not None:
         # convert the table encoder to actuat torch nn
-        specific_table_encoder = {
-            table: build_encoder(
-                encoder_type, channels, num_layers=feat_layer_num, dropout_prob=dropout_prob)
-            for table, encoder_type in specific_table_encoder.items()
-        }
-
+        # specific_table_encoder = {
+        #     table: build_encoder(
+        #         encoder_type, channels, num_layers=feat_layer_num, dropout_prob=dropout_prob, **kwargs)
+        #     for table, encoder_type in specific_table_encoder.items()
+        # }
+        for table, encoder_type in specific_table_encoder.items():
+            kwargs = {
+                "nfield": sum(len(col_names) for col_names in table_col_names_dict[table].values()),
+            }
+            specific_table_encoder[table] = build_encoder(
+                encoder_type, channels, num_layers=feat_layer_num, dropout_prob=dropout_prob, **kwargs
+            )
+        
     database_table_encoder = AIDATableEncoder(
         tables=data.node_types,
         feat_channels=channels,
@@ -483,13 +553,27 @@ def construct_default_AIDAXFormer(
         data.node_types,
         edge_types=data.edge_types,
         channels=channels,
-        aggr="sum",
-        num_layers=graph_layer_num,
+        aggr=relation_aggr,
+        num_layers=relation_layer_num,
         dropout=dropout_prob,
     )
 
-    fusion_module = None  # Not implemented yet
+    # fusion_module = None  # Not implemented yet
+    fusion_module = FusionLayer(
+        node_types=data.node_types,
+        edge_types=data.edge_types,
+        in_channels=channels,
+        out_channels=channels,
+    )
+    
+    assert not (deactivate_relation_module and deactivate_fusion_module), \
+        "Cannot deactivate both relation module and fusion module."
 
+    if deactivate_relation_module:
+        relation_module = None
+    if deactivate_fusion_module:
+        fusion_module = None
+        
     model = AIDAXFormer(
         channels=channels,
         out_channels=out_channels,

@@ -1,5 +1,6 @@
 from .dfm import DeepFM
 from .tabm import TabM
+from .armnet import ARMNet
 from torch_frame.nn.models import MLP, ResNet, FTTransformer
 import copy
 from typing import Dict, Any
@@ -56,10 +57,12 @@ def construct_tabular_model(model_name: str, model_args: Dict[str, Any]) -> nn.M
         args.pop("dropout_prob", None)
         net = FTTransformer(**args)
     elif model_name == "DFM":
-        args.pop("normalization", None)
         net = DeepFM(**args)
     elif model_name == "TabM":
         net = TabM(**args)
+    elif model_name == "ARMNet":
+        args.pop("normalization", None)
+        net = ARMNet(**args)
     else:
         raise ValueError(f"Unsupported model: {model_name}. Supported models: MLP, ResNet, FTTrans, DFM")
 

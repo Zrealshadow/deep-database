@@ -1,3 +1,4 @@
+from .tabular.armnet import ARMNetModel
 import torch
 from typing import Literal
 
@@ -71,56 +72,23 @@ def build_encoder(
             num_heads=num_heads,
             dropout=dropout,
         )
+    elif encoder_type == "armnet":
+        nfield = kwargs.get("nfield")
+        nhid = kwargs.get("nhid", 32)
+        alpha = kwargs.get("alpha", 1.7)
+        return ARMNetEncoder(
+            channels=channels,
+            num_layers=num_layers,
+            nfield=nfield,
+            nhid=nhid,
+            dropout=dropout,
+            alpha=alpha,
+        )
     else:
         raise ValueError(
             f"Unknown encoder_type: {encoder_type}. "
             f"Supported types: 'dfm', 'tabm', 'mlp', 'resnet', 'transformer'"
         )
-
-
-class TabMEncoder(torch.nn.Module):
-    def __init__(
-        self,
-        channels: int,
-        num_layers: int,
-        k: int = 8,
-        dropout_prob: float = 0.2,
-        activation: str = "relu",
-    ):
-        super().__init__()
-        self.channels = channels
-        self.layers = torch.nn.ModuleList()
-        self.k = k
-        for _ in range(num_layers):
-            layer = BatchEnsembleLayer(
-                in_channels=channels,
-                out_channels=channels,
-                k=k,
-                dropout_prob=dropout_prob,
-                activation=activation,
-            )
-            self.layers.append(layer)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            x: [batch_size, num_columns, channels]
-
-        Returns:
-            x : [batch_size, channels]
-        """
-        x = x.mean(dim=1)
-        # expand x to (batch_size, k, channels)
-        x = x.unsqueeze(1).expand(-1, self.k, -1)
-        for layer in self.layers:
-            x = layer(x)  # [batch_size, k, channels]
-        x = x.mean(dim=1)  # [batch_size, channels]
-        return x
-
-    def reset_parameters(self) -> None:
-        for layer in self.layers:
-            layer.reset_parameters()
-
 
 class MLPEncoder(torch.nn.Module):
     def __init__(self, channels: int, num_layers: int, dropout: float = 0.2):
@@ -278,6 +246,56 @@ class FTTransEncoder(torch.nn.Module):
         x = x.mean(dim=1)
         return x
 
+
+# ------------ upper method is used to reimplement the logic in pytorch_frame
+
+
+
+class TabMEncoder(torch.nn.Module):
+    def __init__(
+        self,
+        channels: int,
+        num_layers: int,
+        k: int = 8,
+        dropout_prob: float = 0.2,
+        activation: str = "relu",
+    ):
+        super().__init__()
+        self.channels = channels
+        self.layers = torch.nn.ModuleList()
+        self.k = k
+        for _ in range(num_layers):
+            layer = BatchEnsembleLayer(
+                in_channels=channels,
+                out_channels=channels,
+                k=k,
+                dropout_prob=dropout_prob,
+                activation=activation,
+            )
+            self.layers.append(layer)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: [batch_size, num_columns, channels]
+
+        Returns:
+            x : [batch_size, channels]
+        """
+        x = x.mean(dim=1)
+        # expand x to (batch_size, k, channels)
+        x = x.unsqueeze(1).expand(-1, self.k, -1)
+        for layer in self.layers:
+            x = layer(x)  # [batch_size, k, channels]
+        x = x.mean(dim=1)  # [batch_size, channels]
+        return x
+
+    def reset_parameters(self) -> None:
+        for layer in self.layers:
+            layer.reset_parameters()
+
+
+
 class DFMEncoder(torch.nn.Module):
     def __init__(
         self,
@@ -315,3 +333,34 @@ class DFMEncoder(torch.nn.Module):
 
         out = linear_out + mlp_out + fm_out
         return out
+
+
+class ARMNetEncoder(ARMNetModel):
+    """Adapter for ARMNetModel with standardized encoder API."""
+
+    def __init__(
+        self,
+        channels: int,
+        num_layers: int,
+        nfield: int,
+        nhid: int,
+        alpha: float,
+        dropout: float = 0.2,
+        normalization: str = 'layer_norm',
+    ):
+        # Call parent with mapped parameters
+        super().__init__(
+            nfield=nfield,
+            nemb=channels,
+            nhid=nhid,
+            mlp_nlayer=num_layers,
+            mlp_nhid=channels,
+            dropout=dropout,
+            alpha=alpha,
+            normalization=normalization,
+            noutput=channels
+        )
+        # Store for API consistency
+        self.channels = channels
+        self.num_layers = num_layers
+        self.nhid = nhid
