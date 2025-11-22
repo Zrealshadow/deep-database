@@ -41,9 +41,7 @@ export PYTHONPATH="$TPBERTA_ROOT:$PYTHONPATH"
 
 # Data source directories (hard coded like exam.sh)
 DATA_DIRS=(
-  "fit-best-table"
   "fit-medium-table" 
-  "flatten-table"
 )
 
 # Default data source (first one)
@@ -114,13 +112,14 @@ echo ""
 
 python "$PROJECT_ROOT/tpberta/preprocess.py" \
     --input_dir "$INPUT_DIR" \
-    --output_dir "$OUTPUT_DIR"
+    --output_dir "$OUTPUT_DIR" \
+    --pretrain_dir "$TPBERTA_PRETRAIN_DIR"
 
 echo ""
 echo "=========================================="
 echo "Preprocessing completed!"
 echo "Output saved to: $OUTPUT_DIR"
-echo "  - {dataset_name}.csv"
+echo "  - {dataset_name}.csv (2 columns: embedding, target)"
 echo "  - feature_names.json"
 echo "  - split_info.json"
 echo "Log saved to: $LOG_FILE"

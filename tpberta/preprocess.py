@@ -267,15 +267,24 @@ def convert_to_tpberta_format(
     output_dir: str,
     target_col: Optional[str] = None,
     task_type: Optional[str] = None,
+    pretrain_dir: Optional[str] = None,
+    device: Optional[str] = None,
 ) -> str:
     """
-    Convert TableData format to TP-BERTa format.
+    Convert TableData format to TP-BERTa format with embeddings.
+    
+    This function:
+    1. Reads train/val/test CSV files
+    2. Generates TP-BERTa embeddings for each row
+    3. Outputs 2-column CSV: embedding (comma-separated), target
     
     Args:
         input_dir: Directory containing train.csv, val.csv, test.csv, and target_col.txt
         output_dir: Output directory for TP-BERTa format files
         target_col: Target column name (if None, read from target_col.txt)
         task_type: Task type (if None, read from target_col.txt)
+        pretrain_dir: Path to pre-trained TP-BERTa model (if None, use TPBERTA_PRETRAIN_DIR env var)
+        device: Device to use (default: "cuda" if available, else "cpu")
     
     Returns:
         Path to output CSV file
@@ -283,6 +292,25 @@ def convert_to_tpberta_format(
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Get pretrain_dir from parameter or environment variable
+    if pretrain_dir is None:
+        import os
+        pretrain_dir = os.environ.get("TPBERTA_PRETRAIN_DIR")
+        if pretrain_dir is None:
+            # Try default path
+            default_path = Path("/home/naili/tp-berta/checkpoints/tp-joint")
+            if default_path.exists():
+                pretrain_dir = str(default_path)
+            else:
+                raise ValueError(
+                    "pretrain_dir not provided and TPBERTA_PRETRAIN_DIR not set. "
+                    "Please provide pretrain_dir or set TPBERTA_PRETRAIN_DIR environment variable."
+                )
+    
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device(device)
     
     # Load target column info from target_col.txt
     target_col_file = input_dir / "target_col.txt"
@@ -333,39 +361,83 @@ def convert_to_tpberta_format(
         'test_size': len(test_df)
     }
     
-    # Combine all splits
+    # Generate feature_names.json (needed for embedding generation)
     combined_df = pd.concat([train_df, val_df, test_df], ignore_index=True)
-    
-    # Save combined CSV
-    dataset_name = input_dir.name
-    output_csv = output_dir / f"{dataset_name}.csv"
-    combined_df.to_csv(output_csv, index=False)
-    
-    # Generate feature_names.json
     feature_names_file = output_dir / "feature_names.json"
     _generate_feature_names(combined_df, feature_names_file)
+    
+    print(f"🔄 Generating TP-BERTa embeddings...")
+    print(f"   Device: {device}")
+    print(f"   Pretrain dir: {pretrain_dir}")
+    
+    # Generate embeddings for each split
+    def process_split(df, split_name):
+        """Process a single split and return embeddings + targets."""
+        print(f"   Processing {split_name} split ({len(df)} rows)...")
+        
+        # Get embeddings
+        embeddings = _get_tpberta_embeddings(
+            df=df,
+            pretrain_dir=pretrain_dir,
+            feature_names_file=str(feature_names_file),
+            device=device,
+        )
+        
+        # Convert embeddings to comma-separated strings
+        embedding_strings = []
+        for emb in embeddings:
+            emb_str = ",".join([str(x) for x in emb.flatten()])
+            embedding_strings.append(emb_str)
+        
+        # Get targets
+        targets = df[target_col].values
+        
+        return embedding_strings, targets
+    
+    # Process all splits
+    train_embeddings, train_targets = process_split(train_df, "train")
+    val_embeddings, val_targets = process_split(val_df, "val")
+    test_embeddings, test_targets = process_split(test_df, "test")
+    
+    # Combine all splits
+    all_embeddings = train_embeddings + val_embeddings + test_embeddings
+    all_targets = np.concatenate([train_targets, val_targets, test_targets])
+    
+    # Create output DataFrame with 2 columns: embedding, target
+    output_df = pd.DataFrame({
+        'embedding': all_embeddings,
+        'target': all_targets
+    })
+    
+    # Save output CSV
+    dataset_name = input_dir.name
+    output_csv = output_dir / f"{dataset_name}.csv"
+    output_df.to_csv(output_csv, index=False)
     
     # Save split info
     split_info_file = output_dir / "split_info.json"
     with open(split_info_file, 'w') as f:
         json.dump(split_info, f, indent=2)
     
-    print(f"✅ Converted to TP-BERTa format:")
+    print(f"✅ Converted to TP-BERTa format with embeddings:")
     print(f"   Input: {input_dir}")
     print(f"   Output: {output_dir}")
-    print(f"   CSV: {output_csv}")
+    print(f"   CSV: {output_csv} (2 columns: embedding, target)")
     print(f"   Feature names: {feature_names_file}")
     print(f"   Split info: {split_info_file}")
-    print(f"   Target column: {target_col} (last column)")
+    print(f"   Target column: {target_col}")
     print(f"   Task type: {tpberta_task_type}")
+    print(f"   Total rows: {len(output_df)}")
     
     return str(output_csv)
 
 
 def main():
-    """Main function to convert TableData format to TP-BERTa format."""
+    """Main function to convert TableData format to TP-BERTa format with embeddings."""
+    import os
+    
     parser = argparse.ArgumentParser(
-        description="Convert TableData format to TP-BERTa format"
+        description="Convert TableData format to TP-BERTa format with embeddings"
     )
     parser.add_argument(
         "--input_dir",
@@ -392,6 +464,18 @@ def main():
         help="Task type: BINARY_CLASSIFICATION, REGRESSION, or MULTICLASS_CLASSIFICATION "
              "(if not provided, read from target_col.txt)"
     )
+    parser.add_argument(
+        "--pretrain_dir",
+        type=str,
+        default=None,
+        help="Path to pre-trained TP-BERTa model (if not provided, use TPBERTA_PRETRAIN_DIR env var)"
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Device to use (cuda/cpu, default: auto-detect)"
+    )
     
     args = parser.parse_args()
     
@@ -401,8 +485,11 @@ def main():
             output_dir=args.output_dir,
             target_col=args.target_col,
             task_type=args.task_type,
+            pretrain_dir=args.pretrain_dir,
+            device=args.device,
         )
         print(f"\n✅ Success! Output CSV: {output_csv}")
+        print(f"   Format: 2 columns (embedding, target)")
     except Exception as e:
         print(f"\n❌ Error: {e}")
         traceback.print_exc()
