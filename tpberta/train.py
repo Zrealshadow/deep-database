@@ -137,16 +137,37 @@ def load_embedding_data(data_dir: Path):
 def check_data_distribution(train_labels, val_labels, test_labels, task_type: str):
     """Check and print data distribution information."""
     all_labels = np.concatenate([train_labels, val_labels, test_labels])
-    unique_labels, counts = np.unique(all_labels, return_counts=True)
+    
     print(f"\nData distribution:")
     print(f"  Total samples: {len(all_labels)}")
-    for label, count in zip(unique_labels, counts):
-        print(f"  Label {label}: {count} ({count / len(all_labels) * 100:.1f}%)")
-    if task_type == "binclass" and len(unique_labels) == 2:
-        pos_ratio = counts[1] / len(all_labels) if len(counts) > 1 else 0
-        print(f"  Positive class ratio: {pos_ratio:.3f}")
-        if pos_ratio < 0.1 or pos_ratio > 0.9:
-            print(f"  ⚠️  Warning: Highly imbalanced dataset! This may affect AUC.")
+    
+    if task_type == "regression":
+        # For regression: show statistical summary
+        print(f"  Label statistics:")
+        print(f"    Mean: {np.mean(all_labels):.6f}")
+        print(f"    Std: {np.std(all_labels):.6f}")
+        print(f"    Min: {np.min(all_labels):.6f}")
+        print(f"    Max: {np.max(all_labels):.6f}")
+        print(f"    25th percentile: {np.percentile(all_labels, 25):.6f}")
+        print(f"    50th percentile (median): {np.percentile(all_labels, 50):.6f}")
+        print(f"    75th percentile: {np.percentile(all_labels, 75):.6f}")
+        
+        # Also show split-specific stats
+        print(f"\n  Split-specific statistics:")
+        print(f"    Train: mean={np.mean(train_labels):.6f}, std={np.std(train_labels):.6f}, range=[{np.min(train_labels):.6f}, {np.max(train_labels):.6f}]")
+        print(f"    Val: mean={np.mean(val_labels):.6f}, std={np.std(val_labels):.6f}, range=[{np.min(val_labels):.6f}, {np.max(val_labels):.6f}]")
+        print(f"    Test: mean={np.mean(test_labels):.6f}, std={np.std(test_labels):.6f}, range=[{np.min(test_labels):.6f}, {np.max(test_labels):.6f}]")
+    else:
+        # For classification: show class distribution
+        unique_labels, counts = np.unique(all_labels, return_counts=True)
+        for label, count in zip(unique_labels, counts):
+            print(f"  Label {label}: {count} ({count / len(all_labels) * 100:.1f}%)")
+        
+        if task_type == "binclass" and len(unique_labels) == 2:
+            pos_ratio = counts[1] / len(all_labels) if len(counts) > 1 else 0
+            print(f"  Positive class ratio: {pos_ratio:.3f}")
+            if pos_ratio < 0.1 or pos_ratio > 0.9:
+                print(f"  ⚠️  Warning: Highly imbalanced dataset! This may affect AUC.")
 
 
 def train_prediction_head(
@@ -292,6 +313,8 @@ def train_prediction_head(
                 val_targets.extend(labels)
 
         val_metric = metric_fn(val_targets, val_preds)
+        # Convert to Python native float for JSON serialization
+        val_metric = float(val_metric)
         val_metrics.append(val_metric)
 
         # Check for improvement
@@ -336,16 +359,19 @@ def train_prediction_head(
             test_targets.extend(labels)
 
     test_metric = metric_fn(test_targets, test_preds)
+    # Convert to Python native float for JSON serialization
+    test_metric = float(test_metric)
 
     # Save results
+    # Convert all NumPy types to Python native types for JSON serialization
     results = {
         'best_val_metric': float(best_val_metric),
         'test_metric': float(test_metric),
         'task_type': task_type,
-        'embedding_dim': embedding_dim,
-        'num_epochs_trained': epoch + 1,
-        'train_losses': train_losses,
-        'val_metrics': val_metrics,
+        'embedding_dim': int(embedding_dim),
+        'num_epochs_trained': int(epoch + 1),
+        'train_losses': [float(x) for x in train_losses],
+        'val_metrics': [float(x) for x in val_metrics],
     }
 
     with open(output_dir / "results.json", 'w') as f:
