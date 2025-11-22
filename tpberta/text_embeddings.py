@@ -57,7 +57,6 @@ def _get_nomic_embeddings(
             Options: "search_document", "search_query", "clustering", "classification"
         batch_size: Batch size for encoding
         device: Device to use ("cuda", "cpu", or torch.device)
-        normalize: Whether to normalize embeddings
         feature_names_file: Optional path to feature_names.json. If provided, uses standardized
                            feature names as keys instead of original column names.
     
@@ -128,7 +127,6 @@ def _get_bge_embeddings(
         df: Input DataFrame
         batch_size: Batch size for encoding
         device: Device to use ("cuda", "cpu", or torch.device)
-        normalize: Whether to normalize embeddings
         feature_names_file: Optional path to feature_names.json. If provided, uses standardized
                            feature names as keys instead of original column names.
     
