@@ -8,6 +8,12 @@ from relbench.base import Database, Dataset, BaseTask
 from relbench.datasets import get_dataset
 from relbench.tasks import trial, f1, amazon, hm, avito
 
+from relbench.datasets.avito import AvitoDataset as RDBenchAvitoDataset
+from relbench.datasets.trial import TrialDataset as RDBenchTrialDataset
+from relbench.datasets.amazon import AmazonDataset as RDBenchAmazonDataset
+from relbench.datasets.f1 import F1Dataset as RDBenchF1Dataset
+from relbench.datasets.hm import HMDataset as RDBenchHMDataset
+
 from utils.task import task_extensions
 
 
@@ -166,9 +172,6 @@ class DatabaseFactory(object):
 # Register default datasets from relbench
 # ============================================================================
 
-def _load_avito_dataset(cache_dir: Optional[str] = None) -> Dataset:
-    """Load the Avito dataset."""
-    return get_dataset("rel-avito", download=True)
 
 
 def _preprocess_avito_database(db: Database) -> None:
@@ -182,23 +185,39 @@ def _preprocess_avito_database(db: Database) -> None:
             table.df.reset_index(drop=True, inplace=True)
 
 
+#TODO： cache_dir is not activated / need refine in future Node
+def _load_avito_dataset(cache_dir: Optional[str] = None) -> Dataset:
+    """Load the Avito dataset."""
+    if cache_dir:
+        return RDBenchAvitoDataset(cache_dir=cache_dir)
+    return get_dataset("rel-avito", download=True)
+
+
 def _load_trial_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the Trial dataset."""
+    if cache_dir:
+        return RDBenchTrialDataset(cache_dir=cache_dir)
     return get_dataset("rel-trial", download=True)
 
 
 def _load_f1_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the F1 dataset."""
+    if cache_dir:
+        return RDBenchF1Dataset(cache_dir=cache_dir)
     return get_dataset("rel-f1", download=True)
 
 
 def _load_amazon_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the Amazon dataset."""
+    if cache_dir:
+        return RDBenchAmazonDataset(cache_dir=cache_dir)
     return get_dataset("rel-amazon", download=True)
 
 
 def _load_hm_dataset(cache_dir: Optional[str] = None) -> Dataset:
     """Load the HM dataset."""
+    if cache_dir:
+        return RDBenchHMDataset(cache_dir=cache_dir)
     return get_dataset("rel-hm", download=True)
 
 
