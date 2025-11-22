@@ -210,14 +210,11 @@ def _get_tpberta_embeddings(
 
                 # Get encoder output
                 outputs = actual_model.tpberta(**batch)
-                # Extract embeddings: prefer pooler_output if available, otherwise use CLS token
-                # Note: For pretrain models (TPBertaForMTLPretrain), pooler_output is None,
-                # so we always use the CLS token (first token) from last_hidden_state
-                if hasattr(outputs, 'pooler_output') and outputs.pooler_output is not None:
-                    embeddings = outputs.pooler_output
-                else:
-                    # Use CLS token (first token) from sequence output
-                    embeddings = outputs.last_hidden_state[:, 0, :]
+                # Extract CLS token (first token) from sequence output
+                # Note: TPBertaForClassification and TPBertaForMTLPretrain both set
+                # add_pooling_layer=False, so pooler_output is always None.
+                # We directly use the CLS token from last_hidden_state.
+                embeddings = outputs.last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
 
                 all_embeddings.append(embeddings.cpu().numpy())
 
