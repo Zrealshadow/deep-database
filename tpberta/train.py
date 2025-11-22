@@ -96,7 +96,7 @@ def train_prediction_head(
     
     Args:
         data_dir: Directory containing train.csv, val.csv, test.csv (each with columns: embedding, target)
-        output_dir: Directory to save model and results
+        output_dir: Directory to save results
         target_col_txt_path: Path to target_col.txt (if None, auto-detect from parent dir)
         hidden_dims: Hidden layer dimensions for prediction head
         dropout: Dropout rate
@@ -306,14 +306,6 @@ def train_prediction_head(
     with open(output_dir / "results.json", 'w') as f:
         json.dump(results, f, indent=2)
     
-    # Save model
-    torch.save({
-        'model_state_dict': best_model_state,
-        'embedding_dim': embedding_dim,
-        'hidden_dims': hidden_dims,
-        'task_type': task_type,
-    }, output_dir / "prediction_head.pth")
-    
     # Save predictions
     np.save(output_dir / "test_predictions.npy", np.array(test_preds))
     np.save(output_dir / "test_targets.npy", np.array(test_targets))
@@ -323,7 +315,6 @@ def train_prediction_head(
     print("=" * 60)
     print(f"Best Val {metric_fn.__name__}: {best_val_metric:.6f}")
     print(f"Test {metric_fn.__name__}: {test_metric:.6f}")
-    print(f"Model saved to: {output_dir / 'prediction_head.pth'}")
     
     return results
 
@@ -345,7 +336,7 @@ def main():
         "--output_dir",
         type=str,
         required=True,
-        help="Output directory for model and results"
+        help="Output directory for results"
     )
     parser.add_argument(
         "--target_col_txt",
