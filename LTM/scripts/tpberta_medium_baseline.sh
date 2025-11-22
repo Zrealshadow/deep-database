@@ -129,9 +129,9 @@ train_dataset_model() {
         --data_dir "$input_dir" \
         --output_dir "$output_dir" \
         --target_col_txt "$target_col_txt"; then
-        echo ""
+    echo ""
         echo "  ✅ Completed: $dataset with $model"
-        echo "     Results saved to: $output_dir"
+    echo "     Results saved to: $output_dir"
         return 0
     else
         echo ""

@@ -2,13 +2,22 @@
 
 Unified interface for extracting embeddings and training prediction heads. Supports TP-BERTa, Nomic, and BGE.
 
+## Environment Variables
+
+```bash
+export TPBERTA_ROOT="/home/naili/tp-berta"
+export TPBERTA_PRETRAIN_DIR="$TPBERTA_ROOT/checkpoints/tp-joint"
+export TPBERTA_BASE_MODEL_DIR="$TPBERTA_ROOT/checkpoints/roberta-base"
+export PYTHONPATH="$PROJECT_ROOT:$TPBERTA_ROOT:$PYTHONPATH"
+export CUDA_VISIBLE_DEVICES=0
+```
+
 ## Quick Start
 
 ### 1. Generate Embeddings for RelBench (.npy)
 
 ```bash
-cd LTM/scripts
-./save_embed_numpy.sh
+./LTM/scripts/save_embed_numpy.sh
 ```
 
 **Output Structure**:
@@ -33,9 +42,8 @@ data/tpberta_relbench/
 ### 2. Preprocess Medium Tables (CSV)
 
 ```bash
-cd LTM/scripts
-./save_medium_embed_csv.sh              # All
-./save_medium_embed_csv.sh avito-user-clicks  # Single
+./LTM/scripts/save_medium_embed_csv.sh              # All
+./LTM/scripts/save_medium_embed_csv.sh avito-user-clicks  # Single
 ```
 
 **Input Structure**:
@@ -72,9 +80,8 @@ data/tpberta_table/
 ### 3. Train Prediction Head
 
 ```bash
-cd LTM/scripts
-./tpberta_medium_baseline.sh            # All
-./tpberta_medium_baseline.sh avito-user-clicks  # Single
+./LTM/scripts/tpberta_medium_baseline.sh            # All
+./LTM/scripts/tpberta_medium_baseline.sh avito-user-clicks  # Single
 ```
 
 **Input Structure**:
@@ -125,17 +132,6 @@ emb = get_embeddings(df, model="nomic", task_prefix="classification", batch_size
 emb = get_embeddings(df, model="bge", batch_size=32)
 ```
 
----
-
-## Environment Variables
-
-```bash
-export TPBERTA_ROOT="/home/naili/tp-berta"
-export TPBERTA_PRETRAIN_DIR="$TPBERTA_ROOT/checkpoints/tp-joint"
-export TPBERTA_BASE_MODEL_DIR="$TPBERTA_ROOT/checkpoints/roberta-base"
-export PYTHONPATH="$PROJECT_ROOT:$TPBERTA_ROOT:$PYTHONPATH"
-export CUDA_VISIBLE_DEVICES=0
-```
 
 ---
 
