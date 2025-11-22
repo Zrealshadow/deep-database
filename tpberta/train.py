@@ -80,8 +80,6 @@ def train_prediction_head(
     data_dir: str,
     output_dir: str,
     target_col_txt_path: Optional[str] = None,
-    embedding_dim: Optional[int] = None,  # Auto-detect if None
-    task_type: Optional[str] = None,  # Auto-detect if None: "binclass" or "regression"
     hidden_dims: List[int] = [256, 128],
     dropout: float = 0.2,
     batch_size: int = 256,
@@ -100,8 +98,6 @@ def train_prediction_head(
         data_dir: Directory containing train.csv, val.csv, test.csv (each with columns: embedding, target)
         output_dir: Directory to save model and results
         target_col_txt_path: Path to target_col.txt (if None, auto-detect from parent dir)
-        embedding_dim: Dimension of embeddings (auto-detect if None)
-        task_type: Task type ("binclass" or "regression", auto-detect if None)
         hidden_dims: Hidden layer dimensions for prediction head
         dropout: Dropout rate
         batch_size: Batch size
@@ -126,21 +122,17 @@ def train_prediction_head(
     if target_col_txt_path is None:
         target_col_txt_path = data_dir.parent / "target_col.txt"  # Go up one level to find original data dir
     
-    # Load task type from target_col.txt
-    if task_type is None and Path(target_col_txt_path).exists():
-        with open(target_col_txt_path, 'r') as f:
-            lines = f.readlines()
-            task_type_str = lines[1].strip() if len(lines) > 1 else "BINARY_CLASSIFICATION"
-        task_type_map = {
-            "BINARY_CLASSIFICATION": "binclass",
-            "REGRESSION": "regression",
-            "MULTICLASS_CLASSIFICATION": "multiclass"
-        }
-        task_type = task_type_map.get(task_type_str, "binclass")
-        print(f"Detected task type from target_col.txt: {task_type}")
-    elif task_type is None:
-        print("Warning: target_col.txt not found, will auto-detect task type from labels")
-        task_type = None
+    # Load task type from target_col.txt (always exists)
+    with open(target_col_txt_path, 'r') as f:
+        lines = f.readlines()
+        task_type_str = lines[1].strip()
+    task_type_map = {
+        "BINARY_CLASSIFICATION": "binclass",
+        "REGRESSION": "regression",
+        "MULTICLASS_CLASSIFICATION": "multiclass"
+    }
+    task_type = task_type_map.get(task_type_str, "binclass")
+    print(f"Detected task type from target_col.txt: {task_type}")
     
     # Load data from separate CSV files
     print(f"Loading embedding data from {data_dir}...")
@@ -157,55 +149,25 @@ def train_prediction_head(
         raise FileNotFoundError(f"test.csv not found in {data_dir}")
     
     # Load each split
-    def load_split(csv_path, split_name):
-        df = pd.read_csv(csv_path)
-        
-        # Find embedding and target columns
-        embedding_col = None
-        for col in ['embedding', 'embedding_string', 'embedding_str']:
-            if col in df.columns:
-                embedding_col = col
-                break
-        
-        if embedding_col is None:
-            raise ValueError(f"Could not find embedding column in {csv_path}. Available columns: {df.columns.tolist()}")
-        
-        target_col = None
-        for col in ['target', 'label']:
-            if col in df.columns:
-                target_col = col
-                break
-        
-        if target_col is None:
-            raise ValueError(f"Could not find target/label column in {csv_path}. Available columns: {df.columns.tolist()}")
-        
-        embedding_strings = df[embedding_col].tolist()
-        labels = df[target_col].values
-        
-        print(f"  {split_name}: {len(embedding_strings)} rows")
-        
-        return embedding_strings, labels
+    train_df = pd.read_csv(train_csv)
+    train_strings = train_df['embedding'].tolist()
+    train_labels = train_df['target'].values
+    print(f"  Train: {len(train_strings)} rows")
     
-    train_strings, train_labels = load_split(train_csv, "Train")
-    val_strings, val_labels = load_split(val_csv, "Val")
-    test_strings, test_labels = load_split(test_csv, "Test")
+    val_df = pd.read_csv(val_csv)
+    val_strings = val_df['embedding'].tolist()
+    val_labels = val_df['target'].values
+    print(f"  Val: {len(val_strings)} rows")
     
-    # Auto-detect task type from labels if not provided
-    if task_type is None:
-        all_labels = np.concatenate([train_labels, val_labels, test_labels])
-        unique_labels = np.unique(all_labels)
-        if len(unique_labels) == 2:
-            task_type = "binclass"
-        elif all_labels.dtype in [np.float64, np.float32, np.int64, np.int32]:
-            task_type = "regression"
-        else:
-            task_type = "binclass"  # default
-        print(f"Auto-detected task type: {task_type}")
+    test_df = pd.read_csv(test_csv)
+    test_strings = test_df['embedding'].tolist()
+    test_labels = test_df['target'].values
+    print(f"  Test: {len(test_strings)} rows")
     
     print(f"Data split: Train={len(train_strings)}, Val={len(val_strings)}, Test={len(test_strings)}")
     
     # Create datasets (auto-detect embedding_dim)
-    train_dataset = EmbeddingDataset(train_strings, train_labels, embedding_dim)
+    train_dataset = EmbeddingDataset(train_strings, train_labels, None)
     val_dataset = EmbeddingDataset(val_strings, val_labels, train_dataset.embedding_dim)
     test_dataset = EmbeddingDataset(test_strings, test_labels, train_dataset.embedding_dim)
     
@@ -397,19 +359,6 @@ def main():
         help="Path to target_col.txt (auto-detect if None)"
     )
     parser.add_argument(
-        "--embedding_dim",
-        type=int,
-        default=None,
-        help="Embedding dimension (auto-detect if None)"
-    )
-    parser.add_argument(
-        "--task_type",
-        type=str,
-        default=None,
-        choices=["binclass", "regression", "multiclass"],
-        help="Task type (auto-detect if None)"
-    )
-    parser.add_argument(
         "--hidden_dims",
         type=int,
         nargs="+",
@@ -460,8 +409,6 @@ def main():
             data_dir=args.data_dir,
             output_dir=args.output_dir,
             target_col_txt_path=args.target_col_txt,
-            embedding_dim=args.embedding_dim,
-            task_type=args.task_type,
             hidden_dims=args.hidden_dims,
             dropout=args.dropout,
             batch_size=args.batch_size,
