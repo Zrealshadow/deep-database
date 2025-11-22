@@ -61,15 +61,14 @@ class TPBertaHead(nn.Module):
         super().__init__()
         # TP-BERTa: Linear(input_dim -> input_dim) -> Tanh -> Linear(input_dim -> output_dim)
         self.dense = nn.Linear(input_dim, input_dim)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)  # Use single dropout layer (matches original)
         self.out_proj = nn.Linear(input_dim, output_dim)
 
     def forward(self, x):
-        x = self.dropout1(x)
+        x = self.dropout(x)
         x = self.dense(x)
         x = torch.tanh(x)
-        x = self.dropout2(x)
+        x = self.dropout(x)  # Reuse same dropout layer (matches original)
         x = self.out_proj(x)
         return x
 
