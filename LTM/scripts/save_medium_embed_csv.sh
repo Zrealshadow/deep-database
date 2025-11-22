@@ -77,7 +77,7 @@ echo "=========================================="
 echo ""
 
 # Set CUDA_VISIBLE_DEVICES to use only one GPU (avoid DataParallel)
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 # ============================================
 # Function to process a single dataset with a model
