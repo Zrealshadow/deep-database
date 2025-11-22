@@ -37,64 +37,64 @@ class ModelArgs:
         self.pretrain_dir = str(pretrain_dir)
         self.model_suffix = "pytorch_models/best"
 
-
-def process_csv_rows_to_embeddings(
-        csv_rows: List[str],
-        pretrain_dir: str,
-        feature_names_file: Optional[str] = None,
-        delimiter: str = ";",
-        device: Optional[str] = None,
-) -> List[str]:
-    """
-    Process CSV rows (semicolon-separated strings) to embedding strings.
-    
-    Args:
-        csv_rows: List of CSV row strings, each row is semicolon-separated values.
-                  Format: "value1;value2;value3;...;label" (label is last)
-        pretrain_dir: Path to pre-trained TP-BERTa model directory
-        feature_names_file: Path to feature_names.json (optional, will generate if not provided)
-        delimiter: Delimiter used in CSV rows (default: ";")
-        device: Device to use (default: "cuda" if available, else "cpu")
-    
-    Returns:
-        List of comma-separated embedding strings (one per input row)
-    """
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = torch.device(device)
-
-    # Parse CSV rows into DataFrame
-    rows_data = []
-    for row in csv_rows:
-        values = row.strip().split(delimiter)
-        rows_data.append(values)
-
-    # Create DataFrame (assume last column is label)
-    if not rows_data:
-        return []
-
-    num_cols = len(rows_data[0])
-    col_names = [f"feature_{i}" for i in range(num_cols - 1)] + ["label"]
-    df = pd.DataFrame(rows_data, columns=col_names)
-
-    # Convert to TP-BERTa format and get embeddings
-    # Check if DataFrame has label column (assume last column is label if it exists)
-    has_label = "label" in df.columns
-    embeddings = _get_tpberta_embeddings(
-        df=df,
-        pretrain_dir=pretrain_dir,
-        feature_names_file=feature_names_file,
-        device=device,
-        has_label=has_label,
-    )
-
-    # Convert embeddings to comma-separated strings
-    embedding_strings = []
-    for emb in embeddings:
-        emb_str = ",".join([str(x) for x in emb.flatten()])
-        embedding_strings.append(emb_str)
-
-    return embedding_strings
+#
+# def process_csv_rows_to_embeddings(
+#         csv_rows: List[str],
+#         pretrain_dir: str,
+#         feature_names_file: Optional[str] = None,
+#         delimiter: str = ";",
+#         device: Optional[str] = None,
+# ) -> List[str]:
+#     """
+#     Process CSV rows (semicolon-separated strings) to embedding strings.
+#
+#     Args:
+#         csv_rows: List of CSV row strings, each row is semicolon-separated values.
+#                   Format: "value1;value2;value3;...;label" (label is last)
+#         pretrain_dir: Path to pre-trained TP-BERTa model directory
+#         feature_names_file: Path to feature_names.json (optional, will generate if not provided)
+#         delimiter: Delimiter used in CSV rows (default: ";")
+#         device: Device to use (default: "cuda" if available, else "cpu")
+#
+#     Returns:
+#         List of comma-separated embedding strings (one per input row)
+#     """
+#     if device is None:
+#         device = "cuda" if torch.cuda.is_available() else "cpu"
+#     device = torch.device(device)
+#
+#     # Parse CSV rows into DataFrame
+#     rows_data = []
+#     for row in csv_rows:
+#         values = row.strip().split(delimiter)
+#         rows_data.append(values)
+#
+#     # Create DataFrame (assume last column is label)
+#     if not rows_data:
+#         return []
+#
+#     num_cols = len(rows_data[0])
+#     col_names = [f"feature_{i}" for i in range(num_cols - 1)] + ["label"]
+#     df = pd.DataFrame(rows_data, columns=col_names)
+#
+#     # Convert to TP-BERTa format and get embeddings
+#     # Check if DataFrame has label column (assume last column is label if it exists)
+#     has_label = "label" in df.columns
+#     embeddings = _get_tpberta_embeddings(
+#         df=df,
+#         pretrain_dir=pretrain_dir,
+#         feature_names_file=feature_names_file,
+#         device=device,
+#         has_label=has_label,
+#     )
+#
+#     # Convert embeddings to comma-separated strings
+#     embedding_strings = []
+#     for emb in embeddings:
+#         emb_str = ",".join([str(x) for x in emb.flatten()])
+#         embedding_strings.append(emb_str)
+#
+#     return embedding_strings
 
 
 def _get_tpberta_embeddings(
@@ -103,6 +103,7 @@ def _get_tpberta_embeddings(
         feature_names_file: Optional[str] = None,
         device: torch.device = None,
         has_label: bool = True,
+        dataset_name: str = "temp_dataset",
 ) -> np.ndarray:
     """
     Get TP-BERTa embeddings for a DataFrame.
@@ -142,18 +143,19 @@ def _get_tpberta_embeddings(
             df_to_save['dummy_label'] = 0
         
         # Save DataFrame as CSV
-        dataset_name = "temp_dataset"
         csv_path = temp_dir / f"{dataset_name}.csv"
         df_to_save.to_csv(csv_path, index=False)
 
-        # Generate feature_names.json if not provided
-        # Use original df (without dummy label) for feature names
+        # Handle feature_names.json: TP-BERTa MUST read from filesystem
+        # Auto-generate if not provided (will be cleaned up with temp_dir)
+        temp_feature_names_file = temp_dir / "feature_names.json"
+        
         if feature_names_file is None or not Path(feature_names_file).exists():
-            feature_names_file = temp_dir / "feature_names.json"
-            _generate_feature_names(df, feature_names_file, has_label=has_label)
+            # Auto-generate from DataFrame (temporary, will be cleaned up)
+            _generate_feature_names(df, temp_feature_names_file, has_label=has_label)
         else:
-            # Copy to temp dir
-            shutil.copy(feature_names_file, temp_dir / "feature_names.json")
+            # File path provided: copy to temp dir
+            shutil.copy(feature_names_file, temp_feature_names_file)
 
         # Load pre-trained model
         pretrain_path = Path(pretrain_dir)
@@ -224,7 +226,7 @@ def _get_tpberta_embeddings(
         return final_embeddings
 
     finally:
-        # Cleanup
+        # Cleanup temporary directory and all files (including feature_names.json)
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
 
@@ -254,7 +256,7 @@ def _generate_feature_names(df: pd.DataFrame, output_file: Path, has_label: bool
         json.dump(feature_name_dict, f, indent=4)
 
 
-def convert_to_tpberta_format(
+def preprocess(
         input_dir: str,
         output_dir: str,
         target_col: Optional[str] = None,
@@ -262,12 +264,13 @@ def convert_to_tpberta_format(
         device: Optional[str] = None,
 ) -> str:
     """
-    Convert TableData format to TP-BERTa format with embeddings.
+    Offline preprocessing: Convert TableData format to TP-BERTa format with embeddings.
     
-    This function:
+    This function performs offline batch processing:
     1. Reads train/val/test CSV files
     2. Generates TP-BERTa embeddings for each row
-    3. Outputs 2-column CSV: embedding (comma-separated), target
+    3. Saves feature_names.json (persistent, not cleaned up)
+    4. Outputs train.csv, val.csv, test.csv with embeddings (2-column: embedding, target)
     
     Args:
         input_dir: Directory containing train.csv, val.csv, test.csv, and target_col.txt
@@ -277,7 +280,11 @@ def convert_to_tpberta_format(
         device: Device to use (default: "cuda" if available, else "cpu")
     
     Returns:
-        Path to output CSV file
+        Path to output directory
+    
+    Note:
+        This is for offline batch processing. For runtime embedding extraction,
+        use get_embeddings() instead.
     """
     import os
     
@@ -456,7 +463,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        output_csv = convert_to_tpberta_format(
+        output_csv = preprocess(
             input_dir=args.input_dir,
             output_dir=args.output_dir,
             target_col=args.target_col,

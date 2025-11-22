@@ -1,13 +1,28 @@
 """
 TP-BERTa Package
 
-This package provides:
-1. Preprocessing: Convert CSV rows to embedding strings
-2. Training: Train prediction head on preprocessed embedding data
+This package provides three main interfaces:
+
+1. get_embeddings: Runtime embedding extraction (returns numpy array)
+   - Auto-generates and cleans up feature_names.json
+   - Use for runtime processing (e.g., conver_needed_csv.py)
+
+2. preprocess: Offline preprocessing (saves CSV files with embeddings)
+   - Saves train.csv, val.csv, test.csv with embeddings
+   - Use for batch preprocessing
+
+3. train: Train prediction head on preprocessed embeddings
+   - Loads embeddings from CSV files
+   - Trains TP-BERTa style head
 """
 
-from .preprocess import process_csv_rows_to_embeddings
-from .train import train_prediction_head
+from .text_embeddings import get_embeddings
+from .preprocess import preprocess
+from .train import train_prediction_head as train
 
-__all__ = ['process_csv_rows_to_embeddings', 'train_prediction_head']
+__all__ = [
+    'get_embeddings',      # Runtime embedding extraction
+    'preprocess',          # Offline preprocessing (saves CSV)
+    'train',               # Train prediction head
+]
 

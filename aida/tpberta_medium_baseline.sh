@@ -95,7 +95,7 @@ train_dataset() {
     echo "  OUTPUT_DIR: $output_dir"
     echo "  TARGET_COL_TXT: $target_col_txt"
     echo ""
-    
+
     # Check input directory exists
     if [ ! -d "$input_dir" ]; then
         echo "  ⚠️  Warning: Input directory not found: $input_dir"
