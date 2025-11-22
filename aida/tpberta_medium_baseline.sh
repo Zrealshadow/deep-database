@@ -49,9 +49,9 @@ OUTPUT_DIR="$RESULT_DIR/tpberta_head/$TEST_DATASET"
 
 # Training parameters
 MAX_EPOCHS="${MAX_EPOCHS:-200}"
-EARLY_STOP="${EARLY_STOP:-50}"
-BATCH_SIZE="${BATCH_SIZE:-64}"
-LEARNING_RATE="${LEARNING_RATE:-1e-3}"
+EARLY_STOP="${EARLY_STOP:-10}"
+BATCH_SIZE="${BATCH_SIZE:-256}"
+LEARNING_RATE="${LEARNING_RATE:-0.001}"
 
 # Test dataset (already set above for logging)
 # TEST_DATASET is set at line 20 from command line argument

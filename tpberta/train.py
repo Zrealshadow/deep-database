@@ -84,10 +84,10 @@ def train_prediction_head(
     task_type: Optional[str] = None,  # Auto-detect if None: "binclass" or "regression"
     hidden_dims: List[int] = [256, 128],
     dropout: float = 0.2,
-    batch_size: int = 64,
-    learning_rate: float = 1e-3,
+    batch_size: int = 256,
+    learning_rate: float = 0.001,
     num_epochs: int = 200,
-    early_stop: int = 50,
+    early_stop: int = 10,
     device: Optional[str] = None,
 ) -> dict:
     """
@@ -425,14 +425,14 @@ def main():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
-        help="Batch size (default: 64)"
+        default=256,
+        help="Batch size (default: 256)"
     )
     parser.add_argument(
         "--lr",
         type=float,
-        default=1e-3,
-        help="Learning rate (default: 1e-3)"
+        default=0.001,
+        help="Learning rate (default: 0.001)"
     )
     parser.add_argument(
         "--max_epochs",
@@ -443,8 +443,8 @@ def main():
     parser.add_argument(
         "--early_stop",
         type=int,
-        default=50,
-        help="Early stopping patience (default: 50)"
+        default=10,
+        help="Early stopping patience (default: 10)"
     )
     parser.add_argument(
         "--device",
