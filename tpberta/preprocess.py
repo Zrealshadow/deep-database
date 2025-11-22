@@ -78,11 +78,14 @@ def process_csv_rows_to_embeddings(
     df = pd.DataFrame(rows_data, columns=col_names)
 
     # Convert to TP-BERTa format and get embeddings
+    # Check if DataFrame has label column (assume last column is label if it exists)
+    has_label = "label" in df.columns
     embeddings = _get_tpberta_embeddings(
         df=df,
         pretrain_dir=pretrain_dir,
         feature_names_file=feature_names_file,
         device=device,
+        has_label=has_label,
     )
 
     # Convert embeddings to comma-separated strings
@@ -99,15 +102,17 @@ def _get_tpberta_embeddings(
         pretrain_dir: str,
         feature_names_file: Optional[str] = None,
         device: torch.device = None,
+        has_label: bool = True,
 ) -> np.ndarray:
     """
     Get TP-BERTa embeddings for a DataFrame.
     
     Args:
-        df: DataFrame with features and label (label is last column)
+        df: DataFrame with features. If has_label=True, label should be the last column.
         pretrain_dir: Path to pre-trained TP-BERTa model
         feature_names_file: Path to feature_names.json
         device: Device to use
+        has_label: Whether the DataFrame has a label column (default: True)
     
     Returns:
         numpy array of embeddings [N, hidden_size]
@@ -116,21 +121,30 @@ def _get_tpberta_embeddings(
         temp_dir is used because TP-BERTa's data loaders require reading CSV and 
         feature_names.json from the filesystem. We create a temporary directory,
         save the DataFrame as CSV there, process it, then clean up.
+        
+        If has_label=False, a dummy label column will be added (TP-BERTa requires it).
     """
     # Create temporary directory for TP-BERTa processing
     # TP-BERTa data loaders need to read from filesystem, so we save DataFrame to temp CSV
     temp_dir = Path(tempfile.mkdtemp())
 
     try:
+        # Prepare DataFrame: TP-BERTa requires label column as last column
+        df_to_save = df.copy()
+        if not has_label:
+            # Add dummy label column (TP-BERTa data loader requires it)
+            df_to_save['dummy_label'] = 0
+        
         # Save DataFrame as CSV
         dataset_name = "temp_dataset"
         csv_path = temp_dir / f"{dataset_name}.csv"
-        df.to_csv(csv_path, index=False)
+        df_to_save.to_csv(csv_path, index=False)
 
         # Generate feature_names.json if not provided
+        # Use original df (without dummy label) for feature names
         if feature_names_file is None or not Path(feature_names_file).exists():
             feature_names_file = temp_dir / "feature_names.json"
-            _generate_feature_names(df, feature_names_file)
+            _generate_feature_names(df, feature_names_file, has_label=has_label)
         else:
             # Copy to temp dir
             shutil.copy(feature_names_file, temp_dir / "feature_names.json")
@@ -146,21 +160,13 @@ def _get_tpberta_embeddings(
             pre_train=False
         )
 
-        # Determine task type from label
-        label_col = df.columns[-1]
-        label_values = df[label_col].dropna().unique()
-        if len(label_values) == 2:
-            task_type = "binclass"
-        elif df[label_col].dtype in [np.float64, np.float32, np.int64, np.int32]:
-            task_type = "regression"
-        else:
-            task_type = "binclass"  # default
-
+        # For embedding extraction, task_type doesn't matter (we only use encoder, not head)
+        # TP-BERTa data loader requires a valid task_type, but it won't affect embeddings
         # Prepare data loaders
         data_loaders, datasets = prepare_tpberta_loaders(
             [dataset_name],
             data_config,
-            tt=task_type
+            tt="binclass"  # Default task_type (required by TP-BERTa, but doesn't affect embeddings)
         )
 
         if len(data_loaders) == 0:
@@ -198,11 +204,13 @@ def _get_tpberta_embeddings(
 
                 # Get encoder output
                 outputs = actual_model.tpberta(**batch)
-                # Use pooled output (CLS token)
+                # Extract embeddings: prefer pooler_output if available, otherwise use CLS token
+                # Note: For pretrain models (TPBertaForMTLPretrain), pooler_output is None,
+                # so we always use the CLS token (first token) from last_hidden_state
                 if hasattr(outputs, 'pooler_output') and outputs.pooler_output is not None:
                     embeddings = outputs.pooler_output
                 else:
-                    # Fallback: use first token (CLS)
+                    # Use CLS token (first token) from sequence output
                     embeddings = outputs.last_hidden_state[:, 0, :]
 
                 all_embeddings.append(embeddings.cpu().numpy())
@@ -218,11 +226,14 @@ def _get_tpberta_embeddings(
             shutil.rmtree(temp_dir)
 
 
-def _generate_feature_names(df: pd.DataFrame, output_file: Path):
+def _generate_feature_names(df: pd.DataFrame, output_file: Path, has_label: bool = True):
     """Generate feature_names.json from DataFrame."""
     feature_name_dict = {}
 
-    for col in df.columns[:-1]:  # Skip label column
+    # Determine which columns are features (skip label if present)
+    feature_cols = df.columns[:-1] if has_label else df.columns
+    
+    for col in feature_cols:
         temp = col
         # Handle underscores
         if '_' in temp:
