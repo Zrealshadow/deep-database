@@ -7,6 +7,7 @@ Trains prediction head on preprocessed embedding data.
 import sys
 from pathlib import Path
 from typing import Optional, List
+import random
 import numpy as np
 import pandas as pd
 import torch
@@ -87,6 +88,7 @@ def train_prediction_head(
     num_epochs: int = 200,
     early_stop: int = 10,
     device: Optional[str] = None,
+    seed: int = 42,
 ) -> dict:
     """
     Train prediction head on preprocessed embedding data.
@@ -105,10 +107,21 @@ def train_prediction_head(
         num_epochs: Maximum number of epochs
         early_stop: Early stopping patience
         device: Device to use (default: "cuda" if available)
+        seed: Random seed for reproducibility (default: 42)
     
     Returns:
         Dictionary with training results and metrics
     """
+    # Set random seeds for reproducibility
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(device)
@@ -170,7 +183,11 @@ def train_prediction_head(
     embedding_dim = train_dataset.embedding_dim
     print(f"Detected embedding dimension: {embedding_dim}")
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    # Set generator for DataLoader reproducibility
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=generator)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
@@ -387,6 +404,12 @@ def main():
         default=None,
         help="Device to use (cuda/cpu, default: auto-detect)"
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (default: 42)"
+    )
     
     args = parser.parse_args()
     
@@ -402,6 +425,7 @@ def main():
             num_epochs=args.max_epochs,
             early_stop=args.early_stop,
             device=args.device,
+            seed=args.seed,
         )
         print(f"\n✅ Training completed successfully!")
         return 0
