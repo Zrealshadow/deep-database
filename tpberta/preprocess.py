@@ -111,7 +111,7 @@ def _get_tpberta_embeddings(
         df: DataFrame with features. If has_label=True, label should be the last column.
         pretrain_dir: Path to pre-trained TP-BERTa model
         feature_names_file: Path to feature_names.json
-        device: Device to use
+        device: Device to use (can be torch.device or str like "cuda"/"cpu")
         has_label: Whether the DataFrame has a label column (default: True)
     
     Returns:
@@ -124,6 +124,12 @@ def _get_tpberta_embeddings(
         
         If has_label=False, a dummy label column will be added (TP-BERTa requires it).
     """
+    # Convert device string to torch.device if needed
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    elif isinstance(device, str):
+        device = torch.device(device)
+    
     # Create temporary directory for TP-BERTa processing
     # TP-BERTa data loaders need to read from filesystem, so we save DataFrame to temp CSV
     temp_dir = Path(tempfile.mkdtemp())
