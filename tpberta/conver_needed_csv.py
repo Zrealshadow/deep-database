@@ -73,10 +73,10 @@ def main():
 
         print(f"  Embeddings shape: {embeddings.shape}")
 
-        # Save with model name in filename: {db_name}_{task_name}_{model}_data.npy
-        output_dir = Path("/home/naili/sharing-embedding-table/data/tpberta_relbench")
+        # Save to model-specific folder: {output_root}/{model}/{db_name}_{task_name}_data.npy
+        output_dir = Path("/home/naili/sharing-embedding-table/data/tpberta_relbench") / model
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_filename = f"{db_name}_{task_name}_{model}_data.npy"
+        output_filename = f"{db_name}_{task_name}_data.npy"
         output_path = output_dir / output_filename
         np.save(output_path, embeddings)
         print(f"  Saved to: {output_path}")
