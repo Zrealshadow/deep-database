@@ -77,6 +77,81 @@ class PredictionHead(nn.Module):
         return self.network(x)
 
 
+def set_random_seed(seed: int):
+    """Set random seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def load_task_type(target_col_txt_path: str) -> str:
+    """Load task type from target_col.txt."""
+    with open(target_col_txt_path, 'r') as f:
+        lines = f.readlines()
+        task_type_str = lines[1].strip()
+    task_type_map = {
+        "BINARY_CLASSIFICATION": "binclass",
+        "REGRESSION": "regression",
+        "MULTICLASS_CLASSIFICATION": "multiclass"
+    }
+    task_type = task_type_map.get(task_type_str, "binclass")
+    print(f"Detected task type from target_col.txt: {task_type}")
+    return task_type
+
+
+def load_embedding_data(data_dir: Path):
+    """Load train/val/test embedding data from CSV files."""
+    train_csv = data_dir / "train.csv"
+    val_csv = data_dir / "val.csv"
+    test_csv = data_dir / "test.csv"
+    
+    if not train_csv.exists():
+        raise FileNotFoundError(f"train.csv not found in {data_dir}")
+    if not val_csv.exists():
+        raise FileNotFoundError(f"val.csv not found in {data_dir}")
+    if not test_csv.exists():
+        raise FileNotFoundError(f"test.csv not found in {data_dir}")
+    
+    train_df = pd.read_csv(train_csv)
+    train_strings = train_df['embedding'].tolist()
+    train_labels = train_df['target'].values
+    
+    val_df = pd.read_csv(val_csv)
+    val_strings = val_df['embedding'].tolist()
+    val_labels = val_df['target'].values
+    
+    test_df = pd.read_csv(test_csv)
+    test_strings = test_df['embedding'].tolist()
+    test_labels = test_df['target'].values
+    
+    print(f"  Train: {len(train_strings)} rows")
+    print(f"  Val: {len(val_strings)} rows")
+    print(f"  Test: {len(test_strings)} rows")
+    print(f"Data split: Train={len(train_strings)}, Val={len(val_strings)}, Test={len(test_strings)}")
+    
+    return (train_strings, train_labels, val_strings, val_labels, test_strings, test_labels)
+
+
+def check_data_distribution(train_labels, val_labels, test_labels, task_type: str):
+    """Check and print data distribution information."""
+    all_labels = np.concatenate([train_labels, val_labels, test_labels])
+    unique_labels, counts = np.unique(all_labels, return_counts=True)
+    print(f"\nData distribution:")
+    print(f"  Total samples: {len(all_labels)}")
+    for label, count in zip(unique_labels, counts):
+        print(f"  Label {label}: {count} ({count/len(all_labels)*100:.1f}%)")
+    if task_type == "binclass" and len(unique_labels) == 2:
+        pos_ratio = counts[1] / len(all_labels) if len(counts) > 1 else 0
+        print(f"  Positive class ratio: {pos_ratio:.3f}")
+        if pos_ratio < 0.1 or pos_ratio > 0.9:
+            print(f"  ⚠️  Warning: Highly imbalanced dataset! This may affect AUC.")
+
+
 def train_prediction_head(
     data_dir: str,
     output_dir: str,
@@ -113,14 +188,7 @@ def train_prediction_head(
         Dictionary with training results and metrics
     """
     # Set random seeds for reproducibility
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    set_random_seed(seed)
     
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -131,48 +199,12 @@ def train_prediction_head(
     
     data_dir = Path(data_dir)
     
-    with open(target_col_txt_path, 'r') as f:
-        lines = f.readlines()
-        task_type_str = lines[1].strip()
-    task_type_map = {
-        "BINARY_CLASSIFICATION": "binclass",
-        "REGRESSION": "regression",
-        "MULTICLASS_CLASSIFICATION": "multiclass"
-    }
-    task_type = task_type_map.get(task_type_str, "binclass")
-    print(f"Detected task type from target_col.txt: {task_type}")
+    # Load task type
+    task_type = load_task_type(target_col_txt_path)
     
     # Load data from separate CSV files
     print(f"Loading embedding data from {data_dir}...")
-    
-    train_csv = data_dir / "train.csv"
-    val_csv = data_dir / "val.csv"
-    test_csv = data_dir / "test.csv"
-    
-    if not train_csv.exists():
-        raise FileNotFoundError(f"train.csv not found in {data_dir}")
-    if not val_csv.exists():
-        raise FileNotFoundError(f"val.csv not found in {data_dir}")
-    if not test_csv.exists():
-        raise FileNotFoundError(f"test.csv not found in {data_dir}")
-    
-    # Load each split
-    train_df = pd.read_csv(train_csv)
-    train_strings = train_df['embedding'].tolist()
-    train_labels = train_df['target'].values
-    print(f"  Train: {len(train_strings)} rows")
-    
-    val_df = pd.read_csv(val_csv)
-    val_strings = val_df['embedding'].tolist()
-    val_labels = val_df['target'].values
-    print(f"  Val: {len(val_strings)} rows")
-    
-    test_df = pd.read_csv(test_csv)
-    test_strings = test_df['embedding'].tolist()
-    test_labels = test_df['target'].values
-    print(f"  Test: {len(test_strings)} rows")
-    
-    print(f"Data split: Train={len(train_strings)}, Val={len(val_strings)}, Test={len(test_strings)}")
+    train_strings, train_labels, val_strings, val_labels, test_strings, test_labels = load_embedding_data(data_dir)
     
     # Create datasets (auto-detect embedding_dim)
     train_dataset = EmbeddingDataset(train_strings, train_labels, None)
@@ -182,6 +214,9 @@ def train_prediction_head(
     # Use detected embedding dimension
     embedding_dim = train_dataset.embedding_dim
     print(f"Detected embedding dimension: {embedding_dim}")
+    
+    # Check data distribution
+    check_data_distribution(train_labels, val_labels, test_labels, task_type)
     
     # Set generator for DataLoader reproducibility
     generator = torch.Generator()
@@ -383,7 +418,7 @@ def main():
     parser.add_argument(
         "--lr",
         type=float,
-        default=0.001,
+        default=0.01,
         help="Learning rate (default: 0.001)"
     )
     parser.add_argument(

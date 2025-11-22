@@ -14,7 +14,6 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 import torch
-import base64
 import json
 
 from bin import build_default_model
@@ -46,7 +45,6 @@ def process_csv_rows_to_embeddings(
         pretrain_dir: str,
         feature_names_file: Optional[str] = None,
         delimiter: str = ";",
-        output_format: str = "comma_separated",  # Default: comma_separated (matches input format)
         device: Optional[str] = None,
 ) -> List[str]:
     """
@@ -58,11 +56,10 @@ def process_csv_rows_to_embeddings(
         pretrain_dir: Path to pre-trained TP-BERTa model directory
         feature_names_file: Path to feature_names.json (optional, will generate if not provided)
         delimiter: Delimiter used in CSV rows (default: ";")
-        output_format: Output format for embeddings ("base64" or "comma_separated", default: "comma_separated")
         device: Device to use (default: "cuda" if available, else "cpu")
     
     Returns:
-        List of embedding strings (one per input row)
+        List of comma-separated embedding strings (one per input row)
     """
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -90,20 +87,11 @@ def process_csv_rows_to_embeddings(
         device=device,
     )
 
-    # Convert embeddings to string format (default: comma_separated)
+    # Convert embeddings to comma-separated strings
     embedding_strings = []
     for emb in embeddings:
-        if output_format == "comma_separated":
-            # Convert to comma-separated string (default, matches input format)
-            emb_str = ",".join([str(x) for x in emb.flatten()])
-            embedding_strings.append(emb_str)
-        elif output_format == "base64":
-            # Encode as base64 string
-            emb_bytes = emb.tobytes()
-            emb_b64 = base64.b64encode(emb_bytes).decode('utf-8')
-            embedding_strings.append(emb_b64)
-        else:
-            raise ValueError(f"Unknown output_format: {output_format}. Use 'comma_separated' or 'base64'")
+        emb_str = ",".join([str(x) for x in emb.flatten()])
+        embedding_strings.append(emb_str)
 
     return embedding_strings
 
@@ -259,7 +247,6 @@ def convert_to_tpberta_format(
         output_dir: str,
         target_col: Optional[str] = None,
         task_type: Optional[str] = None,
-        pretrain_dir: Optional[str] = None,
         device: Optional[str] = None,
 ) -> str:
     """
@@ -275,30 +262,24 @@ def convert_to_tpberta_format(
         output_dir: Output directory for TP-BERTa format files
         target_col: Target column name (if None, read from target_col.txt)
         task_type: Task type (if None, read from target_col.txt)
-        pretrain_dir: Path to pre-trained TP-BERTa model (if None, use TPBERTA_PRETRAIN_DIR env var)
         device: Device to use (default: "cuda" if available, else "cpu")
     
     Returns:
         Path to output CSV file
     """
+    import os
+    
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get pretrain_dir from parameter or environment variable
+    # Get pretrain_dir from environment variable
+    pretrain_dir = os.environ.get("TPBERTA_PRETRAIN_DIR")
     if pretrain_dir is None:
-        import os
-        pretrain_dir = os.environ.get("TPBERTA_PRETRAIN_DIR")
-        if pretrain_dir is None:
-            # Try default path
-            default_path = Path("/home/naili/tp-berta/checkpoints/tp-joint")
-            if default_path.exists():
-                pretrain_dir = str(default_path)
-            else:
-                raise ValueError(
-                    "pretrain_dir not provided and TPBERTA_PRETRAIN_DIR not set. "
-                    "Please provide pretrain_dir or set TPBERTA_PRETRAIN_DIR environment variable."
-                )
+        raise ValueError(
+            "TPBERTA_PRETRAIN_DIR environment variable not set. "
+            "Please set TPBERTA_PRETRAIN_DIR to the path of pre-trained TP-BERTa model."
+        )
 
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -455,12 +436,6 @@ def main():
              "(if not provided, read from target_col.txt)"
     )
     parser.add_argument(
-        "--pretrain_dir",
-        type=str,
-        default=None,
-        help="Path to pre-trained TP-BERTa model (if not provided, use TPBERTA_PRETRAIN_DIR env var)"
-    )
-    parser.add_argument(
         "--device",
         type=str,
         default=None,
@@ -475,7 +450,6 @@ def main():
             output_dir=args.output_dir,
             target_col=args.target_col,
             task_type=args.task_type,
-            pretrain_dir=args.pretrain_dir,
             device=args.device,
         )
         print(f"\n✅ Success! Output CSV: {output_csv}")
