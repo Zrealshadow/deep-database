@@ -11,7 +11,6 @@ import json
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn.functional as F
 from typing import Optional, Union
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
@@ -47,7 +46,6 @@ def _get_nomic_embeddings(
         task_prefix: str = "search_document",
         batch_size: int = 32,
         device: Optional[Union[str, torch.device]] = None,
-        normalize: bool = True,
         feature_names_file: Optional[str] = None,
 ) -> np.ndarray:
     """
@@ -111,10 +109,6 @@ def _get_nomic_embeddings(
     # Concatenate all batches
     embeddings = torch.cat(all_embeddings, dim=0)
 
-    # Normalize if requested
-    if normalize:
-        embeddings = F.normalize(embeddings, p=2, dim=1)
-
     # Convert to numpy
     embeddings = embeddings.cpu().numpy()
 
@@ -125,7 +119,6 @@ def _get_bge_embeddings(
         df: pd.DataFrame,
         batch_size: int = 32,
         device: Optional[Union[str, torch.device]] = None,
-        normalize: bool = True,
         feature_names_file: Optional[str] = None,
 ) -> np.ndarray:
     """
@@ -133,7 +126,6 @@ def _get_bge_embeddings(
     
     Args:
         df: Input DataFrame
-        text_format: Format for converting DataFrame to text (see _dataframe_to_texts)
         batch_size: Batch size for encoding
         device: Device to use ("cuda", "cpu", or torch.device)
         normalize: Whether to normalize embeddings
@@ -185,11 +177,6 @@ def _get_bge_embeddings(
 
     # Concatenate all batches
     embeddings = torch.cat(all_embeddings, dim=0)
-
-    # Normalize if requested
-    if normalize:
-        embeddings = F.normalize(embeddings, p=2, dim=1)
-
     # Convert to numpy
     embeddings = embeddings.cpu().numpy()
 
@@ -272,19 +259,15 @@ def get_embeddings(
         return _get_nomic_embeddings(
             df=df,
             task_prefix=task_prefix,
-            text_format=text_format,
             batch_size=batch_size,
             device=device,
-            normalize=True,
             feature_names_file=feature_names_file,
         )
     elif model.lower() == "bge":
         return _get_bge_embeddings(
             df=df,
-            text_format=text_format,
             batch_size=batch_size,
             device=device,
-            normalize=True,
             feature_names_file=feature_names_file,
         )
     else:
