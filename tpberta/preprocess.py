@@ -5,6 +5,10 @@ Converts CSV rows (semicolon-separated strings) to embedding strings.
 """
 
 import sys
+import tempfile
+import shutil
+import argparse
+import traceback
 from pathlib import Path
 from typing import List, Optional
 import numpy as np
@@ -14,7 +18,6 @@ import base64
 import json
 
 # Add tp-berta to path (assuming it's in the parent directory of sharing-embedding-table)
-# This matches the structure: relational_data/tp-berta and relational_data/sharing-embedding-table
 tpberta_root = Path(__file__).resolve().parent.parent.parent.parent / "tp-berta"
 if tpberta_root.exists():
     sys.path.insert(0, str(tpberta_root))
@@ -22,13 +25,31 @@ if tpberta_root.exists():
 # TP-BERTa imports (will work if tp-berta is in sys.path)
 try:
     from bin import build_default_model
-    from lib import DataConfig, prepare_tpberta_loaders
+    from lib import DataConfig
+    from lib.data_utils import prepare_tpberta_loaders
     from bin.tpberta_modeling import TPBertaForClassification, RobertaConfig
 except ImportError as e:
     raise ImportError(
         f"Failed to import TP-BERTa modules. Make sure tp-berta directory is in the correct location. "
-        f"Error: {e}. Tried path: {tpberta_root}"
+        f"Error: {e}"
     )
+
+
+class ModelArgs:
+    """Arguments class for building TP-BERTa model."""
+    def __init__(self, pretrain_dir, max_position_embeddings, max_feature_length,
+                 max_numerical_token, max_categorical_token, feature_map, batch_size):
+        self.base_model_dir = None
+        self.max_position_embeddings = max_position_embeddings
+        self.type_vocab_size = 5
+        self.max_seq_length = 512
+        self.max_feature_length = max_feature_length
+        self.max_numerical_token = max_numerical_token
+        self.max_categorical_token = max_categorical_token
+        self.feature_map = feature_map
+        self.batch_size = batch_size
+        self.pretrain_dir = str(pretrain_dir)
+        self.model_suffix = "pytorch_models/best"
 
 
 def process_csv_rows_to_embeddings(
@@ -36,7 +57,7 @@ def process_csv_rows_to_embeddings(
     pretrain_dir: str,
     feature_names_file: Optional[str] = None,
     delimiter: str = ";",
-    output_format: str = "base64",  # "base64" or "comma_separated"
+    output_format: str = "comma_separated",  # Default: comma_separated (matches input format)
     device: Optional[str] = None,
 ) -> List[str]:
     """
@@ -48,7 +69,7 @@ def process_csv_rows_to_embeddings(
         pretrain_dir: Path to pre-trained TP-BERTa model directory
         feature_names_file: Path to feature_names.json (optional, will generate if not provided)
         delimiter: Delimiter used in CSV rows (default: ";")
-        output_format: Output format for embeddings ("base64" or "comma_separated")
+        output_format: Output format for embeddings ("base64" or "comma_separated", default: "comma_separated")
         device: Device to use (default: "cuda" if available, else "cpu")
     
     Returns:
@@ -80,20 +101,20 @@ def process_csv_rows_to_embeddings(
         device=device,
     )
     
-    # Convert embeddings to string format
+    # Convert embeddings to string format (default: comma_separated)
     embedding_strings = []
     for emb in embeddings:
-        if output_format == "base64":
+        if output_format == "comma_separated":
+            # Convert to comma-separated string (default, matches input format)
+            emb_str = ",".join([str(x) for x in emb.flatten()])
+            embedding_strings.append(emb_str)
+        elif output_format == "base64":
             # Encode as base64 string
             emb_bytes = emb.tobytes()
             emb_b64 = base64.b64encode(emb_bytes).decode('utf-8')
             embedding_strings.append(emb_b64)
-        elif output_format == "comma_separated":
-            # Convert to comma-separated string
-            emb_str = ",".join([str(x) for x in emb.flatten()])
-            embedding_strings.append(emb_str)
         else:
-            raise ValueError(f"Unknown output_format: {output_format}")
+            raise ValueError(f"Unknown output_format: {output_format}. Use 'comma_separated' or 'base64'")
     
     return embedding_strings
 
@@ -115,12 +136,14 @@ def _get_tpberta_embeddings(
     
     Returns:
         numpy array of embeddings [N, hidden_size]
-    """
-    from pathlib import Path
-    import tempfile
-    import shutil
     
+    Note:
+        temp_dir is used because TP-BERTa's data loaders require reading CSV and 
+        feature_names.json from the filesystem. We create a temporary directory,
+        save the DataFrame as CSV there, process it, then clean up.
+    """
     # Create temporary directory for TP-BERTa processing
+    # TP-BERTa data loaders need to read from filesystem, so we save DataFrame to temp CSV
     temp_dir = Path(tempfile.mkdtemp())
     
     try:
@@ -135,7 +158,6 @@ def _get_tpberta_embeddings(
             _generate_feature_names(df, feature_names_file)
         else:
             # Copy to temp dir
-            import shutil
             shutil.copy(feature_names_file, temp_dir / "feature_names.json")
         
         # Load pre-trained model
@@ -160,7 +182,6 @@ def _get_tpberta_embeddings(
             task_type = "binclass"  # default
         
         # Prepare data loaders
-        from lib.data_utils import prepare_tpberta_loaders
         data_loaders, datasets = prepare_tpberta_loaders(
             [dataset_name], 
             data_config, 
@@ -174,22 +195,7 @@ def _get_tpberta_embeddings(
         dataset = datasets[0]
         
         # Build model (encoder only, no head needed for embeddings)
-        class Args:
-            def __init__(self, pretrain_dir, max_position_embeddings, max_feature_length,
-                         max_numerical_token, max_categorical_token, feature_map, batch_size):
-                self.base_model_dir = None
-                self.max_position_embeddings = max_position_embeddings
-                self.type_vocab_size = 5
-                self.max_seq_length = 512
-                self.max_feature_length = max_feature_length
-                self.max_numerical_token = max_numerical_token
-                self.max_categorical_token = max_categorical_token
-                self.feature_map = feature_map
-                self.batch_size = batch_size
-                self.pretrain_dir = str(pretrain_dir)
-                self.model_suffix = "pytorch_models/best"
-        
-        args = Args(
+        args = ModelArgs(
             pretrain_path,
             max_position_embeddings=64,
             max_feature_length=8,
@@ -254,4 +260,157 @@ def _generate_feature_names(df: pd.DataFrame, output_file: Path):
     
     with open(output_file, 'w') as f:
         json.dump(feature_name_dict, f, indent=4)
+
+
+def convert_to_tpberta_format(
+    input_dir: str,
+    output_dir: str,
+    target_col: Optional[str] = None,
+    task_type: Optional[str] = None,
+) -> str:
+    """
+    Convert TableData format to TP-BERTa format.
+    
+    Args:
+        input_dir: Directory containing train.csv, val.csv, test.csv, and target_col.txt
+        output_dir: Output directory for TP-BERTa format files
+        target_col: Target column name (if None, read from target_col.txt)
+        task_type: Task type (if None, read from target_col.txt)
+    
+    Returns:
+        Path to output CSV file
+    """
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Load target column info from target_col.txt
+    target_col_file = input_dir / "target_col.txt"
+    if target_col is None or task_type is None:
+        if not target_col_file.exists():
+            raise FileNotFoundError(
+                f"target_col.txt not found in {input_dir}. "
+                f"Please provide target_col and task_type, or create target_col.txt"
+            )
+        
+        with open(target_col_file, 'r') as f:
+            lines = f.readlines()
+            if target_col is None:
+                target_col = lines[0].strip()
+            if task_type is None:
+                task_type = lines[1].strip() if len(lines) > 1 else "BINARY_CLASSIFICATION"
+    
+    # Map TaskType to TP-BERTa task type
+    task_type_map = {
+        "BINARY_CLASSIFICATION": "binclass",
+        "REGRESSION": "regression",
+        "MULTICLASS_CLASSIFICATION": "multiclass"
+    }
+    tpberta_task_type = task_type_map.get(task_type, "binclass")
+    
+    # Load all splits
+    train_df = pd.read_csv(input_dir / "train.csv")
+    val_df = pd.read_csv(input_dir / "val.csv")
+    test_df = pd.read_csv(input_dir / "test.csv")
+    
+    # Verify target column exists
+    if target_col not in train_df.columns:
+        raise ValueError(
+            f"Target column '{target_col}' not found in CSV. "
+            f"Available columns: {list(train_df.columns)}"
+        )
+    
+    # Make sure target column is last
+    all_columns = [col for col in train_df.columns if col != target_col] + [target_col]
+    train_df = train_df[all_columns]
+    val_df = val_df[all_columns]
+    test_df = test_df[all_columns]
+    
+    # Store split sizes
+    split_info = {
+        'train_size': len(train_df),
+        'val_size': len(val_df),
+        'test_size': len(test_df)
+    }
+    
+    # Combine all splits
+    combined_df = pd.concat([train_df, val_df, test_df], ignore_index=True)
+    
+    # Save combined CSV
+    dataset_name = input_dir.name
+    output_csv = output_dir / f"{dataset_name}.csv"
+    combined_df.to_csv(output_csv, index=False)
+    
+    # Generate feature_names.json
+    feature_names_file = output_dir / "feature_names.json"
+    _generate_feature_names(combined_df, feature_names_file)
+    
+    # Save split info
+    split_info_file = output_dir / "split_info.json"
+    with open(split_info_file, 'w') as f:
+        json.dump(split_info, f, indent=2)
+    
+    print(f"✅ Converted to TP-BERTa format:")
+    print(f"   Input: {input_dir}")
+    print(f"   Output: {output_dir}")
+    print(f"   CSV: {output_csv}")
+    print(f"   Feature names: {feature_names_file}")
+    print(f"   Split info: {split_info_file}")
+    print(f"   Target column: {target_col} (last column)")
+    print(f"   Task type: {tpberta_task_type}")
+    
+    return str(output_csv)
+
+
+def main():
+    """Main function to convert TableData format to TP-BERTa format."""
+    parser = argparse.ArgumentParser(
+        description="Convert TableData format to TP-BERTa format"
+    )
+    parser.add_argument(
+        "--input_dir",
+        type=str,
+        required=True,
+        help="Input directory containing train.csv, val.csv, test.csv, and target_col.txt"
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        required=True,
+        help="Output directory for TP-BERTa format files"
+    )
+    parser.add_argument(
+        "--target_col",
+        type=str,
+        default=None,
+        help="Target column name (if not provided, read from target_col.txt)"
+    )
+    parser.add_argument(
+        "--task_type",
+        type=str,
+        default=None,
+        help="Task type: BINARY_CLASSIFICATION, REGRESSION, or MULTICLASS_CLASSIFICATION "
+             "(if not provided, read from target_col.txt)"
+    )
+    
+    args = parser.parse_args()
+    
+    try:
+        output_csv = convert_to_tpberta_format(
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            target_col=args.target_col,
+            task_type=args.task_type,
+        )
+        print(f"\n✅ Success! Output CSV: {output_csv}")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        traceback.print_exc()
+        return 1
+    
+    return 0
+
+
+if __name__ == "__main__":
+    exit(main())
 
