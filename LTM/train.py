@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import json
-from sklearn.metrics import roc_auc_score, mean_squared_error, mean_absolute_error
+from sklearn.metrics import roc_auc_score, mean_absolute_error
 
 
 class EmbeddingDataset(Dataset):
@@ -48,9 +48,12 @@ class EmbeddingDataset(Dataset):
         if self.embedding_dim is not None and len(embedding) != self.embedding_dim:
             raise ValueError(f"Embedding dimension mismatch: expected {self.embedding_dim}, got {len(embedding)}")
 
+        # Convert label to float to avoid np.bool_ indexing warning
+        label_value = float(self.labels[idx])
+        
         return {
             'embedding': torch.FloatTensor(embedding),
-            'label': torch.FloatTensor([self.labels[idx]])
+            'label': torch.FloatTensor([label_value])
         }
 
 
@@ -115,15 +118,15 @@ def load_embedding_data(data_dir: Path):
 
     train_df = pd.read_csv(train_csv)
     train_strings = train_df['embedding'].tolist()
-    train_labels = train_df['target'].values
+    train_labels = train_df['target'].values.astype(np.float32)  # Convert to float32
 
     val_df = pd.read_csv(val_csv)
     val_strings = val_df['embedding'].tolist()
-    val_labels = val_df['target'].values
+    val_labels = val_df['target'].values.astype(np.float32)  # Convert to float32
 
     test_df = pd.read_csv(test_csv)
     test_strings = test_df['embedding'].tolist()
-    test_labels = test_df['target'].values
+    test_labels = test_df['target'].values.astype(np.float32)  # Convert to float32
 
     print(f"  Train: {len(train_strings)} rows")
     print(f"  Val: {len(val_strings)} rows")
@@ -177,7 +180,8 @@ def train_prediction_head(
         batch_size: int = 256,
         learning_rate: float = 0.001,
         num_epochs: int = 200,
-        early_stop: int = 10,
+        early_stop: int = 50,
+        max_round_epoch: int = 20,
         device: Optional[str] = None,
         seed: int = 42,
 ) -> dict:
@@ -196,6 +200,7 @@ def train_prediction_head(
         learning_rate: Learning rate
         num_epochs: Maximum number of epochs
         early_stop: Early stopping patience
+        max_round_epoch: Maximum number of batches per epoch (default: 20, consistent with dnn_baseline)
         device: Device to use (default: "cuda" if available)
         seed: Random seed for reproducibility (default: 42)
     
@@ -248,16 +253,28 @@ def train_prediction_head(
         dropout=dropout
     ).to(device)
     print(f"Model architecture: TP-BERTa head (Input={embedding_dim} -> {embedding_dim} -> 1)")
+    
+    # Deactivate dropout in regression task (consistent with dnn_baseline)
+    if task_type == "regression":
+        def deactivate_dropout(net):
+            for module in net.modules():
+                if isinstance(module, nn.Dropout):
+                    module.eval()
+                    for param in module.parameters():
+                        param.requires_grad = False
+        deactivate_dropout(model)
 
     # Setup loss and optimizer
     if task_type == "binclass":
         criterion = nn.BCEWithLogitsLoss()
         metric_fn = roc_auc_score
         higher_is_better = True
+        is_regression = False
     else:  # regression
-        criterion = nn.MSELoss()
-        metric_fn = mean_squared_error
+        criterion = nn.L1Loss()  # Use L1Loss for regression (consistent with dnn_baseline)
+        metric_fn = mean_absolute_error  # Use MAE for regression (consistent with dnn_baseline)
         higher_is_better = False
+        is_regression = True
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -275,8 +292,13 @@ def train_prediction_head(
     for epoch in range(num_epochs):
         # Training
         model.train()
-        epoch_loss = 0.0
-        for batch in train_loader:
+        loss_accum = 0.0
+        count_accum = 0
+        for idx, batch in enumerate(train_loader):
+            # Limit batches per epoch (consistent with dnn_baseline)
+            if idx > max_round_epoch:
+                break
+                
             embeddings = batch['embedding'].to(device)
             labels = batch['label'].squeeze().to(device)
 
@@ -286,10 +308,11 @@ def train_prediction_head(
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.item()
+            loss_accum += loss.item()
+            count_accum += 1
 
-        avg_loss = epoch_loss / len(train_loader)
-        train_losses.append(avg_loss)
+        train_loss = loss_accum / count_accum if count_accum > 0 else 0.0
+        train_losses.append(train_loss)
 
         # Validation
         model.eval()
@@ -302,16 +325,33 @@ def train_prediction_head(
                 labels = batch['label'].squeeze().cpu().numpy()
 
                 logits = model(embeddings).squeeze().cpu().numpy()
-
+                
+                # Consistent with dnn_baseline: sigmoid for classification, logits for regression
                 if task_type == "binclass":
-                    probs = 1 / (1 + np.exp(-logits))  # sigmoid
-                    val_preds.extend(probs)
-                else:
+                    pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
+                    val_preds.extend(pred_probs)
+                else:  # regression
                     val_preds.extend(logits)
 
                 val_targets.extend(labels)
 
-        val_metric = metric_fn(val_targets, val_preds)
+        # Check if we have both classes in validation set
+        if task_type == "binclass":
+            val_targets_array = np.array(val_targets)
+            unique_val_labels = np.unique(val_targets_array)
+            if len(unique_val_labels) < 2:
+                print(f"  ⚠️  Warning: Validation set has only one class ({unique_val_labels[0]}). AUC cannot be calculated.")
+                val_metric = 0.5  # Default to 0.5 if only one class
+            else:
+                val_metric = metric_fn(val_targets_array, np.array(val_preds))
+                # Debug info for first few epochs
+                if epoch < 3:
+                    print(f"    Debug: Val labels unique: {unique_val_labels}, "
+                          f"Val preds range: [{np.min(val_preds):.4f}, {np.max(val_preds):.4f}], "
+                          f"Val preds mean: {np.mean(val_preds):.4f}")
+        else:
+            val_metric = metric_fn(np.array(val_targets), np.array(val_preds))
+        
         # Convert to Python native float for JSON serialization
         val_metric = float(val_metric)
         val_metrics.append(val_metric)
@@ -324,10 +364,10 @@ def train_prediction_head(
             best_val_metric = val_metric
             best_model_state = model.state_dict().copy()
             no_improvement = 0
-            print(f"Epoch {epoch + 1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f} *")
+            print(f"Epoch {epoch + 1:3d} | Loss: {train_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f} *")
         else:
             no_improvement += 1
-            print(f"Epoch {epoch + 1:3d} | Loss: {avg_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f}")
+            print(f"Epoch {epoch + 1:3d} | Loss: {train_loss:.6f} | Val {metric_fn.__name__}: {val_metric:.6f}")
 
         # Early stopping
         if no_improvement >= early_stop:
@@ -343,19 +383,20 @@ def train_prediction_head(
     test_targets = []
 
     with torch.no_grad():
-        for batch in test_loader:
-            embeddings = batch['embedding'].to(device)
-            labels = batch['label'].squeeze().cpu().numpy()
+            for batch in test_loader:
+                embeddings = batch['embedding'].to(device)
+                labels = batch['label'].squeeze().cpu().numpy()
 
-            logits = model(embeddings).squeeze().cpu().numpy()
+                logits = model(embeddings).squeeze().cpu().numpy()
+                
+                # Consistent with dnn_baseline: sigmoid for classification, logits for regression
+                if task_type == "binclass":
+                    pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
+                    test_preds.extend(pred_probs)
+                else:  # regression
+                    test_preds.extend(logits)
 
-            if task_type == "binclass":
-                probs = 1 / (1 + np.exp(-logits))  # sigmoid
-                test_preds.extend(probs)
-            else:
-                test_preds.extend(logits)
-
-            test_targets.extend(labels)
+                test_targets.extend(labels)
 
     test_metric = metric_fn(test_targets, test_preds)
     # Convert to Python native float for JSON serialization
@@ -442,7 +483,13 @@ def main():
         "--early_stop",
         type=int,
         default=10,
-        help="Early stopping patience (default: 10)"
+        help="Early stopping patience (default: 50)"
+    )
+    parser.add_argument(
+        "--max_round_epoch",
+        type=int,
+        default=20,
+        help="Maximum number of batches per epoch (default: 20, consistent with dnn_baseline)"
     )
     parser.add_argument(
         "--device",
@@ -469,6 +516,7 @@ def main():
             learning_rate=args.lr,
             num_epochs=args.max_epochs,
             early_stop=args.early_stop,
+            max_round_epoch=args.max_round_epoch,
             device=args.device,
             seed=args.seed,
         )
