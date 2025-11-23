@@ -17,7 +17,8 @@ INPUT_DATA_DIR_ROOT="/home/naili/sharing-embedding-table/data/tpberta_table"
 ORIGINAL_DATA_DIR_ROOT="/home/lingze/embedding_fusion/data/fit-medium-table"
 
 # Models to train (should match models used in preprocessing)
-MODELS=("nomic" "bge" "tpberta")
+# MODELS=("nomic" "bge" "tpberta")
+MODELS=("nomic" "bge")
 
 # List of datasets to train
 DATA_LIST=(
@@ -77,8 +78,8 @@ echo "Logging to: $LOG_FILE"
 echo "=========================================="
 echo ""
 
-# Set CUDA_VISIBLE_DEVICES to use only one GPU
-export CUDA_VISIBLE_DEVICES=0
+# Set CUDA_VISIBLE_DEVICES to use GPU 5 (index 4)
+export CUDA_VISIBLE_DEVICES=4
 
 # ============================================
 # Function to train on a single dataset with a model
