@@ -64,26 +64,13 @@ def get_nomic_embeddings(
     texts = dataframe_to_texts(df, prefix=prefix, feature_names_map=feature_names_map)
     print(f"  Converted {len(texts)} rows to texts. Starting encoding...")
 
-    # Encode in batches with progress bar
-    all_embeddings = []
-    num_batches = (len(texts) + batch_size - 1) // batch_size
-    pbar = tqdm(total=num_batches, desc="Encoding texts", unit="batch")
-    for i in range(0, len(texts), batch_size):
-        batch_texts = texts[i:i + batch_size]
-        batch_embeddings = model.encode(
-            batch_texts,
-            convert_to_tensor=True,
-            batch_size=batch_size,
-            show_progress_bar=False
-        )
-        all_embeddings.append(batch_embeddings)
-        pbar.update(1)
-    pbar.close()
-
-    # Concatenate all batches
-    embeddings = torch.cat(all_embeddings, dim=0)
-
-    # Convert to numpy
-    embeddings = embeddings.cpu().numpy()
+    # Encode all texts directly with specified batch_size
+    # model.encode() will handle batching internally
+    embeddings = model.encode(
+        texts,
+        convert_to_numpy=True,
+        batch_size=batch_size,  # Single batch_size parameter
+        show_progress_bar=True  # Use built-in progress bar
+    )
 
     return embeddings

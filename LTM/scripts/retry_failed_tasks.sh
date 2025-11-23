@@ -46,14 +46,14 @@ echo ""
 # trial:study-outcome - Failed on: nomic, tpberta (BGE succeeded)
 
 echo "=========================================="
-echo "Task 1: trial:study-outcome (Nomic) - batch_size=8"
+echo "Task 1: trial:study-outcome (Nomic) - batch_size=4"
 echo "=========================================="
 python "$PROJECT_ROOT/scripts/retry_failed_task.py" \
     --db_name trial \
     --task_name study-outcome \
     --cache_dir rel-trial \
     --model nomic \
-    --batch_size 8
+    --batch_size 4
 echo ""
 
 echo "=========================================="
