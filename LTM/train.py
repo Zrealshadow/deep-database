@@ -200,7 +200,7 @@ def train_prediction_head(
         learning_rate: Learning rate
         num_epochs: Maximum number of epochs
         early_stop: Early stopping patience
-        max_round_epoch: Maximum number of batches per epoch (default: 20, consistent with dnn_baseline)
+        max_round_epoch: Maximum number of batches per epoch (default: 20)
         device: Device to use (default: "cuda" if available)
         seed: Random seed for reproducibility (default: 42)
     
@@ -271,8 +271,8 @@ def train_prediction_head(
         higher_is_better = True
         is_regression = False
     else:  # regression
-        criterion = nn.L1Loss()  # Use L1Loss for regression (consistent with dnn_baseline)
-        metric_fn = mean_absolute_error  # Use MAE for regression (consistent with dnn_baseline)
+        criterion = nn.L1Loss()  # Use L1Loss for regression
+        metric_fn = mean_absolute_error  # Use MAE for regression
         higher_is_better = False
         is_regression = True
 
@@ -295,7 +295,7 @@ def train_prediction_head(
         loss_accum = 0.0
         count_accum = 0
         for idx, batch in enumerate(train_loader):
-            # Limit batches per epoch (consistent with dnn_baseline)
+            # Limit batches per epoch
             if idx > max_round_epoch:
                 break
                 
@@ -326,7 +326,7 @@ def train_prediction_head(
 
                 logits = model(embeddings).squeeze().cpu().numpy()
                 
-                # Consistent with dnn_baseline: sigmoid for classification, logits for regression
+                # sigmoid for classification, logits for regression
                 if task_type == "binclass":
                     pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
                     val_preds.extend(pred_probs)
@@ -389,7 +389,7 @@ def train_prediction_head(
 
                 logits = model(embeddings).squeeze().cpu().numpy()
                 
-                # Consistent with dnn_baseline: sigmoid for classification, logits for regression
+                # sigmoid for classification, logits for regression
                 if task_type == "binclass":
                     pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
                     test_preds.extend(pred_probs)
@@ -489,7 +489,7 @@ def main():
         "--max_round_epoch",
         type=int,
         default=20,
-        help="Maximum number of batches per epoch (default: 20, consistent with dnn_baseline)"
+        help="Maximum number of batches per epoch (default: 20)"
     )
     parser.add_argument(
         "--device",

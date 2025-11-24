@@ -83,7 +83,37 @@ def get_tpberta_embeddings(
             # Add dummy label column (TP-BERTa data loader requires it)
             df_to_save['dummy_label'] = 0
         
+        # Truncate very long strings to prevent memory issues when TP-BERTa reads CSV
+        # TP-BERTa's CSV reader can allocate huge memory if strings are too long
+        # Limit string columns to max 1000 characters (reasonable for tokenization)
+        MAX_STRING_LENGTH = 1000
+        print(f"  Processing {len(df_to_save.columns)} columns, truncating long strings (max: {MAX_STRING_LENGTH} chars)...")
+        
+        # Process ALL columns: convert to string and truncate if needed
+        # This ensures no column will cause memory issues when TP-BERTa reads the CSV
+        truncated_cols = []
+        for col in df_to_save.columns:
+            # Convert to string first (handles mixed types)
+            df_to_save[col] = df_to_save[col].astype(str)
+            
+            # Check if any string is too long
+            max_len = df_to_save[col].str.len().max()
+            if pd.notna(max_len) and max_len > MAX_STRING_LENGTH:
+                truncated_cols.append((col, max_len))
+                # Truncate long strings
+                df_to_save[col] = df_to_save[col].apply(
+                    lambda x: x[:MAX_STRING_LENGTH] if len(str(x)) > MAX_STRING_LENGTH else x
+                )
+        
+        if truncated_cols:
+            print(f"  Truncated {len(truncated_cols)} columns:")
+            for col, max_len in truncated_cols:
+                print(f"    - '{col}': {max_len} -> {MAX_STRING_LENGTH} chars")
+        else:
+            print(f"  No columns needed truncation")
+        
         # Save DataFrame as CSV
+        # All columns are now strings with max length 1000, preventing fixed-length Unicode inference
         csv_path = temp_dir / f"{dataset_name}.csv"
         df_to_save.to_csv(csv_path, index=False)
 
