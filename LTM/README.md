@@ -80,8 +80,8 @@ data/tpberta_table/
 ### 3. Train Prediction Head
 
 ```bash
-./LTM/scripts/tpberta_medium_baseline.sh            # All
-./LTM/scripts/tpberta_medium_baseline.sh avito-user-clicks  # Single
+./LTM/scripts/train_ltm.sh            # All
+./LTM/scripts/train_ltm.sh avito-user-clicks  # Single
 ```
 
 **Input Structure**:

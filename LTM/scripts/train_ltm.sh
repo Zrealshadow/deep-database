@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Medium Baseline Training Script - Multiple Models
-# Usage: ./tpberta_medium_baseline.sh [dataset_name]
+# Usage: ./train_ltm.sh [dataset_name]
 #   If dataset_name is provided, train only that dataset
 #   Otherwise, train all datasets
 #   For each dataset, trains on embeddings from all models: tpberta, nomic, bge
