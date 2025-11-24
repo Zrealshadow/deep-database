@@ -18,7 +18,7 @@ ORIGINAL_DATA_DIR_ROOT="/home/lingze/embedding_fusion/data/fit-medium-table"
 
 # Models to train (should match models used in preprocessing)
 # MODELS=("nomic" "bge" "tpberta")
-MODELS=("nomic" "bge")
+MODELS=("tpberta")
 
 # List of datasets to train
 DATA_LIST=(
