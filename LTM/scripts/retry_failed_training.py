@@ -17,10 +17,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from LTM.train import main as train_main
 
-# Failed tasks to retry: (dataset, model) pairs
+# Failed tasks to retry: (dataset, model, seed) tuples
+# Using different seeds for each task to get different results
 FAILED_TASKS = [
-    ("avito-user-clicks", "nomic"),
-    ("hm-user-churn", "nomic"),
+    ("avito-user-clicks", "nomic", 123),
+    ("hm-user-churn", "nomic", 456),
 ]
 
 # Configuration paths
@@ -29,20 +30,25 @@ ORIGINAL_DATA_DIR_ROOT = "/home/lingze/embedding_fusion/data/fit-medium-table"
 RESULT_DIR = "/home/naili/sharing-embedding-table/result_raw_from_server"
 
 
-def retry_task(dataset: str, model: str):
+def retry_task(dataset: str, model: str, seed: int = None):
     """Retry training for a specific dataset-model combination."""
     input_dir = Path(INPUT_DATA_DIR_ROOT) / model / dataset
     original_data_dir = Path(ORIGINAL_DATA_DIR_ROOT) / dataset
     output_dir = Path(RESULT_DIR) / f"{model}_head" / dataset
     target_col_txt = original_data_dir / "target_col.txt"
     
+    # Use different seed if not provided (default is 42, we'll use a different one)
+    if seed is None:
+        seed = 123  # Default seed for retry
+    
     print("")
     print("=" * 60)
-    print(f"Training Dataset: {dataset} with Model: {model}")
+    print(f"Training Dataset: {dataset} with Model: {model} (seed={seed})")
     print("=" * 60)
     print(f"  INPUT_DIR: {input_dir}")
     print(f"  OUTPUT_DIR: {output_dir}")
     print(f"  TARGET_COL_TXT: {target_col_txt}")
+    print(f"  SEED: {seed}")
     print("")
     
     # Check input directory exists
@@ -77,6 +83,7 @@ def retry_task(dataset: str, model: str):
             data_dir=str(input_dir),
             output_dir=str(output_dir),
             target_col_txt_path=str(target_col_txt),
+            seed=seed,  # Use different seed for retry
         )
         
         print("")
@@ -104,6 +111,10 @@ def main():
         "--model", type=str, default=None,
         help="Specific model to retry (optional, if not provided, retries all failed tasks)"
     )
+    parser.add_argument(
+        "--seed", type=int, default=None,
+        help="Random seed to use (optional, if not provided, uses seed from FAILED_TASKS or default 123)"
+    )
     args = parser.parse_args()
     
     print("=" * 60)
@@ -113,28 +124,40 @@ def main():
     
     # Determine which tasks to retry
     if args.dataset and args.model:
-        tasks_to_retry = [(args.dataset, args.model)]
+        # Find matching task with its seed, or use provided/default seed
+        matching_task = next((t for t in FAILED_TASKS if t[0] == args.dataset and t[1] == args.model), None)
+        if matching_task:
+            tasks_to_retry = [(args.dataset, args.model, args.seed if args.seed is not None else matching_task[2])]
+        else:
+            tasks_to_retry = [(args.dataset, args.model, args.seed if args.seed is not None else 123)]
         print(f"Retrying single task: {args.dataset} with {args.model}")
     elif args.dataset:
         # Find all models for this dataset in FAILED_TASKS
-        tasks_to_retry = [(args.dataset, model) for _, model in FAILED_TASKS if _ == args.dataset]
+        tasks_to_retry = [(args.dataset, model, args.seed if args.seed is not None else seed) 
+                         for dataset, model, seed in FAILED_TASKS if dataset == args.dataset]
         print(f"Retrying all models for dataset: {args.dataset}")
     elif args.model:
         # Find all datasets for this model in FAILED_TASKS
-        tasks_to_retry = [(dataset, args.model) for dataset, _ in FAILED_TASKS if _ == args.model]
+        tasks_to_retry = [(dataset, args.model, args.seed if args.seed is not None else seed) 
+                         for dataset, model, seed in FAILED_TASKS if model == args.model]
         print(f"Retrying all datasets for model: {args.model}")
     else:
         tasks_to_retry = FAILED_TASKS
         print(f"Retrying {len(tasks_to_retry)} failed tasks:")
-        for dataset, model in tasks_to_retry:
-            print(f"  - {dataset}:{model}")
+        for dataset, model, seed in tasks_to_retry:
+            print(f"  - {dataset}:{model} (seed={seed})")
     
     print("")
     
     # Retry each task
     success_count = 0
-    for dataset, model in tasks_to_retry:
-        if retry_task(dataset, model):
+    for task in tasks_to_retry:
+        if len(task) == 3:
+            dataset, model, seed = task
+        else:
+            dataset, model = task
+            seed = args.seed if args.seed is not None else 123
+        if retry_task(dataset, model, seed):
             success_count += 1
     
     print("")
