@@ -288,8 +288,7 @@ def train_prediction_head(
         loss_accum = 0.0
         count_accum = 0
         for idx, batch in enumerate(train_loader):
-            # Limit batches per epoch (>= to ensure exactly max_round_epoch batches)
-            if idx >= max_round_epoch:
+            if idx > max_round_epoch:
                 break
                 
             embeddings = batch['embedding'].to(device)
