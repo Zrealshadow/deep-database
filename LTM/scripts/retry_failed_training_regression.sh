@@ -54,7 +54,7 @@ echo "=========================================="
 echo ""
 
 # Set CUDA_VISIBLE_DEVICES to use GPU 5 (index 4)
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=3
 
 # ============================================
 # Function to train on a single dataset with a model
