@@ -18,37 +18,24 @@ from sklearn.metrics import roc_auc_score, mean_absolute_error
 
 
 class EmbeddingDataset(Dataset):
-    """Dataset for loading embedding strings and labels."""
+    """Dataset for loading embeddings and labels."""
 
-    def __init__(self, embedding_strings: List[str], labels: np.ndarray,
-                 embedding_dim: Optional[int] = None):
+    def __init__(self, embeddings: np.ndarray, labels: np.ndarray):
         """
         Args:
-            embedding_strings: List of comma-separated embedding strings
-            labels: Array of labels
-            embedding_dim: Dimension of embeddings (auto-detect if None)
+            embeddings: Pre-parsed numpy array of embeddings (shape: [N, embedding_dim])
+            labels: Array of labels (shape: [N])
         """
-        self.embedding_strings = embedding_strings
-        self.labels = labels
-
-        # Auto-detect embedding dimension from first embedding
-        if embedding_dim is None and len(embedding_strings) > 0:
-            self.embedding_dim = len(embedding_strings[0].split(","))
-        else:
-            self.embedding_dim = embedding_dim
+        self.embeddings = embeddings.astype(np.float32)  # Ensure float32 for efficiency
+        self.labels = labels.astype(np.float32)
+        self.embedding_dim = embeddings.shape[1] if len(embeddings.shape) > 1 else embeddings.shape[0]
 
     def __len__(self):
-        return len(self.embedding_strings)
+        return len(self.embeddings)
 
     def __getitem__(self, idx):
-        # Parse comma-separated embedding string
-        embedding = np.array([float(x) for x in self.embedding_strings[idx].split(",")])
-
-        # Ensure correct dimension
-        if self.embedding_dim is not None and len(embedding) != self.embedding_dim:
-            raise ValueError(f"Embedding dimension mismatch: expected {self.embedding_dim}, got {len(embedding)}")
-
-        # Convert label to float to avoid np.bool_ indexing warning
+        # Direct indexing - no string parsing needed!
+        embedding = self.embeddings[idx]
         label_value = float(self.labels[idx])
         
         return {
@@ -90,13 +77,14 @@ def set_random_seed(seed: int):
 
 def load_task_type(target_col_txt_path: str) -> str:
     """Load task type from target_col.txt."""
+    target_col_txt_path = Path(target_col_txt_path)
+    
     with open(target_col_txt_path, 'r') as f:
         lines = f.readlines()
         task_type_str = lines[1].strip()
     task_type_map = {
         "BINARY_CLASSIFICATION": "binclass",
-        "REGRESSION": "regression",
-        "MULTICLASS_CLASSIFICATION": "multiclass"
+        "REGRESSION": "regression"
     }
     task_type = task_type_map.get(task_type_str, "binclass")
     print(f"Detected task type from target_col.txt: {task_type}")
@@ -116,24 +104,33 @@ def load_embedding_data(data_dir: Path):
     if not test_csv.exists():
         raise FileNotFoundError(f"test.csv not found in {data_dir}")
 
+    # Load and parse embeddings in one go (much faster than parsing in __getitem__)
+    def parse_embeddings(embedding_strings: List[str]) -> np.ndarray:
+        """Parse comma-separated embedding strings to numpy array."""
+        print(f"  Parsing {len(embedding_strings)} embeddings...")
+        embeddings = []
+        for emb_str in embedding_strings:
+            embeddings.append([float(x) for x in emb_str.split(",")])
+        return np.array(embeddings, dtype=np.float32)
+    
     train_df = pd.read_csv(train_csv)
-    train_strings = train_df['embedding'].tolist()
-    train_labels = train_df['target'].values.astype(np.float32)  # Convert to float32
+    train_embeddings = parse_embeddings(train_df['embedding'].tolist())
+    train_labels = train_df['target'].values.astype(np.float32)
 
     val_df = pd.read_csv(val_csv)
-    val_strings = val_df['embedding'].tolist()
-    val_labels = val_df['target'].values.astype(np.float32)  # Convert to float32
+    val_embeddings = parse_embeddings(val_df['embedding'].tolist())
+    val_labels = val_df['target'].values.astype(np.float32)
 
     test_df = pd.read_csv(test_csv)
-    test_strings = test_df['embedding'].tolist()
-    test_labels = test_df['target'].values.astype(np.float32)  # Convert to float32
+    test_embeddings = parse_embeddings(test_df['embedding'].tolist())
+    test_labels = test_df['target'].values.astype(np.float32)
 
-    print(f"  Train: {len(train_strings)} rows")
-    print(f"  Val: {len(val_strings)} rows")
-    print(f"  Test: {len(test_strings)} rows")
-    print(f"Data split: Train={len(train_strings)}, Val={len(val_strings)}, Test={len(test_strings)}")
+    print(f"  Train: {len(train_embeddings)} rows, embedding_dim: {train_embeddings.shape[1]}")
+    print(f"  Val: {len(val_embeddings)} rows")
+    print(f"  Test: {len(test_embeddings)} rows")
+    print(f"Data split: Train={len(train_embeddings)}, Val={len(val_embeddings)}, Test={len(test_embeddings)}")
 
-    return (train_strings, train_labels, val_strings, val_labels, test_strings, test_labels)
+    return (train_embeddings, train_labels, val_embeddings, val_labels, test_embeddings, test_labels)
 
 
 def check_data_distribution(train_labels, val_labels, test_labels, task_type: str):
@@ -175,12 +172,12 @@ def check_data_distribution(train_labels, val_labels, test_labels, task_type: st
 def train_prediction_head(
         data_dir: str,
         output_dir: str,
-        target_col_txt_path: Optional[str] = None,
+        target_col_txt_path: str,
         dropout: float = 0.1,
         batch_size: int = 256,
-        learning_rate: float = 0.001,
+        learning_rate: float = 0.005,
         num_epochs: int = 200,
-        early_stop: int = 50,
+        early_stop: int = 10,
         max_round_epoch: int = 20,
         device: Optional[str] = None,
         seed: int = 42,
@@ -194,7 +191,7 @@ def train_prediction_head(
     Args:
         data_dir: Directory containing train.csv, val.csv, test.csv (each with columns: embedding, target)
         output_dir: Directory to save results
-        target_col_txt_path: Path to target_col.txt (if None, auto-detect from parent dir)
+        target_col_txt_path: Path to target_col.txt (required)
         dropout: Dropout rate (default: 0.1)
         batch_size: Batch size
         learning_rate: Learning rate
@@ -219,17 +216,19 @@ def train_prediction_head(
 
     data_dir = Path(data_dir)
 
-    # Load task type
+    # Load task type (target_col_txt_path must be provided)
+    if target_col_txt_path is None:
+        raise ValueError("target_col_txt_path must be provided")
     task_type = load_task_type(target_col_txt_path)
-
+    
     # Load data from separate CSV files
     print(f"Loading embedding data from {data_dir}...")
-    train_strings, train_labels, val_strings, val_labels, test_strings, test_labels = load_embedding_data(data_dir)
+    train_embeddings, train_labels, val_embeddings, val_labels, test_embeddings, test_labels = load_embedding_data(data_dir)
 
-    # Create datasets (auto-detect embedding_dim)
-    train_dataset = EmbeddingDataset(train_strings, train_labels, None)
-    val_dataset = EmbeddingDataset(val_strings, val_labels, train_dataset.embedding_dim)
-    test_dataset = EmbeddingDataset(test_strings, test_labels, train_dataset.embedding_dim)
+    # Create datasets (embeddings are already parsed)
+    train_dataset = EmbeddingDataset(train_embeddings, train_labels)
+    val_dataset = EmbeddingDataset(val_embeddings, val_labels)
+    test_dataset = EmbeddingDataset(test_embeddings, test_labels)
 
     # Use detected embedding dimension
     embedding_dim = train_dataset.embedding_dim
@@ -247,22 +246,16 @@ def train_prediction_head(
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # Create model
+    # For regression, set dropout to 0 to match dnn_baseline behavior
+    model_dropout = 0.0 if task_type == "regression" else dropout
     model = TPBertaHead(
         input_dim=embedding_dim,
         output_dim=1,
-        dropout=dropout
+        dropout=model_dropout
     ).to(device)
     print(f"Model architecture: TP-BERTa head (Input={embedding_dim} -> {embedding_dim} -> 1)")
-    
-    # Deactivate dropout in regression task (consistent with dnn_baseline)
     if task_type == "regression":
-        def deactivate_dropout(net):
-            for module in net.modules():
-                if isinstance(module, nn.Dropout):
-                    module.eval()
-                    for param in module.parameters():
-                        param.requires_grad = False
-        deactivate_dropout(model)
+        print("  Note: Dropout disabled for regression task (consistent with dnn_baseline)")
 
     # Setup loss and optimizer
     if task_type == "binclass":
@@ -295,15 +288,15 @@ def train_prediction_head(
         loss_accum = 0.0
         count_accum = 0
         for idx, batch in enumerate(train_loader):
-            # Limit batches per epoch
-            if idx > max_round_epoch:
+            # Limit batches per epoch (>= to ensure exactly max_round_epoch batches)
+            if idx >= max_round_epoch:
                 break
                 
             embeddings = batch['embedding'].to(device)
-            labels = batch['label'].squeeze().to(device)
+            labels = batch['label'].view(-1).to(device)  # Use view(-1) instead of squeeze()
 
             optimizer.zero_grad()
-            logits = model(embeddings).squeeze()
+            logits = model(embeddings).view(-1)  # Use view(-1) instead of squeeze()
             loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
@@ -322,18 +315,18 @@ def train_prediction_head(
         with torch.no_grad():
             for batch in val_loader:
                 embeddings = batch['embedding'].to(device)
-                labels = batch['label'].squeeze().cpu().numpy()
+                labels = batch['label'].view(-1).cpu().numpy()  # Use view(-1) to avoid 0-d array issue
 
-                logits = model(embeddings).squeeze().cpu().numpy()
+                logits = model(embeddings).view(-1).detach().cpu().numpy()  # Use view(-1) + detach()
                 
                 # sigmoid for classification, logits for regression
                 if task_type == "binclass":
                     pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
-                    val_preds.extend(pred_probs)
+                    val_preds.extend(pred_probs.tolist())  # Use tolist() for safety
                 else:  # regression
-                    val_preds.extend(logits)
+                    val_preds.extend(logits.tolist())  # Use tolist() for safety
 
-                val_targets.extend(labels)
+                val_targets.extend(labels.tolist())  # Use tolist() for safety
 
         # Check if we have both classes in validation set
         if task_type == "binclass":
@@ -385,18 +378,18 @@ def train_prediction_head(
     with torch.no_grad():
             for batch in test_loader:
                 embeddings = batch['embedding'].to(device)
-                labels = batch['label'].squeeze().cpu().numpy()
+                labels = batch['label'].view(-1).cpu().numpy()  # Use view(-1) to avoid 0-d array issue
 
-                logits = model(embeddings).squeeze().cpu().numpy()
+                logits = model(embeddings).view(-1).detach().cpu().numpy()  # Use view(-1) + detach()
                 
                 # sigmoid for classification, logits for regression
                 if task_type == "binclass":
                     pred_probs = torch.sigmoid(torch.from_numpy(logits)).numpy()
-                    test_preds.extend(pred_probs)
+                    test_preds.extend(pred_probs.tolist())  # Use tolist() for safety
                 else:  # regression
-                    test_preds.extend(logits)
+                    test_preds.extend(logits.tolist())  # Use tolist() for safety
 
-                test_targets.extend(labels)
+                test_targets.extend(labels.tolist())  # Use tolist() for safety
 
     test_metric = metric_fn(test_targets, test_preds)
     # Convert to Python native float for JSON serialization
@@ -452,8 +445,8 @@ def main():
     parser.add_argument(
         "--target_col_txt",
         type=str,
-        default=None,
-        help="Path to target_col.txt (auto-detect if None)"
+        required=True,
+        help="Path to target_col.txt"
     )
     parser.add_argument(
         "--dropout",
@@ -483,7 +476,7 @@ def main():
         "--early_stop",
         type=int,
         default=10,
-        help="Early stopping patience (default: 50)"
+        help="Early stopping patience (default: 10)"
     )
     parser.add_argument(
         "--max_round_epoch",
