@@ -1,0 +1,693 @@
+==========================================
+Retry Failed Training Tasks - Regression
+==========================================
+
+Logging to: /home/naili/sharing-embedding-table/logs/retry_failed_training_regression_20251125_104533.log
+==========================================
+
+Retrying 2 failed regression tasks with 5 seeds each:
+  - avito-ad-ctr:nomic (seeds: 123 456 789 2024 1024)
+  - hm-item-sales:nomic (seeds: 123 456 789 2024 1024)
+
+
+==========================================
+Processing task: avito-ad-ctr with nomic
+==========================================
+Will try 5 different seeds: 123 456 789 2024 1024
+
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic (seed=123)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed123
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+  SEED: 123
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.159811 | Val mean_absolute_error: 0.099050 *
+Epoch   2 | Loss: 0.634256 | Val mean_absolute_error: 0.051372 *
+Epoch   3 | Loss: 0.161982 | Val mean_absolute_error: 0.043494 *
+Epoch   4 | Loss: 0.115096 | Val mean_absolute_error: 0.044479
+Epoch   5 | Loss: 0.119252 | Val mean_absolute_error: 0.134962
+Epoch   6 | Loss: 0.137475 | Val mean_absolute_error: 0.103032
+Epoch   7 | Loss: 0.130914 | Val mean_absolute_error: 0.054470
+Epoch   8 | Loss: 0.264228 | Val mean_absolute_error: 0.281110
+Epoch   9 | Loss: 0.279940 | Val mean_absolute_error: 0.150645
+Epoch  10 | Loss: 0.258147 | Val mean_absolute_error: 0.260485
+Epoch  11 | Loss: 0.209031 | Val mean_absolute_error: 0.138332
+Epoch  12 | Loss: 0.212142 | Val mean_absolute_error: 0.134819
+Epoch  13 | Loss: 0.249011 | Val mean_absolute_error: 0.168706
+
+Early stopping at epoch 13
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.043494
+Test mean_absolute_error: 0.172504
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic (seed=123)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed123
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic (seed=456)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed456
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+  SEED: 456
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.255986 | Val mean_absolute_error: 1.181067 *
+Epoch   2 | Loss: 0.642239 | Val mean_absolute_error: 0.395054 *
+Epoch   3 | Loss: 0.383666 | Val mean_absolute_error: 0.247043 *
+Epoch   4 | Loss: 0.261638 | Val mean_absolute_error: 0.145492 *
+Epoch   5 | Loss: 0.132761 | Val mean_absolute_error: 0.041561 *
+Epoch   6 | Loss: 0.123024 | Val mean_absolute_error: 0.049203
+Epoch   7 | Loss: 0.114936 | Val mean_absolute_error: 0.057285
+Epoch   8 | Loss: 0.115271 | Val mean_absolute_error: 0.083894
+Epoch   9 | Loss: 0.116642 | Val mean_absolute_error: 0.122521
+Epoch  10 | Loss: 0.119254 | Val mean_absolute_error: 0.124617
+Epoch  11 | Loss: 0.174231 | Val mean_absolute_error: 0.559516
+Epoch  12 | Loss: 0.506386 | Val mean_absolute_error: 0.505077
+Epoch  13 | Loss: 0.490341 | Val mean_absolute_error: 0.112249
+Epoch  14 | Loss: 0.463708 | Val mean_absolute_error: 0.790175
+Epoch  15 | Loss: 0.466362 | Val mean_absolute_error: 0.379283
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.041561
+Test mean_absolute_error: 0.383131
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic (seed=456)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed456
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic (seed=789)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed789
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+  SEED: 789
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.176435 | Val mean_absolute_error: 0.301106 *
+Epoch   2 | Loss: 0.980814 | Val mean_absolute_error: 0.461799
+Epoch   3 | Loss: 0.263719 | Val mean_absolute_error: 0.210830 *
+Epoch   4 | Loss: 0.196427 | Val mean_absolute_error: 0.181142 *
+Epoch   5 | Loss: 0.208422 | Val mean_absolute_error: 0.195697
+Epoch   6 | Loss: 0.216675 | Val mean_absolute_error: 0.228304
+Epoch   7 | Loss: 0.211185 | Val mean_absolute_error: 0.254349
+Epoch   8 | Loss: 0.214424 | Val mean_absolute_error: 0.218614
+Epoch   9 | Loss: 0.217745 | Val mean_absolute_error: 0.201367
+Epoch  10 | Loss: 0.212771 | Val mean_absolute_error: 0.241394
+Epoch  11 | Loss: 0.219493 | Val mean_absolute_error: 0.228215
+Epoch  12 | Loss: 0.208981 | Val mean_absolute_error: 0.290706
+Epoch  13 | Loss: 0.217768 | Val mean_absolute_error: 0.270754
+Epoch  14 | Loss: 0.212511 | Val mean_absolute_error: 0.250056
+
+Early stopping at epoch 14
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.181142
+Test mean_absolute_error: 0.249870
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic (seed=789)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed789
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic (seed=2024)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed2024
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+  SEED: 2024
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.172587 | Val mean_absolute_error: 0.283326 *
+Epoch   2 | Loss: 0.969938 | Val mean_absolute_error: 0.575848
+Epoch   3 | Loss: 0.302066 | Val mean_absolute_error: 0.115821 *
+Epoch   4 | Loss: 0.130237 | Val mean_absolute_error: 0.131808
+Epoch   5 | Loss: 0.120454 | Val mean_absolute_error: 0.073125 *
+Epoch   6 | Loss: 0.140555 | Val mean_absolute_error: 0.343013
+Epoch   7 | Loss: 0.268320 | Val mean_absolute_error: 0.190482
+Epoch   8 | Loss: 0.251769 | Val mean_absolute_error: 0.262180
+Epoch   9 | Loss: 0.239385 | Val mean_absolute_error: 0.147377
+Epoch  10 | Loss: 0.239851 | Val mean_absolute_error: 0.228655
+Epoch  11 | Loss: 0.236538 | Val mean_absolute_error: 0.158806
+Epoch  12 | Loss: 0.232162 | Val mean_absolute_error: 0.236637
+Epoch  13 | Loss: 0.215527 | Val mean_absolute_error: 0.356553
+Epoch  14 | Loss: 0.234081 | Val mean_absolute_error: 0.167406
+Epoch  15 | Loss: 0.224520 | Val mean_absolute_error: 0.226267
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.073125
+Test mean_absolute_error: 0.226267
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic (seed=2024)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed2024
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic (seed=1024)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed1024
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+  SEED: 1024
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.146064 | Val mean_absolute_error: 0.042606 *
+Epoch   2 | Loss: 0.970004 | Val mean_absolute_error: 0.130935
+Epoch   3 | Loss: 0.643705 | Val mean_absolute_error: 0.219829
+Epoch   4 | Loss: 0.266464 | Val mean_absolute_error: 0.104310
+Epoch   5 | Loss: 0.119084 | Val mean_absolute_error: 0.101274
+Epoch   6 | Loss: 0.111774 | Val mean_absolute_error: 0.072020
+Epoch   7 | Loss: 0.127571 | Val mean_absolute_error: 0.067447
+Epoch   8 | Loss: 0.152956 | Val mean_absolute_error: 0.415488
+Epoch   9 | Loss: 0.354040 | Val mean_absolute_error: 0.395284
+Epoch  10 | Loss: 0.487932 | Val mean_absolute_error: 0.233115
+Epoch  11 | Loss: 0.446503 | Val mean_absolute_error: 0.825794
+
+Early stopping at epoch 11
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.042606
+Test mean_absolute_error: 0.829588
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic (seed=1024)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr_seed1024
+
+==========================================
+Processing task: hm-item-sales with nomic
+==========================================
+Will try 5 different seeds: 123 456 789 2024 1024
+
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic (seed=123)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed123
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+  SEED: 123
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.057218 | Val mean_absolute_error: 0.988067 *
+Epoch   2 | Loss: 1.273054 | Val mean_absolute_error: 0.734610 *
+Epoch   3 | Loss: 0.345710 | Val mean_absolute_error: 0.227928 *
+Epoch   4 | Loss: 0.176166 | Val mean_absolute_error: 0.086578 *
+Epoch   5 | Loss: 0.180889 | Val mean_absolute_error: 0.141780
+Epoch   6 | Loss: 0.160894 | Val mean_absolute_error: 0.145448
+Epoch   7 | Loss: 0.157748 | Val mean_absolute_error: 0.152427
+Epoch   8 | Loss: 0.166923 | Val mean_absolute_error: 0.203353
+Epoch   9 | Loss: 0.227079 | Val mean_absolute_error: 0.134013
+Epoch  10 | Loss: 0.706955 | Val mean_absolute_error: 0.160687
+Epoch  11 | Loss: 0.743966 | Val mean_absolute_error: 1.397143
+Epoch  12 | Loss: 0.505770 | Val mean_absolute_error: 0.449228
+Epoch  13 | Loss: 0.427432 | Val mean_absolute_error: 0.408640
+Epoch  14 | Loss: 0.449006 | Val mean_absolute_error: 0.213024
+
+Early stopping at epoch 14
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.086578
+Test mean_absolute_error: 0.206336
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic (seed=123)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed123
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic (seed=456)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed456
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+  SEED: 456
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 1.939073 | Val mean_absolute_error: 1.300577 *
+Epoch   2 | Loss: 0.654552 | Val mean_absolute_error: 0.226505 *
+Epoch   3 | Loss: 0.284662 | Val mean_absolute_error: 0.245456
+Epoch   4 | Loss: 0.249099 | Val mean_absolute_error: 0.275684
+Epoch   5 | Loss: 0.254597 | Val mean_absolute_error: 0.228806
+Epoch   6 | Loss: 0.250394 | Val mean_absolute_error: 0.399163
+Epoch   7 | Loss: 0.301940 | Val mean_absolute_error: 0.266911
+Epoch   8 | Loss: 0.257908 | Val mean_absolute_error: 0.349032
+Epoch   9 | Loss: 0.251285 | Val mean_absolute_error: 0.303299
+Epoch  10 | Loss: 0.241966 | Val mean_absolute_error: 0.287576
+Epoch  11 | Loss: 0.265297 | Val mean_absolute_error: 0.501338
+Epoch  12 | Loss: 0.380021 | Val mean_absolute_error: 0.536668
+
+Early stopping at epoch 12
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.226505
+Test mean_absolute_error: 0.531361
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic (seed=456)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed456
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic (seed=789)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed789
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+  SEED: 789
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 2.805010 | Val mean_absolute_error: 0.660435 *
+Epoch   2 | Loss: 0.519511 | Val mean_absolute_error: 0.440151 *
+Epoch   3 | Loss: 0.248702 | Val mean_absolute_error: 0.312261 *
+Epoch   4 | Loss: 0.263121 | Val mean_absolute_error: 0.177082 *
+Epoch   5 | Loss: 0.243586 | Val mean_absolute_error: 0.103267 *
+Epoch   6 | Loss: 0.156272 | Val mean_absolute_error: 0.147924
+Epoch   7 | Loss: 0.221879 | Val mean_absolute_error: 0.442606
+Epoch   8 | Loss: 0.492665 | Val mean_absolute_error: 0.371641
+Epoch   9 | Loss: 0.314494 | Val mean_absolute_error: 0.507792
+Epoch  10 | Loss: 0.258885 | Val mean_absolute_error: 0.133611
+Epoch  11 | Loss: 0.148269 | Val mean_absolute_error: 0.089401 *
+Epoch  12 | Loss: 0.158928 | Val mean_absolute_error: 0.134904
+Epoch  13 | Loss: 0.189409 | Val mean_absolute_error: 0.494819
+Epoch  14 | Loss: 0.208200 | Val mean_absolute_error: 0.103979
+Epoch  15 | Loss: 0.231833 | Val mean_absolute_error: 0.248432
+Epoch  16 | Loss: 0.279578 | Val mean_absolute_error: 0.498976
+Epoch  17 | Loss: 0.417378 | Val mean_absolute_error: 0.526485
+Epoch  18 | Loss: 0.427361 | Val mean_absolute_error: 0.550727
+Epoch  19 | Loss: 0.625897 | Val mean_absolute_error: 0.712304
+Epoch  20 | Loss: 0.425918 | Val mean_absolute_error: 0.660318
+Epoch  21 | Loss: 0.474545 | Val mean_absolute_error: 0.449015
+
+Early stopping at epoch 21
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.089401
+Test mean_absolute_error: 0.441347
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic (seed=789)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed789
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic (seed=2024)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed2024
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+  SEED: 2024
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.064443 | Val mean_absolute_error: 0.912678 *
+Epoch   2 | Loss: 1.183422 | Val mean_absolute_error: 0.226540 *
+Epoch   3 | Loss: 0.482205 | Val mean_absolute_error: 0.364158
+Epoch   4 | Loss: 0.193827 | Val mean_absolute_error: 0.109083 *
+Epoch   5 | Loss: 0.186483 | Val mean_absolute_error: 0.131771
+Epoch   6 | Loss: 0.175134 | Val mean_absolute_error: 0.142945
+Epoch   7 | Loss: 0.254076 | Val mean_absolute_error: 0.793946
+Epoch   8 | Loss: 0.475940 | Val mean_absolute_error: 0.592328
+Epoch   9 | Loss: 0.493323 | Val mean_absolute_error: 0.506160
+Epoch  10 | Loss: 0.388800 | Val mean_absolute_error: 0.108494 *
+Epoch  11 | Loss: 0.341895 | Val mean_absolute_error: 0.358510
+Epoch  12 | Loss: 0.244756 | Val mean_absolute_error: 0.282176
+Epoch  13 | Loss: 0.262918 | Val mean_absolute_error: 0.266050
+Epoch  14 | Loss: 0.184296 | Val mean_absolute_error: 0.099468 *
+Epoch  15 | Loss: 0.292750 | Val mean_absolute_error: 0.138499
+Epoch  16 | Loss: 0.187794 | Val mean_absolute_error: 0.440295
+Epoch  17 | Loss: 0.272089 | Val mean_absolute_error: 0.109527
+Epoch  18 | Loss: 0.235790 | Val mean_absolute_error: 0.211203
+Epoch  19 | Loss: 0.157406 | Val mean_absolute_error: 0.094498 *
+Epoch  20 | Loss: 0.365560 | Val mean_absolute_error: 0.703565
+Epoch  21 | Loss: 0.291138 | Val mean_absolute_error: 0.315683
+Epoch  22 | Loss: 0.318475 | Val mean_absolute_error: 0.393707
+Epoch  23 | Loss: 0.402914 | Val mean_absolute_error: 0.536613
+Epoch  24 | Loss: 0.422445 | Val mean_absolute_error: 0.863026
+Epoch  25 | Loss: 0.446208 | Val mean_absolute_error: 0.600944
+Epoch  26 | Loss: 0.618979 | Val mean_absolute_error: 1.455246
+Epoch  27 | Loss: 0.942756 | Val mean_absolute_error: 0.324835
+Epoch  28 | Loss: 0.239941 | Val mean_absolute_error: 0.215394
+Epoch  29 | Loss: 0.265996 | Val mean_absolute_error: 0.484120
+
+Early stopping at epoch 29
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.094498
+Test mean_absolute_error: 0.478602
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic (seed=2024)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed2024
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic (seed=1024)
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed1024
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+  SEED: 1024
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.094147 | Val mean_absolute_error: 0.609307 *
+Epoch   2 | Loss: 0.650456 | Val mean_absolute_error: 0.301465 *
+Epoch   3 | Loss: 0.195417 | Val mean_absolute_error: 0.108043 *
+Epoch   4 | Loss: 0.166181 | Val mean_absolute_error: 0.107048 *
+Epoch   5 | Loss: 0.168865 | Val mean_absolute_error: 0.088188 *
+Epoch   6 | Loss: 0.230618 | Val mean_absolute_error: 0.250258
+Epoch   7 | Loss: 0.366097 | Val mean_absolute_error: 0.453291
+Epoch   8 | Loss: 0.206830 | Val mean_absolute_error: 0.455285
+Epoch   9 | Loss: 0.309873 | Val mean_absolute_error: 0.393861
+Epoch  10 | Loss: 0.219646 | Val mean_absolute_error: 0.102718
+Epoch  11 | Loss: 0.358719 | Val mean_absolute_error: 0.178017
+Epoch  12 | Loss: 0.301739 | Val mean_absolute_error: 0.091589
+Epoch  13 | Loss: 0.380775 | Val mean_absolute_error: 0.382858
+Epoch  14 | Loss: 0.378051 | Val mean_absolute_error: 0.132895
+Epoch  15 | Loss: 0.208332 | Val mean_absolute_error: 0.366804
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.088188
+Test mean_absolute_error: 0.360968
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic (seed=1024)
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales_seed1024
+
+==========================================
+Retry Training Completed!
+==========================================
+Total tasks attempted: 10
+Successful tasks: 10
+Failed tasks: 0
+
+Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/{model}_head/{dataset}_seed{seed}/
+Log saved to: /home/naili/sharing-embedding-table/logs/retry_failed_training_regression_20251125_104533.log
+==========================================
