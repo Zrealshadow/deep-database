@@ -156,6 +156,15 @@ for col in X_train_df.columns:
 
 logger.info(f"Found {len(numerical_cols)} numerical, {len(categorical_cols)} categorical, and {len(timestamp_cols)} timestamp columns")
 
+
+# remove high-cardinality categorical columns
+max_cardinality = 1_000
+for col in categorical_cols:
+    num_unique = X_train_df[col].nunique()
+    if num_unique > max_cardinality:
+        logger.warning(f"Dropping high-cardinality categorical column: {col} with {num_unique} unique values")
+        categorical_cols.remove(col)
+
 # Drop unsupported columns
 if text_cols_to_drop:
     logger.warning(f"Dropping {len(text_cols_to_drop)} text/embedding/unsupported columns: {text_cols_to_drop}")
@@ -163,6 +172,10 @@ if text_cols_to_drop:
     X_val_df = X_val_df.drop(columns=text_cols_to_drop)
     X_test_df = X_test_df.drop(columns=text_cols_to_drop)
 
+# leave the numerical, categorical, and timestamp columns
+X_train_df = X_train_df[numerical_cols + categorical_cols + timestamp_cols]
+X_val_df = X_val_df[numerical_cols + categorical_cols + timestamp_cols]
+X_test_df = X_test_df[numerical_cols + categorical_cols + timestamp_cols]
 
 # Custom transformer for timestamp features
 class DatetimeTransformer(BaseEstimator, TransformerMixin):
