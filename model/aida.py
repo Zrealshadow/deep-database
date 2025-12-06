@@ -359,7 +359,8 @@ class AIDATableEncoder(torch.nn.Module):
                 assert hasattr(
                     encoder, 'channels'), "The specific table encoder must have attribute 'channels'."
                 assert encoder.channels == feat_channels, "The specific table encoder channels must match feat_channels."
-
+                self.table_encoder_dict[table] = encoder
+                
     def forward(self, x_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         for table, x in x_dict.items():
             if table in self.table_encoder_dict:

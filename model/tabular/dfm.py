@@ -30,14 +30,17 @@ class DeepFMModel(torch.nn.Module):
         noutput (int): Number of output dimensions (typically 1 for regression/binary classification).
     """
 
-    def __init__(self, nfield, nemb, mlp_layers, mlp_hid, dropout, noutput, normalization: str, reduce_dim: bool = True):
+    def __init__(self, nfield, nemb, mlp_layers, mlp_hid, dropout, noutput, normalization: str, reduce_dim: bool = False):
         super().__init__()
-        self.linear = torch.nn.Linear(nemb, noutput)
+        self.linear = torch.nn.Linear(nemb, nemb)
         self.fm = FactorizationMachine(reduce_dim=reduce_dim, normalize=True)
-        self.mlp_ninput = nfield*nemb
+        # self.mlp_ninput = nfield*nemb
+        self.mlp_ninput = nemb
         self.mlp = MLP(self.mlp_ninput, mlp_layers, mlp_hid,
-                       dropout, noutput, normalization)
+                       dropout, nemb, normalization)
 
+        self.last_layer = torch.nn.Linear(nemb*3, noutput)
+        self.norm = torch.nn.LayerNorm(nemb*3) 
     def forward(self, x):
         """
         :param x:   FloatTensor B*F*E
@@ -45,10 +48,20 @@ class DeepFMModel(torch.nn.Module):
         """
         x_emb = x     # B*F*E
         x_linear = torch.mean(self.linear(x_emb), axis=1)  # B * 1
-        x_fm = self.fm(x_emb).unsqueeze(-1)               # B * 1
-        x_mlp = self.mlp(x_emb.view(-1, self.mlp_ninput))  # B * 1
+        # x_fm = self.fm(x_emb).unsqueeze(-1)                # B * 1
+        x_fm = self.fm(x_emb)                # B * E
+        # x_mlp = self.mlp(x_emb.view(-1, self.mlp_ninput))  # B * 1
+        x_mlp = self.mlp(torch.mean(x_emb, axis=1))        # B * 1
         # print(x_linear, x_fm, x_mlp)
-        y = x_linear + x_mlp + x_fm
+        # y = x_linear + x_mlp + x_fm
+        # print(x_linear.shape, x_fm.shape, x_mlp.shape)
+        # y = x_linear + x_mlp + x_fm
+        # add lead to low performance
+        # concate them
+        
+        x_ = torch.cat([x_linear, x_fm, x_mlp], dim=-1)  # B * (3*E)
+        x_ = self.norm(x_)
+        y = self.last_layer(x_)
         # B * 1
         return y
 
@@ -56,6 +69,8 @@ class DeepFMModel(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.linear.weight)
         torch.nn.init.zeros_(self.linear.bias)
         self.mlp.reset_parameters()
+        torch.nn.init.xavier_uniform_(self.last_layer.weight)
+        torch.nn.init.zeros_(self.last_layer.bias)
 
 class DeepFM(torch.nn.Module):
     """DeepFM model for tabular data with automatic feature encoding.
@@ -118,7 +133,8 @@ class DeepFM(torch.nn.Module):
             mlp_layers=num_layers,
             mlp_hid=channels,
             dropout=dropout_prob,
-            noutput=out_channels
+            noutput=out_channels,
+            normalization=normalization,
         )
 
         self.reset_parameters()

@@ -215,7 +215,7 @@ class FTTransEncoder(torch.nn.Module):
         encoder_layer = torch.nn.TransformerEncoderLayer(
             d_model=channels,
             nhead=num_heads,
-            dim_feedforward=channels * 4,  # Standard transformer feedforward dimension
+            dim_feedforward=channels,  # Standard transformer feedforward dimension
             dropout=dropout,
             activation='relu',
             batch_first=True,
@@ -263,6 +263,7 @@ class TabMEncoder(torch.nn.Module):
         super().__init__()
         self.channels = channels
         self.layers = torch.nn.ModuleList()
+        num_layers = max(1, num_layers)
         self.k = k
         for _ in range(num_layers):
             layer = BatchEnsembleLayer(
@@ -306,6 +307,7 @@ class DFMEncoder(torch.nn.Module):
         super().__init__()
         self.channels = channels
         self.linear = torch.nn.Linear(channels, channels)
+        num_layers = max(1, num_layers - 1)
         self.mlp = MLPEncoder(
             channels=channels,
             num_layers=num_layers,
@@ -349,6 +351,7 @@ class ARMNetEncoder(ARMNetModel):
         normalization: str = 'layer_norm',
     ):
         # Call parent with mapped parameters
+        num_layers = num_layers - 1 if num_layers > 1 else 1
         super().__init__(
             nfield=nfield,
             nemb=channels,

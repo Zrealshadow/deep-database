@@ -136,7 +136,10 @@ class DatabaseFactory(object):
 
         loader_func = cls._dataset_registry[db_name]["loader"]
         return loader_func(cache_dir=cache_dir)
-
+    
+    # TODO: need to refine this function, actually dataset is not needed here
+    # We can get_dataset(db_name) to get dataset, and dataset is lazy loading
+    # so we don't need to pass dataset here
     @classmethod
     def get_task(
             cls,

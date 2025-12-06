@@ -64,6 +64,6 @@ def construct_tabular_model(model_name: str, model_args: Dict[str, Any]) -> nn.M
         args.pop("normalization", None)
         net = ARMNet(**args)
     else:
-        raise ValueError(f"Unsupported model: {model_name}. Supported models: MLP, ResNet, FTTrans, DFM")
+        raise ValueError(f"Unsupported model: {model_name}. Supported models: MLP, ResNet, FTTrans, DFM, TabM, ARMNet.")
 
     return net

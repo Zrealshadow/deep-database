@@ -277,9 +277,9 @@ class TabM(torch.nn.Module):
             col_names_dict=col_names_dict,
             stype_encoder_dict=stype_encoder_dict,
         )
-        nfield = sum(len(col_names) for col_names in col_names_dict.values())
+        self.nfield = sum(len(col_names) for col_names in col_names_dict.values())
         self.tabm = TabMEnsemble(
-            nfields=nfield,
+            nfields=self.nfield,
             channels=channels,
             num_layers=num_layers,
             k=k,

@@ -10,7 +10,6 @@ data_list=(
     "event-user-repeat"
     "event-user-attendance"
     "ratebeer-beer-positive"
-    "ratebeer-place-positive"
     "ratebeer-user-active"
     "trial-site-success"
     "trial-study-outcome"
@@ -19,8 +18,7 @@ data_list=(
 )
 
 # Model types to test
-models=("MLP" "FTTrans" "ResNet" "DFM" "TabM")
-
+models=("MLP" "FTTrans" "ResNet" "DFM" "TabM" "ARMNet")
 
 # Function to run DNN baseline
 run_dnn_baseline() {

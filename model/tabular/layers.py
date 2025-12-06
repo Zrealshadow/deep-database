@@ -70,7 +70,7 @@ class FactorizationMachine(nn.Module):
         F = x.size(1)
         
         if self.reduce_dim:
-            fm = torch.sum(fm, dim=1)
+            fm = torch.mean(fm, dim=1)
             # [B, 1]
             
         if self.normalize:
