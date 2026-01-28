@@ -1,0 +1,1915 @@
+Logging to: /home/naili/sharing-embedding-table/logs/tpberta_medium_baseline_all_20251123_084236.log
+==========================================
+
+
+==========================================
+Training Dataset: avito-user-clicks with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-user-clicks
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-user-clicks
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-user-clicks/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-user-clicks...
+  Train: 59454 rows
+  Val: 21183 rows
+  Test: 47996 rows
+Data split: Train=59454, Val=21183, Test=47996
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 128633
+  Label 0.0: 124846 (97.1%)
+  Label 1.0: 3787 (2.9%)
+  Positive class ratio: 0.029
+  ⚠️  Warning: Highly imbalanced dataset! This may affect AUC.
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0881, 0.0881], Val preds mean: 0.0881
+Epoch   1 | Loss: 0.269071 | Val roc_auc_score: 0.500000 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0338, 0.0338], Val preds mean: 0.0338
+Epoch   2 | Loss: 0.172478 | Val roc_auc_score: 0.500000
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0340, 0.0340], Val preds mean: 0.0340
+Epoch   3 | Loss: 0.175395 | Val roc_auc_score: 0.500000
+Epoch   4 | Loss: 0.166593 | Val roc_auc_score: 0.500000
+Epoch   5 | Loss: 0.167498 | Val roc_auc_score: 0.500758 *
+Epoch   6 | Loss: 0.158014 | Val roc_auc_score: 0.500000
+Epoch   7 | Loss: 0.165667 | Val roc_auc_score: 0.499242
+Epoch   8 | Loss: 0.187327 | Val roc_auc_score: 0.500000
+Epoch   9 | Loss: 0.173093 | Val roc_auc_score: 0.500000
+Epoch  10 | Loss: 0.170317 | Val roc_auc_score: 0.500000
+Epoch  11 | Loss: 0.157684 | Val roc_auc_score: 0.500000
+Epoch  12 | Loss: 0.179035 | Val roc_auc_score: 0.500000
+Epoch  13 | Loss: 0.148536 | Val roc_auc_score: 0.500000
+Epoch  14 | Loss: 0.171474 | Val roc_auc_score: 0.500000
+Epoch  15 | Loss: 0.173186 | Val roc_auc_score: 0.500000
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.500758
+Test roc_auc_score: 0.500000
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-user-clicks with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-user-clicks
+
+==========================================
+Training Dataset: avito-user-clicks with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/avito-user-clicks
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/avito-user-clicks
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-user-clicks/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/avito-user-clicks...
+  Train: 59454 rows
+  Val: 21183 rows
+  Test: 47996 rows
+Data split: Train=59454, Val=21183, Test=47996
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 128633
+  Label 0.0: 124846 (97.1%)
+  Label 1.0: 3787 (2.9%)
+  Positive class ratio: 0.029
+  ⚠️  Warning: Highly imbalanced dataset! This may affect AUC.
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0186, 0.0217], Val preds mean: 0.0199
+Epoch   1 | Loss: 0.219330 | Val roc_auc_score: 0.554744 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0334, 0.0407], Val preds mean: 0.0367
+Epoch   2 | Loss: 0.164857 | Val roc_auc_score: 0.557864 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0282, 0.0369], Val preds mean: 0.0323
+Epoch   3 | Loss: 0.168237 | Val roc_auc_score: 0.557397
+Epoch   4 | Loss: 0.162874 | Val roc_auc_score: 0.555364
+Epoch   5 | Loss: 0.166183 | Val roc_auc_score: 0.555345
+Epoch   6 | Loss: 0.157291 | Val roc_auc_score: 0.557372
+Epoch   7 | Loss: 0.161152 | Val roc_auc_score: 0.557533
+Epoch   8 | Loss: 0.180963 | Val roc_auc_score: 0.558768 *
+Epoch   9 | Loss: 0.169961 | Val roc_auc_score: 0.561668 *
+Epoch  10 | Loss: 0.165121 | Val roc_auc_score: 0.561973 *
+Epoch  11 | Loss: 0.156476 | Val roc_auc_score: 0.562784 *
+Epoch  12 | Loss: 0.169580 | Val roc_auc_score: 0.563741 *
+Epoch  13 | Loss: 0.144284 | Val roc_auc_score: 0.564543 *
+Epoch  14 | Loss: 0.162879 | Val roc_auc_score: 0.565003 *
+Epoch  15 | Loss: 0.172942 | Val roc_auc_score: 0.564652
+Epoch  16 | Loss: 0.166853 | Val roc_auc_score: 0.565383 *
+Epoch  17 | Loss: 0.165931 | Val roc_auc_score: 0.565528 *
+Epoch  18 | Loss: 0.160065 | Val roc_auc_score: 0.566320 *
+Epoch  19 | Loss: 0.177240 | Val roc_auc_score: 0.565912
+Epoch  20 | Loss: 0.169662 | Val roc_auc_score: 0.566572 *
+Epoch  21 | Loss: 0.171320 | Val roc_auc_score: 0.567224 *
+Epoch  22 | Loss: 0.162340 | Val roc_auc_score: 0.568572 *
+Epoch  23 | Loss: 0.157724 | Val roc_auc_score: 0.569868 *
+Epoch  24 | Loss: 0.175747 | Val roc_auc_score: 0.567670
+Epoch  25 | Loss: 0.152519 | Val roc_auc_score: 0.567645
+Epoch  26 | Loss: 0.151673 | Val roc_auc_score: 0.567931
+Epoch  27 | Loss: 0.162605 | Val roc_auc_score: 0.569448
+Epoch  28 | Loss: 0.173788 | Val roc_auc_score: 0.569263
+Epoch  29 | Loss: 0.170551 | Val roc_auc_score: 0.569843
+Epoch  30 | Loss: 0.169568 | Val roc_auc_score: 0.568443
+Epoch  31 | Loss: 0.149443 | Val roc_auc_score: 0.569120
+Epoch  32 | Loss: 0.156749 | Val roc_auc_score: 0.571430 *
+Epoch  33 | Loss: 0.159868 | Val roc_auc_score: 0.571884 *
+Epoch  34 | Loss: 0.178508 | Val roc_auc_score: 0.572399 *
+Epoch  35 | Loss: 0.169525 | Val roc_auc_score: 0.572322
+Epoch  36 | Loss: 0.164551 | Val roc_auc_score: 0.572608 *
+Epoch  37 | Loss: 0.170923 | Val roc_auc_score: 0.571753
+Epoch  38 | Loss: 0.177238 | Val roc_auc_score: 0.571927
+Epoch  39 | Loss: 0.178461 | Val roc_auc_score: 0.571926
+Epoch  40 | Loss: 0.155521 | Val roc_auc_score: 0.573266 *
+Epoch  41 | Loss: 0.149789 | Val roc_auc_score: 0.572225
+Epoch  42 | Loss: 0.164678 | Val roc_auc_score: 0.572898
+Epoch  43 | Loss: 0.167601 | Val roc_auc_score: 0.573614 *
+Epoch  44 | Loss: 0.163956 | Val roc_auc_score: 0.574069 *
+Epoch  45 | Loss: 0.158955 | Val roc_auc_score: 0.572748
+Epoch  46 | Loss: 0.162501 | Val roc_auc_score: 0.572893
+Epoch  47 | Loss: 0.162326 | Val roc_auc_score: 0.572866
+Epoch  48 | Loss: 0.167897 | Val roc_auc_score: 0.572845
+Epoch  49 | Loss: 0.172182 | Val roc_auc_score: 0.573451
+Epoch  50 | Loss: 0.171473 | Val roc_auc_score: 0.572296
+Epoch  51 | Loss: 0.159124 | Val roc_auc_score: 0.573565
+Epoch  52 | Loss: 0.160593 | Val roc_auc_score: 0.574545 *
+Epoch  53 | Loss: 0.170625 | Val roc_auc_score: 0.575067 *
+Epoch  54 | Loss: 0.157033 | Val roc_auc_score: 0.573279
+Epoch  55 | Loss: 0.166230 | Val roc_auc_score: 0.574941
+Epoch  56 | Loss: 0.161011 | Val roc_auc_score: 0.574785
+Epoch  57 | Loss: 0.162670 | Val roc_auc_score: 0.575097 *
+Epoch  58 | Loss: 0.152292 | Val roc_auc_score: 0.575400 *
+Epoch  59 | Loss: 0.158044 | Val roc_auc_score: 0.575209
+Epoch  60 | Loss: 0.171072 | Val roc_auc_score: 0.576061 *
+Epoch  61 | Loss: 0.165978 | Val roc_auc_score: 0.576809 *
+Epoch  62 | Loss: 0.147369 | Val roc_auc_score: 0.576270
+Epoch  63 | Loss: 0.160726 | Val roc_auc_score: 0.577143 *
+Epoch  64 | Loss: 0.159931 | Val roc_auc_score: 0.575874
+Epoch  65 | Loss: 0.149082 | Val roc_auc_score: 0.576273
+Epoch  66 | Loss: 0.154996 | Val roc_auc_score: 0.577791 *
+Epoch  67 | Loss: 0.162542 | Val roc_auc_score: 0.577347
+Epoch  68 | Loss: 0.162673 | Val roc_auc_score: 0.577120
+Epoch  69 | Loss: 0.166129 | Val roc_auc_score: 0.577622
+Epoch  70 | Loss: 0.166929 | Val roc_auc_score: 0.577304
+Epoch  71 | Loss: 0.148555 | Val roc_auc_score: 0.577743
+Epoch  72 | Loss: 0.163417 | Val roc_auc_score: 0.578203 *
+Epoch  73 | Loss: 0.160991 | Val roc_auc_score: 0.578584 *
+Epoch  74 | Loss: 0.164625 | Val roc_auc_score: 0.578560
+Epoch  75 | Loss: 0.175153 | Val roc_auc_score: 0.577029
+Epoch  76 | Loss: 0.161225 | Val roc_auc_score: 0.577759
+Epoch  77 | Loss: 0.154728 | Val roc_auc_score: 0.576706
+Epoch  78 | Loss: 0.160992 | Val roc_auc_score: 0.576766
+Epoch  79 | Loss: 0.148811 | Val roc_auc_score: 0.577123
+Epoch  80 | Loss: 0.166325 | Val roc_auc_score: 0.580193 *
+Epoch  81 | Loss: 0.162887 | Val roc_auc_score: 0.577697
+Epoch  82 | Loss: 0.154500 | Val roc_auc_score: 0.575689
+Epoch  83 | Loss: 0.160298 | Val roc_auc_score: 0.577443
+Epoch  84 | Loss: 0.166178 | Val roc_auc_score: 0.578480
+Epoch  85 | Loss: 0.170468 | Val roc_auc_score: 0.577426
+Epoch  86 | Loss: 0.164151 | Val roc_auc_score: 0.577812
+Epoch  87 | Loss: 0.149819 | Val roc_auc_score: 0.577848
+Epoch  88 | Loss: 0.156936 | Val roc_auc_score: 0.577299
+Epoch  89 | Loss: 0.176251 | Val roc_auc_score: 0.578967
+Epoch  90 | Loss: 0.165726 | Val roc_auc_score: 0.579689
+
+Early stopping at epoch 90
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.580193
+Test roc_auc_score: 0.646153
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-user-clicks with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/avito-user-clicks
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 4.155794 | Val mean_absolute_error: 0.150905 *
+Epoch   2 | Loss: 1.243637 | Val mean_absolute_error: 1.250768
+Epoch   3 | Loss: 0.455442 | Val mean_absolute_error: 0.271626
+Epoch   4 | Loss: 0.155366 | Val mean_absolute_error: 0.199320
+Epoch   5 | Loss: 0.135576 | Val mean_absolute_error: 0.124094 *
+Epoch   6 | Loss: 0.131184 | Val mean_absolute_error: 0.079695 *
+Epoch   7 | Loss: 0.143005 | Val mean_absolute_error: 0.302387
+Epoch   8 | Loss: 0.295158 | Val mean_absolute_error: 0.602095
+Epoch   9 | Loss: 0.342545 | Val mean_absolute_error: 0.401835
+Epoch  10 | Loss: 0.247429 | Val mean_absolute_error: 0.195587
+Epoch  11 | Loss: 0.234960 | Val mean_absolute_error: 0.249299
+Epoch  12 | Loss: 0.239954 | Val mean_absolute_error: 0.284098
+Epoch  13 | Loss: 0.239134 | Val mean_absolute_error: 0.245373
+Epoch  14 | Loss: 0.231733 | Val mean_absolute_error: 0.269327
+Epoch  15 | Loss: 0.229719 | Val mean_absolute_error: 0.278219
+Epoch  16 | Loss: 0.232040 | Val mean_absolute_error: 0.255897
+
+Early stopping at epoch 16
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.079695
+Test mean_absolute_error: 0.255682
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/avito-ad-ctr
+
+==========================================
+Training Dataset: avito-ad-ctr with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/avito-ad-ctr
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/avito-ad-ctr
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/avito-ad-ctr/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/avito-ad-ctr...
+  Train: 5100 rows
+  Val: 1766 rows
+  Test: 1816 rows
+Data split: Train=5100, Val=1766, Test=1816
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 8682
+  Label statistics:
+    Mean: 0.046947
+    Std: 0.099533
+    Min: 0.000517
+    Max: 1.000000
+    25th percentile: 0.008264
+    50th percentile (median): 0.018182
+    75th percentile: 0.043478
+
+  Split-specific statistics:
+    Train: mean=0.044565, std=0.095666, range=[0.000517, 1.000000]
+    Val: mean=0.048414, std=0.099201, range=[0.000913, 1.000000]
+    Test: mean=0.052210, std=0.109753, range=[0.000847, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 0.307946 | Val mean_absolute_error: 0.061813 *
+Epoch   2 | Loss: 0.046621 | Val mean_absolute_error: 0.041379 *
+Epoch   3 | Loss: 0.036211 | Val mean_absolute_error: 0.040596 *
+Epoch   4 | Loss: 0.034649 | Val mean_absolute_error: 0.038182 *
+Epoch   5 | Loss: 0.033916 | Val mean_absolute_error: 0.037084 *
+Epoch   6 | Loss: 0.034125 | Val mean_absolute_error: 0.037205
+Epoch   7 | Loss: 0.033737 | Val mean_absolute_error: 0.037016 *
+Epoch   8 | Loss: 0.033818 | Val mean_absolute_error: 0.037064
+Epoch   9 | Loss: 0.034100 | Val mean_absolute_error: 0.039979
+Epoch  10 | Loss: 0.033987 | Val mean_absolute_error: 0.039686
+Epoch  11 | Loss: 0.034098 | Val mean_absolute_error: 0.037235
+Epoch  12 | Loss: 0.033696 | Val mean_absolute_error: 0.036940 *
+Epoch  13 | Loss: 0.033692 | Val mean_absolute_error: 0.037356
+Epoch  14 | Loss: 0.033523 | Val mean_absolute_error: 0.037130
+Epoch  15 | Loss: 0.033525 | Val mean_absolute_error: 0.037559
+Epoch  16 | Loss: 0.033539 | Val mean_absolute_error: 0.038709
+Epoch  17 | Loss: 0.033391 | Val mean_absolute_error: 0.037773
+Epoch  18 | Loss: 0.033439 | Val mean_absolute_error: 0.036794 *
+Epoch  19 | Loss: 0.033840 | Val mean_absolute_error: 0.037173
+Epoch  20 | Loss: 0.033473 | Val mean_absolute_error: 0.036653 *
+Epoch  21 | Loss: 0.033356 | Val mean_absolute_error: 0.037632
+Epoch  22 | Loss: 0.033323 | Val mean_absolute_error: 0.036561 *
+Epoch  23 | Loss: 0.033393 | Val mean_absolute_error: 0.036859
+Epoch  24 | Loss: 0.033501 | Val mean_absolute_error: 0.037090
+Epoch  25 | Loss: 0.033891 | Val mean_absolute_error: 0.037285
+Epoch  26 | Loss: 0.033571 | Val mean_absolute_error: 0.037311
+Epoch  27 | Loss: 0.033673 | Val mean_absolute_error: 0.037483
+Epoch  28 | Loss: 0.033363 | Val mean_absolute_error: 0.038663
+Epoch  29 | Loss: 0.033353 | Val mean_absolute_error: 0.036753
+Epoch  30 | Loss: 0.033300 | Val mean_absolute_error: 0.036877
+Epoch  31 | Loss: 0.033413 | Val mean_absolute_error: 0.037266
+Epoch  32 | Loss: 0.033395 | Val mean_absolute_error: 0.036739
+
+Early stopping at epoch 32
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.036561
+Test mean_absolute_error: 0.041003
+
+✅ Training completed successfully!
+
+  ✅ Completed: avito-ad-ctr with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/avito-ad-ctr
+
+==========================================
+Training Dataset: event-user-repeat with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/event-user-repeat
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/event-user-repeat
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/event-user-repeat/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/event-user-repeat...
+  Train: 3842 rows
+  Val: 268 rows
+  Test: 246 rows
+Data split: Train=3842, Val=268, Test=246
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 4356
+  Label 0.0: 2234 (51.3%)
+  Label 1.0: 2122 (48.7%)
+  Positive class ratio: 0.487
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.5782, 0.5831], Val preds mean: 0.5801
+Epoch   1 | Loss: 1.884640 | Val roc_auc_score: 0.353735 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.3426, 0.3447], Val preds mean: 0.3440
+Epoch   2 | Loss: 0.772914 | Val roc_auc_score: 0.638963 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4689, 0.4846], Val preds mean: 0.4789
+Epoch   3 | Loss: 0.729468 | Val roc_auc_score: 0.631271
+Epoch   4 | Loss: 0.707845 | Val roc_auc_score: 0.643645 *
+Epoch   5 | Loss: 0.697526 | Val roc_auc_score: 0.641249
+Epoch   6 | Loss: 0.711288 | Val roc_auc_score: 0.644091 *
+Epoch   7 | Loss: 0.867374 | Val roc_auc_score: 0.644231 *
+Epoch   8 | Loss: 0.784109 | Val roc_auc_score: 0.645206 *
+Epoch   9 | Loss: 0.706019 | Val roc_auc_score: 0.649331 *
+Epoch  10 | Loss: 0.698244 | Val roc_auc_score: 0.654208 *
+Epoch  11 | Loss: 0.869286 | Val roc_auc_score: 0.644928
+Epoch  12 | Loss: 0.872745 | Val roc_auc_score: 0.647436
+Epoch  13 | Loss: 0.708835 | Val roc_auc_score: 0.648941
+Epoch  14 | Loss: 0.768477 | Val roc_auc_score: 0.629766
+Epoch  15 | Loss: 0.701879 | Val roc_auc_score: 0.643088
+Epoch  16 | Loss: 0.740245 | Val roc_auc_score: 0.638406
+Epoch  17 | Loss: 0.700869 | Val roc_auc_score: 0.648913
+Epoch  18 | Loss: 0.690264 | Val roc_auc_score: 0.648300
+Epoch  19 | Loss: 0.693552 | Val roc_auc_score: 0.663991 *
+Epoch  20 | Loss: 0.780311 | Val roc_auc_score: 0.642698
+Epoch  21 | Loss: 0.713633 | Val roc_auc_score: 0.614381
+Epoch  22 | Loss: 0.824659 | Val roc_auc_score: 0.641722
+Epoch  23 | Loss: 0.725391 | Val roc_auc_score: 0.646377
+Epoch  24 | Loss: 0.779706 | Val roc_auc_score: 0.661232
+Epoch  25 | Loss: 0.781915 | Val roc_auc_score: 0.614548
+Epoch  26 | Loss: 0.820850 | Val roc_auc_score: 0.627620
+Epoch  27 | Loss: 0.843679 | Val roc_auc_score: 0.645234
+Epoch  28 | Loss: 0.732283 | Val roc_auc_score: 0.641332
+Epoch  29 | Loss: 0.701145 | Val roc_auc_score: 0.634058
+
+Early stopping at epoch 29
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.663991
+Test roc_auc_score: 0.689639
+
+✅ Training completed successfully!
+
+  ✅ Completed: event-user-repeat with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/event-user-repeat
+
+==========================================
+Training Dataset: event-user-repeat with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/event-user-repeat
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/event-user-repeat
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/event-user-repeat/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/event-user-repeat...
+  Train: 3842 rows
+  Val: 268 rows
+  Test: 246 rows
+Data split: Train=3842, Val=268, Test=246
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 4356
+  Label 0.0: 2234 (51.3%)
+  Label 1.0: 2122 (48.7%)
+  Positive class ratio: 0.487
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4031, 0.4393], Val preds mean: 0.4239
+Epoch   1 | Loss: 0.721175 | Val roc_auc_score: 0.670011 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4451, 0.5037], Val preds mean: 0.4793
+Epoch   2 | Loss: 0.695419 | Val roc_auc_score: 0.651784
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4330, 0.5698], Val preds mean: 0.5133
+Epoch   3 | Loss: 0.691175 | Val roc_auc_score: 0.659755
+Epoch   4 | Loss: 0.688794 | Val roc_auc_score: 0.665050
+Epoch   5 | Loss: 0.677792 | Val roc_auc_score: 0.660479
+Epoch   6 | Loss: 0.689700 | Val roc_auc_score: 0.658528
+Epoch   7 | Loss: 0.764583 | Val roc_auc_score: 0.682386 *
+Epoch   8 | Loss: 0.684822 | Val roc_auc_score: 0.682107
+Epoch   9 | Loss: 0.685168 | Val roc_auc_score: 0.684392 *
+Epoch  10 | Loss: 0.668208 | Val roc_auc_score: 0.674025
+Epoch  11 | Loss: 0.773485 | Val roc_auc_score: 0.684560 *
+Epoch  12 | Loss: 0.696428 | Val roc_auc_score: 0.688350 *
+Epoch  13 | Loss: 0.688144 | Val roc_auc_score: 0.688573 *
+Epoch  14 | Loss: 0.715686 | Val roc_auc_score: 0.693924 *
+Epoch  15 | Loss: 0.702068 | Val roc_auc_score: 0.699331 *
+Epoch  16 | Loss: 0.703064 | Val roc_auc_score: 0.679487
+Epoch  17 | Loss: 0.681232 | Val roc_auc_score: 0.679208
+Epoch  18 | Loss: 0.675399 | Val roc_auc_score: 0.687458
+Epoch  19 | Loss: 0.689981 | Val roc_auc_score: 0.684504
+Epoch  20 | Loss: 0.719286 | Val roc_auc_score: 0.654961
+Epoch  21 | Loss: 0.689230 | Val roc_auc_score: 0.627926
+Epoch  22 | Loss: 0.688533 | Val roc_auc_score: 0.645151
+Epoch  23 | Loss: 0.671077 | Val roc_auc_score: 0.657246
+Epoch  24 | Loss: 0.703287 | Val roc_auc_score: 0.660033
+Epoch  25 | Loss: 0.713391 | Val roc_auc_score: 0.661929
+
+Early stopping at epoch 25
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.699331
+Test roc_auc_score: 0.678676
+
+✅ Training completed successfully!
+
+  ✅ Completed: event-user-repeat with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/event-user-repeat
+
+==========================================
+Training Dataset: event-user-attendance with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/event-user-attendance
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/event-user-attendance
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/event-user-attendance/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/event-user-attendance...
+  Train: 19239 rows
+  Val: 2013 rows
+  Test: 1958 rows
+Data split: Train=19239, Val=2013, Test=1958
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 23210
+  Label statistics:
+    Mean: 0.345584
+    Std: 0.738464
+    Min: 0.000000
+    Max: 16.000000
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 1.000000
+
+  Split-specific statistics:
+    Train: mean=0.362701, std=0.765134, range=[0.000000, 16.000000]
+    Val: mean=0.261798, std=0.524147, range=[0.000000, 4.000000]
+    Test: mean=0.263534, std=0.642397, range=[0.000000, 8.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 3.746459 | Val mean_absolute_error: 1.331593 *
+Epoch   2 | Loss: 0.996310 | Val mean_absolute_error: 0.385957 *
+Epoch   3 | Loss: 0.554730 | Val mean_absolute_error: 0.269944 *
+Epoch   4 | Loss: 0.461499 | Val mean_absolute_error: 0.340966
+Epoch   5 | Loss: 0.453515 | Val mean_absolute_error: 0.267725 *
+Epoch   6 | Loss: 0.429307 | Val mean_absolute_error: 0.298037
+Epoch   7 | Loss: 0.438544 | Val mean_absolute_error: 0.365693
+Epoch   8 | Loss: 0.429985 | Val mean_absolute_error: 0.297680
+Epoch   9 | Loss: 0.457436 | Val mean_absolute_error: 0.570074
+Epoch  10 | Loss: 0.469677 | Val mean_absolute_error: 0.307832
+Epoch  11 | Loss: 0.466631 | Val mean_absolute_error: 0.367126
+Epoch  12 | Loss: 0.594359 | Val mean_absolute_error: 0.752726
+Epoch  13 | Loss: 0.503793 | Val mean_absolute_error: 0.434321
+Epoch  14 | Loss: 0.583141 | Val mean_absolute_error: 0.390290
+Epoch  15 | Loss: 0.467738 | Val mean_absolute_error: 0.464028
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.267725
+Test mean_absolute_error: 0.487784
+
+✅ Training completed successfully!
+
+  ✅ Completed: event-user-attendance with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/event-user-attendance
+
+==========================================
+Training Dataset: event-user-attendance with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/event-user-attendance
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/event-user-attendance
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/event-user-attendance/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/event-user-attendance...
+  Train: 19239 rows
+  Val: 2013 rows
+  Test: 1958 rows
+Data split: Train=19239, Val=2013, Test=1958
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 23210
+  Label statistics:
+    Mean: 0.345584
+    Std: 0.738464
+    Min: 0.000000
+    Max: 16.000000
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 1.000000
+
+  Split-specific statistics:
+    Train: mean=0.362701, std=0.765134, range=[0.000000, 16.000000]
+    Val: mean=0.261798, std=0.524147, range=[0.000000, 4.000000]
+    Test: mean=0.263534, std=0.642397, range=[0.000000, 8.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 0.612839 | Val mean_absolute_error: 0.321292 *
+Epoch   2 | Loss: 0.390747 | Val mean_absolute_error: 0.282400 *
+Epoch   3 | Loss: 0.362880 | Val mean_absolute_error: 0.265094 *
+Epoch   4 | Loss: 0.351845 | Val mean_absolute_error: 0.262369 *
+Epoch   5 | Loss: 0.364341 | Val mean_absolute_error: 0.262096 *
+Epoch   6 | Loss: 0.352609 | Val mean_absolute_error: 0.262099
+Epoch   7 | Loss: 0.361853 | Val mean_absolute_error: 0.261936 *
+Epoch   8 | Loss: 0.346924 | Val mean_absolute_error: 0.262354
+Epoch   9 | Loss: 0.366435 | Val mean_absolute_error: 0.261869 *
+Epoch  10 | Loss: 0.363039 | Val mean_absolute_error: 0.261945
+Epoch  11 | Loss: 0.369219 | Val mean_absolute_error: 0.261911
+Epoch  12 | Loss: 0.364579 | Val mean_absolute_error: 0.262153
+Epoch  13 | Loss: 0.349666 | Val mean_absolute_error: 0.261902
+Epoch  14 | Loss: 0.365916 | Val mean_absolute_error: 0.261903
+Epoch  15 | Loss: 0.361407 | Val mean_absolute_error: 0.262040
+Epoch  16 | Loss: 0.364251 | Val mean_absolute_error: 0.262016
+Epoch  17 | Loss: 0.356607 | Val mean_absolute_error: 0.262233
+Epoch  18 | Loss: 0.359492 | Val mean_absolute_error: 0.263746
+Epoch  19 | Loss: 0.360762 | Val mean_absolute_error: 0.262585
+
+Early stopping at epoch 19
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.261869
+Test mean_absolute_error: 0.264547
+
+✅ Training completed successfully!
+
+  ✅ Completed: event-user-attendance with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/event-user-attendance
+
+==========================================
+Training Dataset: ratebeer-beer-positive with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-beer-positive
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-beer-positive
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-beer-positive/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-beer-positive...
+  Train: 45922 rows
+  Val: 12858 rows
+  Test: 7218 rows
+Data split: Train=45922, Val=12858, Test=7218
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 65998
+  Label statistics:
+    Mean: 0.494618
+    Std: 0.349793
+    Min: 0.000000
+    Max: 1.000000
+    25th percentile: 0.200000
+    50th percentile (median): 0.500000
+    75th percentile: 0.800000
+
+  Split-specific statistics:
+    Train: mean=0.503677, std=0.348352, range=[0.000000, 1.000000]
+    Val: mean=0.477157, std=0.349298, range=[0.000000, 1.000000]
+    Test: mean=0.468088, std=0.357216, range=[0.000000, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 3.592337 | Val mean_absolute_error: 1.895162 *
+Epoch   2 | Loss: 0.995864 | Val mean_absolute_error: 0.437665 *
+Epoch   3 | Loss: 0.412723 | Val mean_absolute_error: 0.329353 *
+Epoch   4 | Loss: 0.336717 | Val mean_absolute_error: 0.307662 *
+Epoch   5 | Loss: 0.311771 | Val mean_absolute_error: 0.317102
+Epoch   6 | Loss: 0.316005 | Val mean_absolute_error: 0.303728 *
+Epoch   7 | Loss: 0.318226 | Val mean_absolute_error: 0.301311 *
+Epoch   8 | Loss: 0.315082 | Val mean_absolute_error: 0.301285 *
+Epoch   9 | Loss: 0.310286 | Val mean_absolute_error: 0.325979
+Epoch  10 | Loss: 0.318716 | Val mean_absolute_error: 0.316403
+Epoch  11 | Loss: 0.318247 | Val mean_absolute_error: 0.297506 *
+Epoch  12 | Loss: 0.312217 | Val mean_absolute_error: 0.313850
+Epoch  13 | Loss: 0.309841 | Val mean_absolute_error: 0.293508 *
+Epoch  14 | Loss: 0.308004 | Val mean_absolute_error: 0.291442 *
+Epoch  15 | Loss: 0.332396 | Val mean_absolute_error: 0.307251
+Epoch  16 | Loss: 0.307984 | Val mean_absolute_error: 0.291891
+Epoch  17 | Loss: 0.312376 | Val mean_absolute_error: 0.307929
+Epoch  18 | Loss: 0.308946 | Val mean_absolute_error: 0.300172
+Epoch  19 | Loss: 0.319740 | Val mean_absolute_error: 0.303610
+Epoch  20 | Loss: 0.294979 | Val mean_absolute_error: 0.290317 *
+Epoch  21 | Loss: 0.322170 | Val mean_absolute_error: 0.396356
+Epoch  22 | Loss: 0.313429 | Val mean_absolute_error: 0.361424
+Epoch  23 | Loss: 0.339873 | Val mean_absolute_error: 0.314203
+Epoch  24 | Loss: 0.320748 | Val mean_absolute_error: 0.296596
+Epoch  25 | Loss: 0.304589 | Val mean_absolute_error: 0.284191 *
+Epoch  26 | Loss: 0.303869 | Val mean_absolute_error: 0.368360
+Epoch  27 | Loss: 0.311667 | Val mean_absolute_error: 0.464340
+Epoch  28 | Loss: 0.326884 | Val mean_absolute_error: 0.308936
+Epoch  29 | Loss: 0.337946 | Val mean_absolute_error: 0.289365
+Epoch  30 | Loss: 0.366001 | Val mean_absolute_error: 0.330441
+Epoch  31 | Loss: 0.339264 | Val mean_absolute_error: 0.314033
+Epoch  32 | Loss: 0.292231 | Val mean_absolute_error: 0.350063
+Epoch  33 | Loss: 0.337466 | Val mean_absolute_error: 0.318785
+Epoch  34 | Loss: 0.330893 | Val mean_absolute_error: 0.293084
+Epoch  35 | Loss: 0.298754 | Val mean_absolute_error: 0.279948 *
+Epoch  36 | Loss: 0.288920 | Val mean_absolute_error: 0.289435
+Epoch  37 | Loss: 0.286829 | Val mean_absolute_error: 0.309955
+Epoch  38 | Loss: 0.283392 | Val mean_absolute_error: 0.284538
+Epoch  39 | Loss: 0.316408 | Val mean_absolute_error: 0.287241
+Epoch  40 | Loss: 0.309979 | Val mean_absolute_error: 0.331253
+Epoch  41 | Loss: 0.292339 | Val mean_absolute_error: 0.321961
+Epoch  42 | Loss: 0.289453 | Val mean_absolute_error: 0.276466 *
+Epoch  43 | Loss: 0.303836 | Val mean_absolute_error: 0.283197
+Epoch  44 | Loss: 0.293690 | Val mean_absolute_error: 0.288616
+Epoch  45 | Loss: 0.309217 | Val mean_absolute_error: 0.301115
+Epoch  46 | Loss: 0.316333 | Val mean_absolute_error: 0.360357
+Epoch  47 | Loss: 0.310830 | Val mean_absolute_error: 0.332825
+Epoch  48 | Loss: 0.298588 | Val mean_absolute_error: 0.345859
+Epoch  49 | Loss: 0.334791 | Val mean_absolute_error: 0.338112
+Epoch  50 | Loss: 0.310352 | Val mean_absolute_error: 0.298689
+Epoch  51 | Loss: 0.295289 | Val mean_absolute_error: 0.306951
+Epoch  52 | Loss: 0.296820 | Val mean_absolute_error: 0.311444
+
+Early stopping at epoch 52
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.276466
+Test mean_absolute_error: 0.343888
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-beer-positive with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-beer-positive
+
+==========================================
+Training Dataset: ratebeer-beer-positive with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-beer-positive
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-beer-positive
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-beer-positive/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-beer-positive...
+  Train: 45922 rows
+  Val: 12858 rows
+  Test: 7218 rows
+Data split: Train=45922, Val=12858, Test=7218
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 65998
+  Label statistics:
+    Mean: 0.494618
+    Std: 0.349793
+    Min: 0.000000
+    Max: 1.000000
+    25th percentile: 0.200000
+    50th percentile (median): 0.500000
+    75th percentile: 0.800000
+
+  Split-specific statistics:
+    Train: mean=0.503677, std=0.348352, range=[0.000000, 1.000000]
+    Val: mean=0.477157, std=0.349298, range=[0.000000, 1.000000]
+    Test: mean=0.468088, std=0.357216, range=[0.000000, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 0.428887 | Val mean_absolute_error: 0.343752 *
+Epoch   2 | Loss: 0.314932 | Val mean_absolute_error: 0.311304 *
+Epoch   3 | Loss: 0.300809 | Val mean_absolute_error: 0.303768 *
+Epoch   4 | Loss: 0.298286 | Val mean_absolute_error: 0.303916
+Epoch   5 | Loss: 0.296893 | Val mean_absolute_error: 0.298605 *
+Epoch   6 | Loss: 0.294281 | Val mean_absolute_error: 0.294577 *
+Epoch   7 | Loss: 0.290422 | Val mean_absolute_error: 0.291983 *
+Epoch   8 | Loss: 0.281810 | Val mean_absolute_error: 0.288828 *
+Epoch   9 | Loss: 0.287270 | Val mean_absolute_error: 0.317457
+Epoch  10 | Loss: 0.289420 | Val mean_absolute_error: 0.285430 *
+Epoch  11 | Loss: 0.282990 | Val mean_absolute_error: 0.303218
+Epoch  12 | Loss: 0.279037 | Val mean_absolute_error: 0.295376
+Epoch  13 | Loss: 0.284278 | Val mean_absolute_error: 0.281547 *
+Epoch  14 | Loss: 0.285195 | Val mean_absolute_error: 0.280138 *
+Epoch  15 | Loss: 0.282244 | Val mean_absolute_error: 0.305247
+Epoch  16 | Loss: 0.283867 | Val mean_absolute_error: 0.281725
+Epoch  17 | Loss: 0.285725 | Val mean_absolute_error: 0.280872
+Epoch  18 | Loss: 0.279639 | Val mean_absolute_error: 0.286572
+Epoch  19 | Loss: 0.272968 | Val mean_absolute_error: 0.275705 *
+Epoch  20 | Loss: 0.283152 | Val mean_absolute_error: 0.290377
+Epoch  21 | Loss: 0.286917 | Val mean_absolute_error: 0.286540
+Epoch  22 | Loss: 0.282323 | Val mean_absolute_error: 0.297230
+Epoch  23 | Loss: 0.291457 | Val mean_absolute_error: 0.280501
+Epoch  24 | Loss: 0.276266 | Val mean_absolute_error: 0.290828
+Epoch  25 | Loss: 0.275782 | Val mean_absolute_error: 0.290990
+Epoch  26 | Loss: 0.279706 | Val mean_absolute_error: 0.294174
+Epoch  27 | Loss: 0.279163 | Val mean_absolute_error: 0.284283
+Epoch  28 | Loss: 0.289291 | Val mean_absolute_error: 0.280410
+Epoch  29 | Loss: 0.279374 | Val mean_absolute_error: 0.271454 *
+Epoch  30 | Loss: 0.280083 | Val mean_absolute_error: 0.278671
+Epoch  31 | Loss: 0.280101 | Val mean_absolute_error: 0.294609
+Epoch  32 | Loss: 0.280282 | Val mean_absolute_error: 0.278692
+Epoch  33 | Loss: 0.273712 | Val mean_absolute_error: 0.277669
+Epoch  34 | Loss: 0.275693 | Val mean_absolute_error: 0.274891
+Epoch  35 | Loss: 0.279110 | Val mean_absolute_error: 0.287882
+Epoch  36 | Loss: 0.279068 | Val mean_absolute_error: 0.273160
+Epoch  37 | Loss: 0.279660 | Val mean_absolute_error: 0.281441
+Epoch  38 | Loss: 0.272110 | Val mean_absolute_error: 0.288252
+Epoch  39 | Loss: 0.272829 | Val mean_absolute_error: 0.277186
+
+Early stopping at epoch 39
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.271454
+Test mean_absolute_error: 0.282853
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-beer-positive with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-beer-positive
+
+==========================================
+Training Dataset: ratebeer-place-positive with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-place-positive
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-place-positive
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-place-positive/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-place-positive...
+  Train: 11337 rows
+  Val: 4570 rows
+  Test: 2869 rows
+Data split: Train=11337, Val=4570, Test=2869
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 18776
+  Label 0.0: 11702 (62.3%)
+  Label 1.0: 7074 (37.7%)
+  Positive class ratio: 0.377
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.7433, 0.7513], Val preds mean: 0.7495
+Epoch   1 | Loss: 1.555259 | Val roc_auc_score: 0.461488 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4270, 0.4735], Val preds mean: 0.4626
+Epoch   2 | Loss: 0.741447 | Val roc_auc_score: 0.580014 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.3691, 0.4380], Val preds mean: 0.4201
+Epoch   3 | Loss: 0.676807 | Val roc_auc_score: 0.586569 *
+Epoch   4 | Loss: 0.672712 | Val roc_auc_score: 0.586678 *
+Epoch   5 | Loss: 0.666636 | Val roc_auc_score: 0.589087 *
+Epoch   6 | Loss: 0.666817 | Val roc_auc_score: 0.593089 *
+Epoch   7 | Loss: 0.665009 | Val roc_auc_score: 0.618089 *
+Epoch   8 | Loss: 0.661868 | Val roc_auc_score: 0.624526 *
+Epoch   9 | Loss: 0.654969 | Val roc_auc_score: 0.624304
+Epoch  10 | Loss: 0.663965 | Val roc_auc_score: 0.613322
+Epoch  11 | Loss: 0.660557 | Val roc_auc_score: 0.626233 *
+Epoch  12 | Loss: 0.657576 | Val roc_auc_score: 0.627475 *
+Epoch  13 | Loss: 0.663583 | Val roc_auc_score: 0.628267 *
+Epoch  14 | Loss: 0.667830 | Val roc_auc_score: 0.628201
+Epoch  15 | Loss: 0.667705 | Val roc_auc_score: 0.630480 *
+Epoch  16 | Loss: 0.645575 | Val roc_auc_score: 0.633863 *
+Epoch  17 | Loss: 0.654586 | Val roc_auc_score: 0.633623
+Epoch  18 | Loss: 0.658287 | Val roc_auc_score: 0.632221
+Epoch  19 | Loss: 0.658718 | Val roc_auc_score: 0.637642 *
+Epoch  20 | Loss: 0.649942 | Val roc_auc_score: 0.639377 *
+Epoch  21 | Loss: 0.645338 | Val roc_auc_score: 0.642957 *
+Epoch  22 | Loss: 0.654534 | Val roc_auc_score: 0.638219
+Epoch  23 | Loss: 0.645361 | Val roc_auc_score: 0.627668
+Epoch  24 | Loss: 0.655771 | Val roc_auc_score: 0.644655 *
+Epoch  25 | Loss: 0.646819 | Val roc_auc_score: 0.646763 *
+Epoch  26 | Loss: 0.650305 | Val roc_auc_score: 0.635873
+Epoch  27 | Loss: 0.650887 | Val roc_auc_score: 0.644614
+Epoch  28 | Loss: 0.645301 | Val roc_auc_score: 0.629471
+Epoch  29 | Loss: 0.654099 | Val roc_auc_score: 0.644521
+Epoch  30 | Loss: 0.663925 | Val roc_auc_score: 0.647287 *
+Epoch  31 | Loss: 0.675645 | Val roc_auc_score: 0.641659
+Epoch  32 | Loss: 0.654863 | Val roc_auc_score: 0.647566 *
+Epoch  33 | Loss: 0.668689 | Val roc_auc_score: 0.634986
+Epoch  34 | Loss: 0.649599 | Val roc_auc_score: 0.650574 *
+Epoch  35 | Loss: 0.645146 | Val roc_auc_score: 0.649016
+Epoch  36 | Loss: 0.656757 | Val roc_auc_score: 0.646210
+Epoch  37 | Loss: 0.652557 | Val roc_auc_score: 0.647702
+Epoch  38 | Loss: 0.647058 | Val roc_auc_score: 0.648806
+Epoch  39 | Loss: 0.662344 | Val roc_auc_score: 0.630963
+Epoch  40 | Loss: 0.670480 | Val roc_auc_score: 0.651647 *
+Epoch  41 | Loss: 0.660701 | Val roc_auc_score: 0.651198
+Epoch  42 | Loss: 0.654032 | Val roc_auc_score: 0.647966
+Epoch  43 | Loss: 0.657292 | Val roc_auc_score: 0.646436
+Epoch  44 | Loss: 0.664261 | Val roc_auc_score: 0.651226
+Epoch  45 | Loss: 0.635385 | Val roc_auc_score: 0.651273
+Epoch  46 | Loss: 0.639585 | Val roc_auc_score: 0.654641 *
+Epoch  47 | Loss: 0.656395 | Val roc_auc_score: 0.650148
+Epoch  48 | Loss: 0.654126 | Val roc_auc_score: 0.650254
+Epoch  49 | Loss: 0.647574 | Val roc_auc_score: 0.649776
+Epoch  50 | Loss: 0.644791 | Val roc_auc_score: 0.651119
+Epoch  51 | Loss: 0.649136 | Val roc_auc_score: 0.653226
+Epoch  52 | Loss: 0.648502 | Val roc_auc_score: 0.646706
+Epoch  53 | Loss: 0.666704 | Val roc_auc_score: 0.645087
+Epoch  54 | Loss: 0.645998 | Val roc_auc_score: 0.651972
+Epoch  55 | Loss: 0.645295 | Val roc_auc_score: 0.656139 *
+Epoch  56 | Loss: 0.645424 | Val roc_auc_score: 0.652374
+Epoch  57 | Loss: 0.649465 | Val roc_auc_score: 0.655998
+Epoch  58 | Loss: 0.660533 | Val roc_auc_score: 0.652052
+Epoch  59 | Loss: 0.674486 | Val roc_auc_score: 0.655156
+Epoch  60 | Loss: 0.641174 | Val roc_auc_score: 0.652896
+Epoch  61 | Loss: 0.645105 | Val roc_auc_score: 0.652893
+Epoch  62 | Loss: 0.647336 | Val roc_auc_score: 0.654048
+Epoch  63 | Loss: 0.641015 | Val roc_auc_score: 0.654689
+Epoch  64 | Loss: 0.642820 | Val roc_auc_score: 0.657339 *
+Epoch  65 | Loss: 0.646656 | Val roc_auc_score: 0.652883
+Epoch  66 | Loss: 0.640826 | Val roc_auc_score: 0.654657
+Epoch  67 | Loss: 0.636620 | Val roc_auc_score: 0.654426
+Epoch  68 | Loss: 0.649075 | Val roc_auc_score: 0.656130
+Epoch  69 | Loss: 0.647336 | Val roc_auc_score: 0.653585
+Epoch  70 | Loss: 0.640371 | Val roc_auc_score: 0.656614
+Epoch  71 | Loss: 0.645468 | Val roc_auc_score: 0.651684
+Epoch  72 | Loss: 0.639043 | Val roc_auc_score: 0.658234 *
+Epoch  73 | Loss: 0.641160 | Val roc_auc_score: 0.652244
+Epoch  74 | Loss: 0.655263 | Val roc_auc_score: 0.654333
+Epoch  75 | Loss: 0.637402 | Val roc_auc_score: 0.658571 *
+Epoch  76 | Loss: 0.638032 | Val roc_auc_score: 0.656838
+Epoch  77 | Loss: 0.628958 | Val roc_auc_score: 0.655849
+Epoch  78 | Loss: 0.638180 | Val roc_auc_score: 0.658824 *
+Epoch  79 | Loss: 0.644280 | Val roc_auc_score: 0.654667
+Epoch  80 | Loss: 0.646232 | Val roc_auc_score: 0.659391 *
+Epoch  81 | Loss: 0.639318 | Val roc_auc_score: 0.655243
+Epoch  82 | Loss: 0.644126 | Val roc_auc_score: 0.660500 *
+Epoch  83 | Loss: 0.639699 | Val roc_auc_score: 0.655274
+Epoch  84 | Loss: 0.662286 | Val roc_auc_score: 0.660517 *
+Epoch  85 | Loss: 0.653413 | Val roc_auc_score: 0.658299
+Epoch  86 | Loss: 0.656541 | Val roc_auc_score: 0.653076
+Epoch  87 | Loss: 0.657702 | Val roc_auc_score: 0.655299
+Epoch  88 | Loss: 0.632903 | Val roc_auc_score: 0.659741
+Epoch  89 | Loss: 0.632602 | Val roc_auc_score: 0.660563 *
+Epoch  90 | Loss: 0.641527 | Val roc_auc_score: 0.660820 *
+Epoch  91 | Loss: 0.640104 | Val roc_auc_score: 0.660553
+Epoch  92 | Loss: 0.637669 | Val roc_auc_score: 0.660069
+Epoch  93 | Loss: 0.639876 | Val roc_auc_score: 0.660296
+Epoch  94 | Loss: 0.635220 | Val roc_auc_score: 0.658744
+Epoch  95 | Loss: 0.638119 | Val roc_auc_score: 0.658637
+Epoch  96 | Loss: 0.634522 | Val roc_auc_score: 0.659234
+Epoch  97 | Loss: 0.640973 | Val roc_auc_score: 0.655214
+Epoch  98 | Loss: 0.650517 | Val roc_auc_score: 0.657554
+Epoch  99 | Loss: 0.657248 | Val roc_auc_score: 0.662948 *
+Epoch 100 | Loss: 0.662915 | Val roc_auc_score: 0.660365
+Epoch 101 | Loss: 0.635433 | Val roc_auc_score: 0.660656
+Epoch 102 | Loss: 0.651268 | Val roc_auc_score: 0.661131
+Epoch 103 | Loss: 0.641629 | Val roc_auc_score: 0.661079
+Epoch 104 | Loss: 0.646434 | Val roc_auc_score: 0.660270
+Epoch 105 | Loss: 0.658810 | Val roc_auc_score: 0.662337
+Epoch 106 | Loss: 0.645901 | Val roc_auc_score: 0.661427
+Epoch 107 | Loss: 0.640583 | Val roc_auc_score: 0.660016
+Epoch 108 | Loss: 0.641453 | Val roc_auc_score: 0.657777
+Epoch 109 | Loss: 0.630900 | Val roc_auc_score: 0.661548
+
+Early stopping at epoch 109
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.662948
+Test roc_auc_score: 0.693454
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-place-positive with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-place-positive
+
+==========================================
+Training Dataset: ratebeer-place-positive with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-place-positive
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-place-positive
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-place-positive/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-place-positive...
+  Train: 11337 rows
+  Val: 4570 rows
+  Test: 2869 rows
+Data split: Train=11337, Val=4570, Test=2869
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 18776
+  Label 0.0: 11702 (62.3%)
+  Label 1.0: 7074 (37.7%)
+  Positive class ratio: 0.377
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.3050, 0.3693], Val preds mean: 0.3394
+Epoch   1 | Loss: 0.683507 | Val roc_auc_score: 0.583845 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.3098, 0.4476], Val preds mean: 0.3643
+Epoch   2 | Loss: 0.663824 | Val roc_auc_score: 0.612014 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.2557, 0.5117], Val preds mean: 0.3640
+Epoch   3 | Loss: 0.659630 | Val roc_auc_score: 0.608928
+Epoch   4 | Loss: 0.654114 | Val roc_auc_score: 0.610554
+Epoch   5 | Loss: 0.654064 | Val roc_auc_score: 0.621220 *
+Epoch   6 | Loss: 0.653974 | Val roc_auc_score: 0.626975 *
+Epoch   7 | Loss: 0.655925 | Val roc_auc_score: 0.623388
+Epoch   8 | Loss: 0.651173 | Val roc_auc_score: 0.627455 *
+Epoch   9 | Loss: 0.646859 | Val roc_auc_score: 0.630252 *
+Epoch  10 | Loss: 0.651224 | Val roc_auc_score: 0.630674 *
+Epoch  11 | Loss: 0.648893 | Val roc_auc_score: 0.632058 *
+Epoch  12 | Loss: 0.651672 | Val roc_auc_score: 0.633693 *
+Epoch  13 | Loss: 0.646463 | Val roc_auc_score: 0.626865
+Epoch  14 | Loss: 0.649782 | Val roc_auc_score: 0.630143
+Epoch  15 | Loss: 0.647094 | Val roc_auc_score: 0.627673
+Epoch  16 | Loss: 0.640323 | Val roc_auc_score: 0.636088 *
+Epoch  17 | Loss: 0.653272 | Val roc_auc_score: 0.636702 *
+Epoch  18 | Loss: 0.643143 | Val roc_auc_score: 0.637054 *
+Epoch  19 | Loss: 0.646079 | Val roc_auc_score: 0.638182 *
+Epoch  20 | Loss: 0.643630 | Val roc_auc_score: 0.635872
+Epoch  21 | Loss: 0.647791 | Val roc_auc_score: 0.633599
+Epoch  22 | Loss: 0.638174 | Val roc_auc_score: 0.631852
+Epoch  23 | Loss: 0.640851 | Val roc_auc_score: 0.626262
+Epoch  24 | Loss: 0.642585 | Val roc_auc_score: 0.638106
+Epoch  25 | Loss: 0.646052 | Val roc_auc_score: 0.634915
+Epoch  26 | Loss: 0.641724 | Val roc_auc_score: 0.639746 *
+Epoch  27 | Loss: 0.647878 | Val roc_auc_score: 0.640386 *
+Epoch  28 | Loss: 0.639549 | Val roc_auc_score: 0.607510
+Epoch  29 | Loss: 0.647061 | Val roc_auc_score: 0.640602 *
+Epoch  30 | Loss: 0.641125 | Val roc_auc_score: 0.616653
+Epoch  31 | Loss: 0.645622 | Val roc_auc_score: 0.636859
+Epoch  32 | Loss: 0.640823 | Val roc_auc_score: 0.635144
+Epoch  33 | Loss: 0.641099 | Val roc_auc_score: 0.640681 *
+Epoch  34 | Loss: 0.644189 | Val roc_auc_score: 0.636061
+Epoch  35 | Loss: 0.640499 | Val roc_auc_score: 0.631141
+Epoch  36 | Loss: 0.642776 | Val roc_auc_score: 0.623331
+Epoch  37 | Loss: 0.643350 | Val roc_auc_score: 0.638420
+Epoch  38 | Loss: 0.638730 | Val roc_auc_score: 0.640932 *
+Epoch  39 | Loss: 0.632192 | Val roc_auc_score: 0.638025
+Epoch  40 | Loss: 0.641316 | Val roc_auc_score: 0.637375
+Epoch  41 | Loss: 0.642612 | Val roc_auc_score: 0.640234
+Epoch  42 | Loss: 0.639645 | Val roc_auc_score: 0.640153
+Epoch  43 | Loss: 0.636786 | Val roc_auc_score: 0.640221
+Epoch  44 | Loss: 0.643282 | Val roc_auc_score: 0.638350
+Epoch  45 | Loss: 0.635095 | Val roc_auc_score: 0.636192
+Epoch  46 | Loss: 0.637295 | Val roc_auc_score: 0.640480
+Epoch  47 | Loss: 0.643697 | Val roc_auc_score: 0.639690
+Epoch  48 | Loss: 0.636419 | Val roc_auc_score: 0.642001 *
+Epoch  49 | Loss: 0.641046 | Val roc_auc_score: 0.637493
+Epoch  50 | Loss: 0.632586 | Val roc_auc_score: 0.640678
+Epoch  51 | Loss: 0.636816 | Val roc_auc_score: 0.640233
+Epoch  52 | Loss: 0.640173 | Val roc_auc_score: 0.641755
+Epoch  53 | Loss: 0.639148 | Val roc_auc_score: 0.642087 *
+Epoch  54 | Loss: 0.645067 | Val roc_auc_score: 0.640306
+Epoch  55 | Loss: 0.645801 | Val roc_auc_score: 0.640049
+Epoch  56 | Loss: 0.644117 | Val roc_auc_score: 0.641477
+Epoch  57 | Loss: 0.649140 | Val roc_auc_score: 0.630328
+Epoch  58 | Loss: 0.639492 | Val roc_auc_score: 0.642962 *
+Epoch  59 | Loss: 0.642261 | Val roc_auc_score: 0.639452
+Epoch  60 | Loss: 0.645358 | Val roc_auc_score: 0.642783
+Epoch  61 | Loss: 0.640554 | Val roc_auc_score: 0.641241
+Epoch  62 | Loss: 0.638388 | Val roc_auc_score: 0.639589
+Epoch  63 | Loss: 0.645915 | Val roc_auc_score: 0.642678
+Epoch  64 | Loss: 0.636618 | Val roc_auc_score: 0.643675 *
+Epoch  65 | Loss: 0.640637 | Val roc_auc_score: 0.642625
+Epoch  66 | Loss: 0.640920 | Val roc_auc_score: 0.639276
+Epoch  67 | Loss: 0.632516 | Val roc_auc_score: 0.641632
+Epoch  68 | Loss: 0.632383 | Val roc_auc_score: 0.639737
+Epoch  69 | Loss: 0.645164 | Val roc_auc_score: 0.641447
+Epoch  70 | Loss: 0.639150 | Val roc_auc_score: 0.641954
+Epoch  71 | Loss: 0.639618 | Val roc_auc_score: 0.643441
+Epoch  72 | Loss: 0.636263 | Val roc_auc_score: 0.644753 *
+Epoch  73 | Loss: 0.641839 | Val roc_auc_score: 0.642936
+Epoch  74 | Loss: 0.633295 | Val roc_auc_score: 0.643918
+Epoch  75 | Loss: 0.636664 | Val roc_auc_score: 0.636625
+Epoch  76 | Loss: 0.638531 | Val roc_auc_score: 0.638141
+Epoch  77 | Loss: 0.636641 | Val roc_auc_score: 0.642433
+Epoch  78 | Loss: 0.642743 | Val roc_auc_score: 0.640974
+Epoch  79 | Loss: 0.642740 | Val roc_auc_score: 0.636182
+Epoch  80 | Loss: 0.639672 | Val roc_auc_score: 0.639656
+Epoch  81 | Loss: 0.634078 | Val roc_auc_score: 0.644806 *
+Epoch  82 | Loss: 0.636195 | Val roc_auc_score: 0.644841 *
+Epoch  83 | Loss: 0.637406 | Val roc_auc_score: 0.637615
+Epoch  84 | Loss: 0.638279 | Val roc_auc_score: 0.642638
+Epoch  85 | Loss: 0.636226 | Val roc_auc_score: 0.643937
+Epoch  86 | Loss: 0.635395 | Val roc_auc_score: 0.640297
+Epoch  87 | Loss: 0.642065 | Val roc_auc_score: 0.638363
+Epoch  88 | Loss: 0.637797 | Val roc_auc_score: 0.644024
+Epoch  89 | Loss: 0.640347 | Val roc_auc_score: 0.641975
+Epoch  90 | Loss: 0.633413 | Val roc_auc_score: 0.642916
+Epoch  91 | Loss: 0.635539 | Val roc_auc_score: 0.641622
+Epoch  92 | Loss: 0.631860 | Val roc_auc_score: 0.643264
+
+Early stopping at epoch 92
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.644841
+Test roc_auc_score: 0.681149
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-place-positive with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-place-positive
+
+==========================================
+Training Dataset: ratebeer-user-active with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-user-active
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-user-active
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-user-active/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/ratebeer-user-active...
+  Train: 16656 rows
+  Val: 2794 rows
+  Test: 3558 rows
+Data split: Train=16656, Val=2794, Test=3558
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 23008
+  Label 0.0: 13030 (56.6%)
+  Label 1.0: 9978 (43.4%)
+  Positive class ratio: 0.434
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0773, 0.6246], Val preds mean: 0.3073
+Epoch   1 | Loss: 0.970948 | Val roc_auc_score: 0.807276 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0740, 0.8793], Val preds mean: 0.4414
+Epoch   2 | Loss: 0.573304 | Val roc_auc_score: 0.818532 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0625, 0.9145], Val preds mean: 0.4019
+Epoch   3 | Loss: 0.530767 | Val roc_auc_score: 0.832096 *
+Epoch   4 | Loss: 0.519188 | Val roc_auc_score: 0.847355 *
+Epoch   5 | Loss: 0.558371 | Val roc_auc_score: 0.844031
+Epoch   6 | Loss: 0.520685 | Val roc_auc_score: 0.853141 *
+Epoch   7 | Loss: 0.487826 | Val roc_auc_score: 0.861432 *
+Epoch   8 | Loss: 0.490069 | Val roc_auc_score: 0.864508 *
+Epoch   9 | Loss: 0.498898 | Val roc_auc_score: 0.861586
+Epoch  10 | Loss: 0.516073 | Val roc_auc_score: 0.864600 *
+Epoch  11 | Loss: 0.516333 | Val roc_auc_score: 0.871270 *
+Epoch  12 | Loss: 0.462640 | Val roc_auc_score: 0.871170
+Epoch  13 | Loss: 0.480202 | Val roc_auc_score: 0.872476 *
+Epoch  14 | Loss: 0.476979 | Val roc_auc_score: 0.869891
+Epoch  15 | Loss: 0.531181 | Val roc_auc_score: 0.869329
+Epoch  16 | Loss: 0.476452 | Val roc_auc_score: 0.879795 *
+Epoch  17 | Loss: 0.470777 | Val roc_auc_score: 0.880711 *
+Epoch  18 | Loss: 0.471191 | Val roc_auc_score: 0.881989 *
+Epoch  19 | Loss: 0.458969 | Val roc_auc_score: 0.879936
+Epoch  20 | Loss: 0.446448 | Val roc_auc_score: 0.880429
+Epoch  21 | Loss: 0.487641 | Val roc_auc_score: 0.876174
+Epoch  22 | Loss: 0.500671 | Val roc_auc_score: 0.879698
+Epoch  23 | Loss: 0.453755 | Val roc_auc_score: 0.882650 *
+Epoch  24 | Loss: 0.461107 | Val roc_auc_score: 0.882827 *
+Epoch  25 | Loss: 0.461804 | Val roc_auc_score: 0.880994
+Epoch  26 | Loss: 0.461363 | Val roc_auc_score: 0.883080 *
+Epoch  27 | Loss: 0.433889 | Val roc_auc_score: 0.883993 *
+Epoch  28 | Loss: 0.473440 | Val roc_auc_score: 0.883057
+Epoch  29 | Loss: 0.468509 | Val roc_auc_score: 0.887525 *
+Epoch  30 | Loss: 0.467872 | Val roc_auc_score: 0.887201
+Epoch  31 | Loss: 0.480552 | Val roc_auc_score: 0.876904
+Epoch  32 | Loss: 0.472498 | Val roc_auc_score: 0.884077
+Epoch  33 | Loss: 0.451699 | Val roc_auc_score: 0.887620 *
+Epoch  34 | Loss: 0.464967 | Val roc_auc_score: 0.884893
+Epoch  35 | Loss: 0.445751 | Val roc_auc_score: 0.887506
+Epoch  36 | Loss: 0.451170 | Val roc_auc_score: 0.888474 *
+Epoch  37 | Loss: 0.454966 | Val roc_auc_score: 0.890126 *
+Epoch  38 | Loss: 0.453890 | Val roc_auc_score: 0.888498
+Epoch  39 | Loss: 0.447852 | Val roc_auc_score: 0.890486 *
+Epoch  40 | Loss: 0.444635 | Val roc_auc_score: 0.892901 *
+Epoch  41 | Loss: 0.460136 | Val roc_auc_score: 0.893233 *
+Epoch  42 | Loss: 0.453693 | Val roc_auc_score: 0.892474
+Epoch  43 | Loss: 0.467330 | Val roc_auc_score: 0.888478
+Epoch  44 | Loss: 0.486851 | Val roc_auc_score: 0.876394
+Epoch  45 | Loss: 0.460148 | Val roc_auc_score: 0.890462
+Epoch  46 | Loss: 0.451765 | Val roc_auc_score: 0.891358
+Epoch  47 | Loss: 0.474863 | Val roc_auc_score: 0.882440
+Epoch  48 | Loss: 0.473507 | Val roc_auc_score: 0.888711
+Epoch  49 | Loss: 0.460144 | Val roc_auc_score: 0.892088
+Epoch  50 | Loss: 0.453918 | Val roc_auc_score: 0.890406
+Epoch  51 | Loss: 0.443613 | Val roc_auc_score: 0.893404 *
+Epoch  52 | Loss: 0.448694 | Val roc_auc_score: 0.886503
+Epoch  53 | Loss: 0.438591 | Val roc_auc_score: 0.893309
+Epoch  54 | Loss: 0.449410 | Val roc_auc_score: 0.892939
+Epoch  55 | Loss: 0.445562 | Val roc_auc_score: 0.894009 *
+Epoch  56 | Loss: 0.450914 | Val roc_auc_score: 0.892632
+Epoch  57 | Loss: 0.452216 | Val roc_auc_score: 0.886966
+Epoch  58 | Loss: 0.441872 | Val roc_auc_score: 0.894303 *
+Epoch  59 | Loss: 0.447232 | Val roc_auc_score: 0.893045
+Epoch  60 | Loss: 0.453152 | Val roc_auc_score: 0.890859
+Epoch  61 | Loss: 0.437566 | Val roc_auc_score: 0.893301
+Epoch  62 | Loss: 0.466911 | Val roc_auc_score: 0.892615
+Epoch  63 | Loss: 0.455312 | Val roc_auc_score: 0.893015
+Epoch  64 | Loss: 0.441015 | Val roc_auc_score: 0.892000
+Epoch  65 | Loss: 0.454693 | Val roc_auc_score: 0.894636 *
+Epoch  66 | Loss: 0.452012 | Val roc_auc_score: 0.894481
+Epoch  67 | Loss: 0.485238 | Val roc_auc_score: 0.892070
+Epoch  68 | Loss: 0.439049 | Val roc_auc_score: 0.894408
+Epoch  69 | Loss: 0.436343 | Val roc_auc_score: 0.895564 *
+Epoch  70 | Loss: 0.444240 | Val roc_auc_score: 0.891807
+Epoch  71 | Loss: 0.478041 | Val roc_auc_score: 0.890852
+Epoch  72 | Loss: 0.498481 | Val roc_auc_score: 0.894152
+Epoch  73 | Loss: 0.462858 | Val roc_auc_score: 0.895306
+Epoch  74 | Loss: 0.446620 | Val roc_auc_score: 0.894773
+Epoch  75 | Loss: 0.455354 | Val roc_auc_score: 0.893002
+Epoch  76 | Loss: 0.461177 | Val roc_auc_score: 0.895447
+Epoch  77 | Loss: 0.439396 | Val roc_auc_score: 0.888589
+Epoch  78 | Loss: 0.436377 | Val roc_auc_score: 0.893335
+Epoch  79 | Loss: 0.470152 | Val roc_auc_score: 0.892651
+
+Early stopping at epoch 79
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.895564
+Test roc_auc_score: 0.889649
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-user-active with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/ratebeer-user-active
+
+==========================================
+Training Dataset: ratebeer-user-active with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-user-active
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-user-active
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/ratebeer-user-active/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/ratebeer-user-active...
+  Train: 16656 rows
+  Val: 2794 rows
+  Test: 3558 rows
+Data split: Train=16656, Val=2794, Test=3558
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 23008
+  Label 0.0: 13030 (56.6%)
+  Label 1.0: 9978 (43.4%)
+  Positive class ratio: 0.434
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0583, 0.7002], Val preds mean: 0.3725
+Epoch   1 | Loss: 0.659511 | Val roc_auc_score: 0.798008 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0462, 0.8897], Val preds mean: 0.3781
+Epoch   2 | Loss: 0.569049 | Val roc_auc_score: 0.809862 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.0570, 0.9763], Val preds mean: 0.4642
+Epoch   3 | Loss: 0.536089 | Val roc_auc_score: 0.818030 *
+Epoch   4 | Loss: 0.529135 | Val roc_auc_score: 0.826152 *
+Epoch   5 | Loss: 0.546564 | Val roc_auc_score: 0.831659 *
+Epoch   6 | Loss: 0.524536 | Val roc_auc_score: 0.836621 *
+Epoch   7 | Loss: 0.506187 | Val roc_auc_score: 0.841129 *
+Epoch   8 | Loss: 0.495003 | Val roc_auc_score: 0.848446 *
+Epoch   9 | Loss: 0.488092 | Val roc_auc_score: 0.852344 *
+Epoch  10 | Loss: 0.494881 | Val roc_auc_score: 0.855252 *
+Epoch  11 | Loss: 0.515073 | Val roc_auc_score: 0.855888 *
+Epoch  12 | Loss: 0.493852 | Val roc_auc_score: 0.855511
+Epoch  13 | Loss: 0.499685 | Val roc_auc_score: 0.856740 *
+Epoch  14 | Loss: 0.475417 | Val roc_auc_score: 0.859774 *
+Epoch  15 | Loss: 0.474030 | Val roc_auc_score: 0.861788 *
+Epoch  16 | Loss: 0.471676 | Val roc_auc_score: 0.864075 *
+Epoch  17 | Loss: 0.481176 | Val roc_auc_score: 0.865410 *
+Epoch  18 | Loss: 0.494687 | Val roc_auc_score: 0.864571
+Epoch  19 | Loss: 0.464504 | Val roc_auc_score: 0.865224
+Epoch  20 | Loss: 0.461918 | Val roc_auc_score: 0.865460 *
+Epoch  21 | Loss: 0.456475 | Val roc_auc_score: 0.866789 *
+Epoch  22 | Loss: 0.490142 | Val roc_auc_score: 0.865538
+Epoch  23 | Loss: 0.484527 | Val roc_auc_score: 0.865766
+Epoch  24 | Loss: 0.463077 | Val roc_auc_score: 0.867553 *
+Epoch  25 | Loss: 0.477866 | Val roc_auc_score: 0.867804 *
+Epoch  26 | Loss: 0.474113 | Val roc_auc_score: 0.868152 *
+Epoch  27 | Loss: 0.454064 | Val roc_auc_score: 0.869123 *
+Epoch  28 | Loss: 0.462434 | Val roc_auc_score: 0.871395 *
+Epoch  29 | Loss: 0.476611 | Val roc_auc_score: 0.871282
+Epoch  30 | Loss: 0.465168 | Val roc_auc_score: 0.871857 *
+Epoch  31 | Loss: 0.455587 | Val roc_auc_score: 0.872198 *
+Epoch  32 | Loss: 0.464340 | Val roc_auc_score: 0.872164
+Epoch  33 | Loss: 0.460017 | Val roc_auc_score: 0.870782
+Epoch  34 | Loss: 0.486331 | Val roc_auc_score: 0.871679
+Epoch  35 | Loss: 0.477141 | Val roc_auc_score: 0.870705
+Epoch  36 | Loss: 0.467071 | Val roc_auc_score: 0.872018
+Epoch  37 | Loss: 0.461618 | Val roc_auc_score: 0.872826 *
+Epoch  38 | Loss: 0.457538 | Val roc_auc_score: 0.873126 *
+Epoch  39 | Loss: 0.460114 | Val roc_auc_score: 0.872794
+Epoch  40 | Loss: 0.456802 | Val roc_auc_score: 0.872498
+Epoch  41 | Loss: 0.457273 | Val roc_auc_score: 0.874301 *
+Epoch  42 | Loss: 0.453940 | Val roc_auc_score: 0.873793
+Epoch  43 | Loss: 0.457231 | Val roc_auc_score: 0.874791 *
+Epoch  44 | Loss: 0.461598 | Val roc_auc_score: 0.872483
+Epoch  45 | Loss: 0.472747 | Val roc_auc_score: 0.872291
+Epoch  46 | Loss: 0.455927 | Val roc_auc_score: 0.873016
+Epoch  47 | Loss: 0.469207 | Val roc_auc_score: 0.874518
+Epoch  48 | Loss: 0.469420 | Val roc_auc_score: 0.874556
+Epoch  49 | Loss: 0.471125 | Val roc_auc_score: 0.873853
+Epoch  50 | Loss: 0.459812 | Val roc_auc_score: 0.875422 *
+Epoch  51 | Loss: 0.455587 | Val roc_auc_score: 0.876012 *
+Epoch  52 | Loss: 0.456474 | Val roc_auc_score: 0.875434
+Epoch  53 | Loss: 0.437797 | Val roc_auc_score: 0.874524
+Epoch  54 | Loss: 0.470154 | Val roc_auc_score: 0.873172
+Epoch  55 | Loss: 0.464977 | Val roc_auc_score: 0.873125
+Epoch  56 | Loss: 0.461049 | Val roc_auc_score: 0.875244
+Epoch  57 | Loss: 0.470328 | Val roc_auc_score: 0.873641
+Epoch  58 | Loss: 0.473744 | Val roc_auc_score: 0.873569
+Epoch  59 | Loss: 0.449310 | Val roc_auc_score: 0.874543
+Epoch  60 | Loss: 0.452816 | Val roc_auc_score: 0.875237
+Epoch  61 | Loss: 0.442579 | Val roc_auc_score: 0.873999
+
+Early stopping at epoch 61
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.876012
+Test roc_auc_score: 0.856833
+
+✅ Training completed successfully!
+
+  ✅ Completed: ratebeer-user-active with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/ratebeer-user-active
+
+==========================================
+Training Dataset: trial-site-success with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/trial-site-success
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/trial-site-success
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/trial-site-success/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/trial-site-success...
+  Train: 100000 rows
+  Val: 19740 rows
+  Test: 22617 rows
+Data split: Train=100000, Val=19740, Test=22617
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 142357
+  Label statistics:
+    Mean: 0.449898
+    Std: 0.477025
+    Min: 0.000000
+    Max: 1.000000
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 1.000000
+
+  Split-specific statistics:
+    Train: mean=0.442168, std=0.475709, range=[0.000000, 1.000000]
+    Val: mean=0.474937, std=0.477694, range=[0.000000, 1.000000]
+    Test: mean=0.462222, std=0.481220, range=[0.000000, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 3.166940 | Val mean_absolute_error: 1.155938 *
+Epoch   2 | Loss: 0.633309 | Val mean_absolute_error: 0.502370 *
+Epoch   3 | Loss: 0.456747 | Val mean_absolute_error: 0.473106 *
+Epoch   4 | Loss: 0.459513 | Val mean_absolute_error: 0.462360 *
+Epoch   5 | Loss: 0.461651 | Val mean_absolute_error: 0.461291 *
+Epoch   6 | Loss: 0.453300 | Val mean_absolute_error: 0.462734
+Epoch   7 | Loss: 0.452481 | Val mean_absolute_error: 0.464424
+Epoch   8 | Loss: 0.452010 | Val mean_absolute_error: 0.464940
+Epoch   9 | Loss: 0.442482 | Val mean_absolute_error: 0.466460
+Epoch  10 | Loss: 0.474243 | Val mean_absolute_error: 0.467519
+Epoch  11 | Loss: 0.528135 | Val mean_absolute_error: 0.508324
+Epoch  12 | Loss: 0.473902 | Val mean_absolute_error: 0.570581
+Epoch  13 | Loss: 0.466190 | Val mean_absolute_error: 0.466376
+Epoch  14 | Loss: 0.480798 | Val mean_absolute_error: 0.467266
+Epoch  15 | Loss: 0.453119 | Val mean_absolute_error: 0.464464
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.461291
+Test mean_absolute_error: 0.454543
+
+✅ Training completed successfully!
+
+  ✅ Completed: trial-site-success with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/trial-site-success
+
+==========================================
+Training Dataset: trial-site-success with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/trial-site-success
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/trial-site-success
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/trial-site-success/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/trial-site-success...
+  Train: 100000 rows
+  Val: 19740 rows
+  Test: 22617 rows
+Data split: Train=100000, Val=19740, Test=22617
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 142357
+  Label statistics:
+    Mean: 0.449898
+    Std: 0.477025
+    Min: 0.000000
+    Max: 1.000000
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 1.000000
+
+  Split-specific statistics:
+    Train: mean=0.442168, std=0.475709, range=[0.000000, 1.000000]
+    Val: mean=0.474937, std=0.477694, range=[0.000000, 1.000000]
+    Test: mean=0.462222, std=0.481220, range=[0.000000, 1.000000]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 0.505840 | Val mean_absolute_error: 0.461990 *
+Epoch   2 | Loss: 0.437942 | Val mean_absolute_error: 0.467084
+Epoch   3 | Loss: 0.432224 | Val mean_absolute_error: 0.467921
+Epoch   4 | Loss: 0.433904 | Val mean_absolute_error: 0.458061 *
+Epoch   5 | Loss: 0.444229 | Val mean_absolute_error: 0.458597
+Epoch   6 | Loss: 0.432882 | Val mean_absolute_error: 0.459646
+Epoch   7 | Loss: 0.433043 | Val mean_absolute_error: 0.459133
+Epoch   8 | Loss: 0.435251 | Val mean_absolute_error: 0.463053
+Epoch   9 | Loss: 0.435437 | Val mean_absolute_error: 0.456838 *
+Epoch  10 | Loss: 0.425716 | Val mean_absolute_error: 0.461389
+Epoch  11 | Loss: 0.425094 | Val mean_absolute_error: 0.459556
+Epoch  12 | Loss: 0.422924 | Val mean_absolute_error: 0.456196 *
+Epoch  13 | Loss: 0.433129 | Val mean_absolute_error: 0.459961
+Epoch  14 | Loss: 0.418148 | Val mean_absolute_error: 0.455898 *
+Epoch  15 | Loss: 0.426970 | Val mean_absolute_error: 0.458779
+Epoch  16 | Loss: 0.433351 | Val mean_absolute_error: 0.456664
+Epoch  17 | Loss: 0.433757 | Val mean_absolute_error: 0.457785
+Epoch  18 | Loss: 0.428084 | Val mean_absolute_error: 0.455347 *
+Epoch  19 | Loss: 0.429085 | Val mean_absolute_error: 0.455178 *
+Epoch  20 | Loss: 0.433066 | Val mean_absolute_error: 0.456138
+Epoch  21 | Loss: 0.432792 | Val mean_absolute_error: 0.460017
+Epoch  22 | Loss: 0.432798 | Val mean_absolute_error: 0.458188
+Epoch  23 | Loss: 0.427732 | Val mean_absolute_error: 0.460337
+Epoch  24 | Loss: 0.432342 | Val mean_absolute_error: 0.462693
+Epoch  25 | Loss: 0.429499 | Val mean_absolute_error: 0.454956 *
+Epoch  26 | Loss: 0.426193 | Val mean_absolute_error: 0.464329
+Epoch  27 | Loss: 0.434887 | Val mean_absolute_error: 0.458573
+Epoch  28 | Loss: 0.436045 | Val mean_absolute_error: 0.459007
+Epoch  29 | Loss: 0.438260 | Val mean_absolute_error: 0.460185
+Epoch  30 | Loss: 0.440922 | Val mean_absolute_error: 0.457950
+Epoch  31 | Loss: 0.432950 | Val mean_absolute_error: 0.463663
+Epoch  32 | Loss: 0.422384 | Val mean_absolute_error: 0.458226
+Epoch  33 | Loss: 0.431848 | Val mean_absolute_error: 0.457260
+Epoch  34 | Loss: 0.437626 | Val mean_absolute_error: 0.456343
+Epoch  35 | Loss: 0.427602 | Val mean_absolute_error: 0.459826
+
+Early stopping at epoch 35
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.454956
+Test mean_absolute_error: 0.451097
+
+✅ Training completed successfully!
+
+  ✅ Completed: trial-site-success with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/trial-site-success
+
+==========================================
+Training Dataset: trial-study-outcome with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/trial-study-outcome
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/trial-study-outcome
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/trial-study-outcome/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/trial-study-outcome...
+  Train: 11994 rows
+  Val: 960 rows
+  Test: 825 rows
+Data split: Train=11994, Val=960, Test=825
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 13779
+  Label 0.0: 5088 (36.9%)
+  Label 1.0: 8691 (63.1%)
+  Positive class ratio: 0.631
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.3348, 0.3367], Val preds mean: 0.3363
+Epoch   1 | Loss: 1.436592 | Val roc_auc_score: 0.517430 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.5389, 0.5475], Val preds mean: 0.5450
+Epoch   2 | Loss: 0.710725 | Val roc_auc_score: 0.531558 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.6657, 0.6867], Val preds mean: 0.6785
+Epoch   3 | Loss: 0.667791 | Val roc_auc_score: 0.552900 *
+Epoch   4 | Loss: 0.657064 | Val roc_auc_score: 0.575802 *
+Epoch   5 | Loss: 0.660977 | Val roc_auc_score: 0.592397 *
+Epoch   6 | Loss: 0.655829 | Val roc_auc_score: 0.606715 *
+Epoch   7 | Loss: 0.652492 | Val roc_auc_score: 0.611042 *
+Epoch   8 | Loss: 0.654432 | Val roc_auc_score: 0.607566
+Epoch   9 | Loss: 0.643175 | Val roc_auc_score: 0.609976
+Epoch  10 | Loss: 0.644155 | Val roc_auc_score: 0.611828 *
+Epoch  11 | Loss: 0.639535 | Val roc_auc_score: 0.610542
+Epoch  12 | Loss: 0.646909 | Val roc_auc_score: 0.610870
+Epoch  13 | Loss: 0.651812 | Val roc_auc_score: 0.621080 *
+Epoch  14 | Loss: 0.654273 | Val roc_auc_score: 0.614987
+Epoch  15 | Loss: 0.643300 | Val roc_auc_score: 0.618288
+Epoch  16 | Loss: 0.642606 | Val roc_auc_score: 0.617464
+Epoch  17 | Loss: 0.631389 | Val roc_auc_score: 0.613186
+Epoch  18 | Loss: 0.641843 | Val roc_auc_score: 0.614929
+Epoch  19 | Loss: 0.644839 | Val roc_auc_score: 0.622220 *
+Epoch  20 | Loss: 0.640550 | Val roc_auc_score: 0.617435
+Epoch  21 | Loss: 0.646947 | Val roc_auc_score: 0.612107
+Epoch  22 | Loss: 0.670271 | Val roc_auc_score: 0.619633
+Epoch  23 | Loss: 0.638725 | Val roc_auc_score: 0.616950
+Epoch  24 | Loss: 0.635432 | Val roc_auc_score: 0.620303
+Epoch  25 | Loss: 0.636952 | Val roc_auc_score: 0.601178
+Epoch  26 | Loss: 0.634417 | Val roc_auc_score: 0.612058
+Epoch  27 | Loss: 0.637720 | Val roc_auc_score: 0.609547
+Epoch  28 | Loss: 0.638555 | Val roc_auc_score: 0.608491
+Epoch  29 | Loss: 0.640533 | Val roc_auc_score: 0.613343
+
+Early stopping at epoch 29
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.622220
+Test roc_auc_score: 0.673302
+
+✅ Training completed successfully!
+
+  ✅ Completed: trial-study-outcome with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/trial-study-outcome
+
+==========================================
+Training Dataset: trial-study-outcome with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/trial-study-outcome
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/trial-study-outcome
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/trial-study-outcome/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/trial-study-outcome...
+  Train: 11994 rows
+  Val: 960 rows
+  Test: 825 rows
+Data split: Train=11994, Val=960, Test=825
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 13779
+  Label 0.0: 5088 (36.9%)
+  Label 1.0: 8691 (63.1%)
+  Positive class ratio: 0.631
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.5971, 0.7284], Val preds mean: 0.6812
+Epoch   1 | Loss: 0.660759 | Val roc_auc_score: 0.553498 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.5513, 0.7434], Val preds mean: 0.6573
+Epoch   2 | Loss: 0.651508 | Val roc_auc_score: 0.568395 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.4563, 0.8675], Val preds mean: 0.6936
+Epoch   3 | Loss: 0.647371 | Val roc_auc_score: 0.571214 *
+Epoch   4 | Loss: 0.636043 | Val roc_auc_score: 0.573086 *
+Epoch   5 | Loss: 0.635930 | Val roc_auc_score: 0.583866 *
+Epoch   6 | Loss: 0.635681 | Val roc_auc_score: 0.589808 *
+Epoch   7 | Loss: 0.632916 | Val roc_auc_score: 0.594333 *
+Epoch   8 | Loss: 0.638800 | Val roc_auc_score: 0.594680 *
+Epoch   9 | Loss: 0.635369 | Val roc_auc_score: 0.594226
+Epoch  10 | Loss: 0.632374 | Val roc_auc_score: 0.596755 *
+Epoch  11 | Loss: 0.625737 | Val roc_auc_score: 0.591363
+Epoch  12 | Loss: 0.631664 | Val roc_auc_score: 0.595267
+Epoch  13 | Loss: 0.636050 | Val roc_auc_score: 0.597635 *
+Epoch  14 | Loss: 0.637336 | Val roc_auc_score: 0.599583 *
+Epoch  15 | Loss: 0.631911 | Val roc_auc_score: 0.599931 *
+Epoch  16 | Loss: 0.630071 | Val roc_auc_score: 0.600293 *
+Epoch  17 | Loss: 0.625938 | Val roc_auc_score: 0.600329 *
+Epoch  18 | Loss: 0.634905 | Val roc_auc_score: 0.597648
+Epoch  19 | Loss: 0.631687 | Val roc_auc_score: 0.598403
+Epoch  20 | Loss: 0.624914 | Val roc_auc_score: 0.602442 *
+Epoch  21 | Loss: 0.624424 | Val roc_auc_score: 0.602469 *
+Epoch  22 | Loss: 0.628455 | Val roc_auc_score: 0.603184 *
+Epoch  23 | Loss: 0.630931 | Val roc_auc_score: 0.600914
+Epoch  24 | Loss: 0.628716 | Val roc_auc_score: 0.598716
+Epoch  25 | Loss: 0.629470 | Val roc_auc_score: 0.598354
+Epoch  26 | Loss: 0.623145 | Val roc_auc_score: 0.600798
+Epoch  27 | Loss: 0.626550 | Val roc_auc_score: 0.602933
+Epoch  28 | Loss: 0.625607 | Val roc_auc_score: 0.599091
+Epoch  29 | Loss: 0.626004 | Val roc_auc_score: 0.599190
+Epoch  30 | Loss: 0.619335 | Val roc_auc_score: 0.600921
+Epoch  31 | Loss: 0.626893 | Val roc_auc_score: 0.601732
+Epoch  32 | Loss: 0.621760 | Val roc_auc_score: 0.601883
+
+Early stopping at epoch 32
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.603184
+Test roc_auc_score: 0.650328
+
+✅ Training completed successfully!
+
+  ✅ Completed: trial-study-outcome with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/trial-study-outcome
+
+==========================================
+Training Dataset: hm-item-sales with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 1.547036 | Val mean_absolute_error: 0.481161 *
+Epoch   2 | Loss: 0.430753 | Val mean_absolute_error: 0.330889 *
+Epoch   3 | Loss: 0.334957 | Val mean_absolute_error: 0.104762 *
+Epoch   4 | Loss: 0.226435 | Val mean_absolute_error: 0.315204
+Epoch   5 | Loss: 0.250333 | Val mean_absolute_error: 0.248054
+Epoch   6 | Loss: 0.261431 | Val mean_absolute_error: 0.282909
+Epoch   7 | Loss: 0.249850 | Val mean_absolute_error: 0.191186
+Epoch   8 | Loss: 0.255680 | Val mean_absolute_error: 0.254854
+Epoch   9 | Loss: 0.255231 | Val mean_absolute_error: 0.130237
+Epoch  10 | Loss: 0.162923 | Val mean_absolute_error: 0.135369
+Epoch  11 | Loss: 0.145540 | Val mean_absolute_error: 0.154294
+Epoch  12 | Loss: 0.223690 | Val mean_absolute_error: 0.427228
+Epoch  13 | Loss: 0.240811 | Val mean_absolute_error: 0.681772
+
+Early stopping at epoch 13
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.104762
+Test mean_absolute_error: 0.673960
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-item-sales
+
+==========================================
+Training Dataset: hm-item-sales with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/hm-item-sales
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/hm-item-sales
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-item-sales/target_col.txt
+
+Detected task type from target_col.txt: regression
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/hm-item-sales...
+  Train: 100000 rows
+  Val: 100000 rows
+  Test: 100000 rows
+Data split: Train=100000, Val=100000, Test=100000
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 300000
+  Label statistics:
+    Mean: 0.078878
+    Std: 0.578593
+    Min: 0.000000
+    Max: 40.364914
+    25th percentile: 0.000000
+    50th percentile (median): 0.000000
+    75th percentile: 0.000000
+
+  Split-specific statistics:
+    Train: mean=0.074234, std=0.468672, range=[0.000000, 23.359339]
+    Val: mean=0.085230, std=0.661035, range=[0.000000, 40.364914]
+    Test: mean=0.077169, std=0.589597, range=[0.000000, 38.314762]
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: regression, Device: cuda
+============================================================
+Epoch   1 | Loss: 0.349674 | Val mean_absolute_error: 0.091349 *
+Epoch   2 | Loss: 0.079265 | Val mean_absolute_error: 0.101991
+Epoch   3 | Loss: 0.081279 | Val mean_absolute_error: 0.087152 *
+Epoch   4 | Loss: 0.079467 | Val mean_absolute_error: 0.085444 *
+Epoch   5 | Loss: 0.070700 | Val mean_absolute_error: 0.085223 *
+Epoch   6 | Loss: 0.074930 | Val mean_absolute_error: 0.085157 *
+Epoch   7 | Loss: 0.080975 | Val mean_absolute_error: 0.085123 *
+Epoch   8 | Loss: 0.076371 | Val mean_absolute_error: 0.085525
+Epoch   9 | Loss: 0.074654 | Val mean_absolute_error: 0.085220
+Epoch  10 | Loss: 0.076360 | Val mean_absolute_error: 0.085256
+Epoch  11 | Loss: 0.073653 | Val mean_absolute_error: 0.085243
+Epoch  12 | Loss: 0.083256 | Val mean_absolute_error: 0.085453
+Epoch  13 | Loss: 0.074065 | Val mean_absolute_error: 0.085232
+Epoch  14 | Loss: 0.059848 | Val mean_absolute_error: 0.085423
+Epoch  15 | Loss: 0.075321 | Val mean_absolute_error: 0.085179
+Epoch  16 | Loss: 0.072881 | Val mean_absolute_error: 0.085354
+Epoch  17 | Loss: 0.072190 | Val mean_absolute_error: 0.085176
+
+Early stopping at epoch 17
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val mean_absolute_error: 0.085123
+Test mean_absolute_error: 0.077184
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-item-sales with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/hm-item-sales
+
+==========================================
+Training Dataset: hm-user-churn with Model: nomic
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-user-churn
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-user-churn
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-user-churn/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/nomic/hm-user-churn...
+  Train: 100000 rows
+  Val: 76556 rows
+  Test: 74575 rows
+Data split: Train=100000, Val=76556, Test=74575
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 251131
+  Label 0.0: 45720 (18.2%)
+  Label 1.0: 205411 (81.8%)
+  Positive class ratio: 0.818
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.7887, 0.7887], Val preds mean: 0.7887
+Epoch   1 | Loss: 0.889639 | Val roc_auc_score: 0.461968 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.6894, 0.6894], Val preds mean: 0.6894
+Epoch   2 | Loss: 0.536933 | Val roc_auc_score: 0.484393 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.7496, 0.7496], Val preds mean: 0.7496
+Epoch   3 | Loss: 0.500716 | Val roc_auc_score: 0.497314 *
+Epoch   4 | Loss: 0.483644 | Val roc_auc_score: 0.536901 *
+Epoch   5 | Loss: 0.480072 | Val roc_auc_score: 0.555572 *
+Epoch   6 | Loss: 0.495925 | Val roc_auc_score: 0.500000
+Epoch   7 | Loss: 0.490219 | Val roc_auc_score: 0.500000
+Epoch   8 | Loss: 0.487661 | Val roc_auc_score: 0.500000
+Epoch   9 | Loss: 0.485375 | Val roc_auc_score: 0.500000
+Epoch  10 | Loss: 0.478100 | Val roc_auc_score: 0.500000
+Epoch  11 | Loss: 0.475997 | Val roc_auc_score: 0.500035
+Epoch  12 | Loss: 0.485805 | Val roc_auc_score: 0.510293
+Epoch  13 | Loss: 0.470849 | Val roc_auc_score: 0.500000
+Epoch  14 | Loss: 0.492953 | Val roc_auc_score: 0.500000
+Epoch  15 | Loss: 0.479108 | Val roc_auc_score: 0.510301
+
+Early stopping at epoch 15
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.555572
+Test roc_auc_score: 0.508312
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-user-churn with nomic
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/nomic_head/hm-user-churn
+
+==========================================
+Training Dataset: hm-user-churn with Model: bge
+==========================================
+  INPUT_DIR: /home/naili/sharing-embedding-table/data/tpberta_table/bge/hm-user-churn
+  OUTPUT_DIR: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/hm-user-churn
+  TARGET_COL_TXT: /home/lingze/embedding_fusion/data/fit-medium-table/hm-user-churn/target_col.txt
+
+Detected task type from target_col.txt: binclass
+Loading embedding data from /home/naili/sharing-embedding-table/data/tpberta_table/bge/hm-user-churn...
+  Train: 100000 rows
+  Val: 76556 rows
+  Test: 74575 rows
+Data split: Train=100000, Val=76556, Test=74575
+Detected embedding dimension: 768
+
+Data distribution:
+  Total samples: 251131
+  Label 0.0: 45720 (18.2%)
+  Label 1.0: 205411 (81.8%)
+  Positive class ratio: 0.818
+Model architecture: TP-BERTa head (Input=768 -> 768 -> 1)
+
+Starting training for 200 epochs...
+Task: binclass, Device: cuda
+============================================================
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.8247, 0.8671], Val preds mean: 0.8496
+Epoch   1 | Loss: 0.492987 | Val roc_auc_score: 0.577434 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.8165, 0.8931], Val preds mean: 0.8583
+Epoch   2 | Loss: 0.479924 | Val roc_auc_score: 0.580943 *
+    Debug: Val labels unique: [0. 1.], Val preds range: [0.7500, 0.8790], Val preds mean: 0.8167
+Epoch   3 | Loss: 0.488433 | Val roc_auc_score: 0.583266 *
+Epoch   4 | Loss: 0.473253 | Val roc_auc_score: 0.585474 *
+Epoch   5 | Loss: 0.475929 | Val roc_auc_score: 0.586864 *
+Epoch   6 | Loss: 0.489766 | Val roc_auc_score: 0.589039 *
+Epoch   7 | Loss: 0.482233 | Val roc_auc_score: 0.591571 *
+Epoch   8 | Loss: 0.480913 | Val roc_auc_score: 0.591680 *
+Epoch   9 | Loss: 0.478708 | Val roc_auc_score: 0.592913 *
+Epoch  10 | Loss: 0.468599 | Val roc_auc_score: 0.593886 *
+Epoch  11 | Loss: 0.467506 | Val roc_auc_score: 0.594869 *
+Epoch  12 | Loss: 0.480200 | Val roc_auc_score: 0.595266 *
+Epoch  13 | Loss: 0.465880 | Val roc_auc_score: 0.596389 *
+Epoch  14 | Loss: 0.488430 | Val roc_auc_score: 0.597073 *
+Epoch  15 | Loss: 0.466326 | Val roc_auc_score: 0.598766 *
+Epoch  16 | Loss: 0.475205 | Val roc_auc_score: 0.598544
+Epoch  17 | Loss: 0.469634 | Val roc_auc_score: 0.599606 *
+Epoch  18 | Loss: 0.470835 | Val roc_auc_score: 0.599740 *
+Epoch  19 | Loss: 0.476415 | Val roc_auc_score: 0.600186 *
+Epoch  20 | Loss: 0.477076 | Val roc_auc_score: 0.600033
+Epoch  21 | Loss: 0.465578 | Val roc_auc_score: 0.599633
+Epoch  22 | Loss: 0.481143 | Val roc_auc_score: 0.600231 *
+Epoch  23 | Loss: 0.469699 | Val roc_auc_score: 0.602311 *
+Epoch  24 | Loss: 0.482185 | Val roc_auc_score: 0.602175
+Epoch  25 | Loss: 0.452530 | Val roc_auc_score: 0.602976 *
+Epoch  26 | Loss: 0.474529 | Val roc_auc_score: 0.602157
+Epoch  27 | Loss: 0.477795 | Val roc_auc_score: 0.602639
+Epoch  28 | Loss: 0.464697 | Val roc_auc_score: 0.603288 *
+Epoch  29 | Loss: 0.474469 | Val roc_auc_score: 0.603248
+Epoch  30 | Loss: 0.458883 | Val roc_auc_score: 0.603584 *
+Epoch  31 | Loss: 0.454612 | Val roc_auc_score: 0.603240
+Epoch  32 | Loss: 0.469427 | Val roc_auc_score: 0.603584
+Epoch  33 | Loss: 0.466824 | Val roc_auc_score: 0.603825 *
+Epoch  34 | Loss: 0.465911 | Val roc_auc_score: 0.603886 *
+Epoch  35 | Loss: 0.466352 | Val roc_auc_score: 0.604182 *
+Epoch  36 | Loss: 0.474035 | Val roc_auc_score: 0.603190
+Epoch  37 | Loss: 0.459823 | Val roc_auc_score: 0.603667
+Epoch  38 | Loss: 0.466139 | Val roc_auc_score: 0.603377
+Epoch  39 | Loss: 0.466636 | Val roc_auc_score: 0.604444 *
+Epoch  40 | Loss: 0.467380 | Val roc_auc_score: 0.605362 *
+Epoch  41 | Loss: 0.470916 | Val roc_auc_score: 0.606464 *
+Epoch  42 | Loss: 0.466870 | Val roc_auc_score: 0.606241
+Epoch  43 | Loss: 0.470820 | Val roc_auc_score: 0.605905
+Epoch  44 | Loss: 0.484845 | Val roc_auc_score: 0.605992
+Epoch  45 | Loss: 0.474166 | Val roc_auc_score: 0.605315
+Epoch  46 | Loss: 0.464401 | Val roc_auc_score: 0.607850 *
+Epoch  47 | Loss: 0.468372 | Val roc_auc_score: 0.607446
+Epoch  48 | Loss: 0.470539 | Val roc_auc_score: 0.607064
+Epoch  49 | Loss: 0.470264 | Val roc_auc_score: 0.607065
+Epoch  50 | Loss: 0.473262 | Val roc_auc_score: 0.608316 *
+Epoch  51 | Loss: 0.474462 | Val roc_auc_score: 0.608825 *
+Epoch  52 | Loss: 0.464686 | Val roc_auc_score: 0.608045
+Epoch  53 | Loss: 0.477410 | Val roc_auc_score: 0.607488
+Epoch  54 | Loss: 0.480353 | Val roc_auc_score: 0.607868
+Epoch  55 | Loss: 0.460855 | Val roc_auc_score: 0.607712
+Epoch  56 | Loss: 0.474014 | Val roc_auc_score: 0.607484
+Epoch  57 | Loss: 0.477844 | Val roc_auc_score: 0.608882 *
+Epoch  58 | Loss: 0.469340 | Val roc_auc_score: 0.608948 *
+Epoch  59 | Loss: 0.465792 | Val roc_auc_score: 0.608038
+Epoch  60 | Loss: 0.456278 | Val roc_auc_score: 0.608573
+Epoch  61 | Loss: 0.472164 | Val roc_auc_score: 0.608918
+Epoch  62 | Loss: 0.474857 | Val roc_auc_score: 0.609025 *
+Epoch  63 | Loss: 0.473308 | Val roc_auc_score: 0.610615 *
+Epoch  64 | Loss: 0.465553 | Val roc_auc_score: 0.610592
+Epoch  65 | Loss: 0.458040 | Val roc_auc_score: 0.610962 *
+Epoch  66 | Loss: 0.489219 | Val roc_auc_score: 0.610928
+Epoch  67 | Loss: 0.461774 | Val roc_auc_score: 0.609726
+Epoch  68 | Loss: 0.480388 | Val roc_auc_score: 0.610452
+Epoch  69 | Loss: 0.464977 | Val roc_auc_score: 0.610015
+Epoch  70 | Loss: 0.468626 | Val roc_auc_score: 0.610983 *
+Epoch  71 | Loss: 0.470822 | Val roc_auc_score: 0.610694
+Epoch  72 | Loss: 0.471568 | Val roc_auc_score: 0.609932
+Epoch  73 | Loss: 0.473756 | Val roc_auc_score: 0.610074
+Epoch  74 | Loss: 0.479792 | Val roc_auc_score: 0.610590
+Epoch  75 | Loss: 0.460656 | Val roc_auc_score: 0.609779
+Epoch  76 | Loss: 0.461496 | Val roc_auc_score: 0.610275
+Epoch  77 | Loss: 0.471888 | Val roc_auc_score: 0.610888
+Epoch  78 | Loss: 0.461775 | Val roc_auc_score: 0.609766
+Epoch  79 | Loss: 0.464105 | Val roc_auc_score: 0.610383
+Epoch  80 | Loss: 0.470652 | Val roc_auc_score: 0.610284
+
+Early stopping at epoch 80
+
+============================================================
+TRAINING COMPLETE
+============================================================
+Best Val roc_auc_score: 0.610983
+Test roc_auc_score: 0.609702
+
+✅ Training completed successfully!
+
+  ✅ Completed: hm-user-churn with bge
+     Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/bge_head/hm-user-churn
+
+==========================================
+All Datasets and Models Training Completed!
+==========================================
+Results saved to: /home/naili/sharing-embedding-table/result_raw_from_server/{model}_head/{dataset}/
+Log saved to: /home/naili/sharing-embedding-table/logs/tpberta_medium_baseline_all_20251123_084236.log
+==========================================
