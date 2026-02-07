@@ -232,3 +232,15 @@ scripts/rel-trial-scripts/bgrl-trial-pre-train.ipynb
 scripts/rel-trial-scripts/dgi-trail-pre-train.ipynb
 scripts/rel-stack-scripts/baseline-tune-post-votes.ipynb
 scripts/rel-stack-scripts/pre-train.ipynb
+scripts/rel-amazon/
+scripts/rel-f1-scripts/
+scripts/rel-stack-scripts/scratch-post-votes.ipynb
+scripts/rel-trial-scripts/graphcl-trial-pre-train.ipynb
+
+test_*
+
+tabPFN/
+
+tabICL/
+
+ltm/
