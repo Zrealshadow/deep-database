@@ -9,7 +9,7 @@ to create a noised version, then test if operators can denoise it back to the gr
 
 import copy
 import random
-from typing import List, Dict, Optional, Set
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 from aida.db.profile import DatabaseSchema, TableSchema
@@ -22,11 +22,18 @@ class NoiseConfig:
     num_noise_tables: int = 5  # Number of irrelevant tables to add
     noise_table_prefix: str = "noise_"  # Prefix for noise table names
 
-    # Column noise
-    num_noise_columns_per_table: int = 3  # Irrelevant columns per table
+    # Column noise - supports both fixed count and range sampling
+    num_noise_columns_per_table: int = 3  # Fixed number (for backward compatibility)
+    noise_columns_range: Optional[tuple] = None  # (min, max) for range sampling
+
+    # Linking strategy for noise tables
+    linking_strategy: str = "random"  # Options: "none", "random", "all"
 
     # Random seed for reproducibility
     random_seed: Optional[int] = 42
+
+    # Metadata
+    difficulty_level: Optional[str] = None  # "A", "B", "C"
 
 
 class NoiseGenerator:
@@ -86,8 +93,7 @@ class NoiseGenerator:
     def __init__(self, random_seed: Optional[int] = 42):
         """Initialize noise generator with random seed."""
         self.random_seed = random_seed
-        if random_seed is not None:
-            random.seed(random_seed)
+        self.random = random.Random(random_seed)
 
     def add_noise(
         self,
@@ -109,7 +115,7 @@ class NoiseGenerator:
 
         # Reset random seed for reproducibility
         if config.random_seed is not None:
-            random.seed(config.random_seed)
+            self.random = random.Random(config.random_seed)
 
         # Deep copy to avoid modifying original
         noised_schema = copy.deepcopy(db_schema)
@@ -119,8 +125,7 @@ class NoiseGenerator:
             self._add_noise_tables(noised_schema, config)
 
         # Add noise columns to existing tables
-        if config.num_noise_columns_per_table > 0:
-            self._add_noise_columns(noised_schema, config)
+        self._add_noise_columns(noised_schema, config)
 
         # Clear cached description
         noised_schema._cached_description = None
@@ -130,11 +135,13 @@ class NoiseGenerator:
     def _add_noise_tables(self, db_schema: DatabaseSchema, config: NoiseConfig):
         """Add irrelevant noise tables to schema with FK connections."""
         # Get original tables (before adding noise)
-        original_tables = [t for t in db_schema.tables.keys()]
+        original_tables = list(db_schema.tables.keys())
 
         # Sample noise table themes
         num_tables = min(config.num_noise_tables, len(self.NOISE_TABLE_THEMES))
-        selected_themes = random.sample(self.NOISE_TABLE_THEMES, num_tables)
+        selected_themes = self.random.sample(self.NOISE_TABLE_THEMES, num_tables)
+
+        added_tables = []
 
         for i, (base_name, columns) in enumerate(selected_themes):
             table_name = f"{config.noise_table_prefix}{base_name}"
@@ -153,33 +160,40 @@ class NoiseGenerator:
                 primary_key=columns[0] if columns else None,
                 foreign_keys={},
                 time_column=None,
-                sample_size=random.randint(100, 10000)
+                sample_size=self.random.randint(100, 10000)
             )
 
-            # Randomly choose FK connection strategy (if there are original tables)
-            if original_tables and random.random() < 0.7:  # 70% chance to connect
-                if random.random() < 0.5:
-                    # Approach A: FK from noise table → existing table
-                    self._connect_noise_to_existing(noise_table, db_schema, original_tables)
-                    db_schema.add_table(noise_table)
-                else:
-                    # Approach B: FK from existing table → noise table
-                    # Must add table first, then create FK from existing table
-                    db_schema.add_table(noise_table)
-                    self._connect_existing_to_noise(noise_table.name, db_schema, original_tables)
-            else:
-                # No FK connection, just add the table
-                db_schema.add_table(noise_table)
+            # Add table first (needed for both linking approaches)
+            db_schema.add_table(noise_table)
+            added_tables.append(table_name)
 
-    def _connect_noise_to_existing(
+        # Apply linking strategy
+        if not original_tables or config.linking_strategy == 'none':
+            return
+
+        # Determine link probability: 100% for 'all', 70% for 'random' (default)
+        link_probability = 1.0 if config.linking_strategy == 'all' else 0.7
+
+        for noise_table_name in added_tables:
+            if self.random.random() >= link_probability:
+                continue
+
+            # Randomly choose direction: noise→existing or existing→noise
+            if self.random.random() < 0.5:
+                noise_table = db_schema.tables[noise_table_name]
+                self._connect_noise_to_existing_inplace(noise_table, db_schema, original_tables)
+            else:
+                self._connect_existing_to_noise(noise_table_name, db_schema, original_tables)
+
+    def _connect_noise_to_existing_inplace(
         self,
         noise_table: TableSchema,
         db_schema: DatabaseSchema,
         original_tables: List[str]
     ):
-        """Approach A: Add FK from noise table to existing table."""
+        """Approach A: Add FK from noise table to existing table (modifies table in-place)."""
         # Select random existing table to reference
-        target_table_name = random.choice(original_tables)
+        target_table_name = self.random.choice(original_tables)
         target_table = db_schema.tables[target_table_name]
 
         if not target_table.primary_key:
@@ -198,7 +212,7 @@ class NoiseGenerator:
     ):
         """Approach B: Add FK from existing table to noise table."""
         # Select random existing table to add FK column to
-        target_table_name = random.choice(original_tables)
+        target_table_name = self.random.choice(original_tables)
         noise_table = db_schema.tables[noise_table_name]
 
         if not noise_table.primary_key:
@@ -231,142 +245,25 @@ class NoiseGenerator:
             if not available_noise_cols:
                 continue
 
-            # Add random noise columns
-            num_to_add = min(config.num_noise_columns_per_table, len(available_noise_cols))
-            noise_cols = random.sample(available_noise_cols, num_to_add)
-
-            # Use API to add columns
-            for col in noise_cols:
-                table.add_column(col, is_foreign_key=False)
-
-    def get_ground_truth_tables(self, original_schema: DatabaseSchema) -> Set[str]:
-        """
-        Get set of ground truth table names.
-
-        Args:
-            original_schema: Original clean schema
-
-        Returns:
-            Set of table names in ground truth
-        """
-        return set(original_schema.tables.keys())
-
-    def get_ground_truth_columns(
-        self,
-        original_schema: DatabaseSchema
-    ) -> Dict[str, Set[str]]:
-        """
-        Get ground truth columns for each table.
-
-        Args:
-            original_schema: Original clean schema
-
-        Returns:
-            Dict mapping table name to set of column names
-        """
-        return {
-            table_name: set(table.columns)
-            for table_name, table in original_schema.tables.items()
-        }
-
-    def calculate_metrics(
-        self,
-        predicted_schema: DatabaseSchema,
-        ground_truth_schema: DatabaseSchema,
-        level: str = "table"
-    ) -> Dict[str, float]:
-        """
-        Calculate precision, recall, F1 for table or column selection.
-
-        Args:
-            predicted_schema: Schema after operator filtering
-            ground_truth_schema: Original clean schema
-            level: "table" or "column"
-
-        Returns:
-            Dict with precision, recall, f1, and counts
-        """
-        if level == "table":
-            return self._calculate_table_metrics(predicted_schema, ground_truth_schema)
-        elif level == "column":
-            return self._calculate_column_metrics(predicted_schema, ground_truth_schema)
-        else:
-            raise ValueError(f"Unknown level: {level}")
-
-    def _calculate_table_metrics(
-        self,
-        predicted_schema: DatabaseSchema,
-        ground_truth_schema: DatabaseSchema
-    ) -> Dict[str, float]:
-        """Calculate metrics for table selection."""
-        predicted_tables = set(predicted_schema.tables.keys())
-        ground_truth_tables = set(ground_truth_schema.tables.keys())
-
-        true_positives = predicted_tables & ground_truth_tables
-        false_positives = predicted_tables - ground_truth_tables
-        false_negatives = ground_truth_tables - predicted_tables
-
-        precision = len(true_positives) / len(predicted_tables) if predicted_tables else 0.0
-        recall = len(true_positives) / len(ground_truth_tables) if ground_truth_tables else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-
-        return {
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "true_positives": len(true_positives),
-            "false_positives": len(false_positives),
-            "false_negatives": len(false_negatives),
-            "predicted_count": len(predicted_tables),
-            "ground_truth_count": len(ground_truth_tables),
-        }
-
-    def _calculate_column_metrics(
-        self,
-        predicted_schema: DatabaseSchema,
-        ground_truth_schema: DatabaseSchema
-    ) -> Dict[str, float]:
-        """Calculate metrics for column selection (aggregated across tables)."""
-        total_tp = 0
-        total_fp = 0
-        total_fn = 0
-        total_predicted = 0
-        total_ground_truth = 0
-
-        # Only evaluate tables that exist in ground truth
-        for table_name in ground_truth_schema.tables.keys():
-            gt_columns = set(ground_truth_schema.tables[table_name].columns)
-            total_ground_truth += len(gt_columns)
-
-            if table_name in predicted_schema.tables:
-                pred_columns = set(predicted_schema.tables[table_name].columns)
-                total_predicted += len(pred_columns)
-
-                tp = pred_columns & gt_columns
-                fp = pred_columns - gt_columns
-                fn = gt_columns - pred_columns
-
-                total_tp += len(tp)
-                total_fp += len(fp)
-                total_fn += len(fn)
+            # Determine number of columns to add
+            if config.noise_columns_range is not None:
+                # Sample from range
+                min_cols, max_cols = config.noise_columns_range
+                num_to_add = self.random.randint(min_cols, max_cols + 1)
             else:
-                # Table not selected - all ground truth columns are false negatives
-                total_fn += len(gt_columns)
+                # Use fixed count (backward compatibility)
+                num_to_add = config.num_noise_columns_per_table
 
-        precision = total_tp / total_predicted if total_predicted > 0 else 0.0
-        recall = total_tp / total_ground_truth if total_ground_truth > 0 else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+            # Cap at available columns
+            num_to_add = min(num_to_add, len(available_noise_cols))
 
-        return {
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "true_positives": total_tp,
-            "false_positives": total_fp,
-            "false_negatives": total_fn,
-            "predicted_count": total_predicted,
-            "ground_truth_count": total_ground_truth,
-        }
+            # Sample random noise columns
+            if num_to_add > 0:
+                noise_cols = self.random.sample(available_noise_cols, num_to_add)
+
+                # Use API to add columns
+                for col in noise_cols:
+                    table.add_column(col, is_foreign_key=False)
 
 
 def generate_noised_schema(

@@ -460,8 +460,17 @@ class PredictionTaskProfile:
         # Parse timedelta to days if it's a string representation
         time_duration = None
         if self.timedelta:
-            # timedelta is already the number of days
-            time_duration = int(self.timedelta) if isinstance(self.timedelta, (int, float, str)) else None
+            try:
+                if isinstance(self.timedelta, (int, float)):
+                    time_duration = int(self.timedelta)
+                elif isinstance(self.timedelta, str):
+                    # Handle pandas Timedelta string format like "30 days" or "30 days 00:00:00"
+                    import pandas as pd
+                    td = pd.Timedelta(self.timedelta)
+                    time_duration = int(td.days)
+            except (ValueError, TypeError):
+                # If parsing fails, leave as None
+                time_duration = None
 
         return TaskProfile(
             nl_query=nl_query,

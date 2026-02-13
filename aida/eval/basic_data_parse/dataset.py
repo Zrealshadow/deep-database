@@ -25,12 +25,12 @@ Usage:
         # Run evaluation...
 """
 
-from typing import List, Dict, Iterator
-from dataclasses import dataclass
 import random
+from typing import List, Dict
+from dataclasses import dataclass
 
 from utils.data.database_factory import DatabaseFactory
-from aida.db.profile import DatabaseSchema, PredictionTaskProfile
+from aida.db.profile import DatabaseSchema
 from .noise_generator import NoiseGenerator, NoiseConfig
 
 
@@ -69,55 +69,81 @@ def get_all_database_task_pairs() -> List[tuple]:
     return pairs
 
 
-def generate_noise_configs(
-    num_variants: int = 3,
-    base_seed: int = 42
-) -> List[NoiseConfig]:
+# Difficulty level definitions
+DIFFICULTY_LEVELS = {
+    'A': {
+        'name': 'Simple',
+        'num_noise_tables': 2,
+        'noise_columns_range': (0, 2),  # Sample from [0, 1, 2]
+        'linking_strategy': 'none',  # No linking
+        'description': '2 unlinked noise tables, 0-2 noise columns per existing table'
+    },
+    'B': {
+        'name': 'Medium',
+        'num_noise_tables': 3,  # Will be randomized to 2-4
+        'noise_columns_range': (0, 2),  # Sample from [0, 1, 2]
+        'linking_strategy': 'random',  # Random linking
+        'description': '2-4 noise tables with random linking, 0-2 noise columns'
+    },
+    'C': {
+        'name': 'Challenge',
+        'num_noise_tables': 5,
+        'noise_columns_range': (2, 5),  # Sample from [2, 3, 4, 5]
+        'linking_strategy': 'all',  # All linked
+        'description': '5 fully-linked noise tables, 2-5 noise columns per table'
+    }
+}
+
+
+def get_noise_config(difficulty_level: str, random_seed: int = 42) -> NoiseConfig:
     """
-    Generate multiple noise configurations with different characteristics.
+    Get noise configuration for a specific difficulty level.
 
     Args:
-        num_variants: Number of noise variants to generate
-        base_seed: Base random seed
+        difficulty_level: Difficulty level ("A", "B", or "C")
+        random_seed: Random seed for reproducibility
 
     Returns:
-        List of NoiseConfig objects
+        NoiseConfig object configured for the specified difficulty
+
+    Raises:
+        ValueError: If difficulty_level is not A, B, or C
     """
-    configs = []
+    if difficulty_level not in DIFFICULTY_LEVELS:
+        raise ValueError(f"Unknown difficulty: {difficulty_level}. Choose from A, B, C")
 
-    # Variant 1: Low noise (baseline)
-    configs.append(NoiseConfig(
-        num_noise_tables=3,
-        num_noise_columns_per_table=2,
-        random_seed=base_seed
-    ))
+    config = DIFFICULTY_LEVELS[difficulty_level]
 
-    # Variant 2: Medium noise (default)
-    if num_variants >= 2:
-        configs.append(NoiseConfig(
-            num_noise_tables=5,
-            num_noise_columns_per_table=3,
-            random_seed=base_seed + 1
-        ))
+    # For level B, randomly choose 2-4 tables
+    num_tables = config['num_noise_tables']
+    if difficulty_level == 'B':
+        rng = random.Random(random_seed)
+        num_tables = rng.randint(2, 4)
 
-    # Variant 3: High noise (challenging)
-    if num_variants >= 3:
-        configs.append(NoiseConfig(
-            num_noise_tables=8,
-            num_noise_columns_per_table=5,
-            random_seed=base_seed + 2
-        ))
+    return NoiseConfig(
+        num_noise_tables=num_tables,
+        noise_columns_range=config['noise_columns_range'],
+        linking_strategy=config['linking_strategy'],
+        random_seed=random_seed,
+        difficulty_level=difficulty_level
+    )
 
-    # Additional variants with random noise levels
-    for i in range(3, num_variants):
-        random.seed(base_seed + i)
-        configs.append(NoiseConfig(
-            num_noise_tables=random.randint(3, 10),
-            num_noise_columns_per_table=random.randint(2, 6),
-            random_seed=base_seed + i
-        ))
 
-    return configs[:num_variants]
+def get_all_difficulty_configs(base_seed: int = 42) -> List[NoiseConfig]:
+    """
+    Get configs for all difficulty levels A, B, C.
+
+    Args:
+        base_seed: Base random seed (each level gets base_seed + offset)
+
+    Returns:
+        List of 3 NoiseConfig objects (one for each difficulty level)
+    """
+    return [
+        get_noise_config('A', base_seed),
+        get_noise_config('B', base_seed + 1),
+        get_noise_config('C', base_seed + 2)
+    ]
 
 
 def generate_evaluation_dataset(
@@ -147,8 +173,8 @@ def generate_evaluation_dataset(
         if verbose:
             print(f"  Found {len(database_task_pairs)} database-task pairs")
 
-    # Generate noise configurations
-    noise_configs = generate_noise_configs(num_noise_variants, base_seed)
+    # Generate noise configurations (one per difficulty level, capped at num_variants)
+    noise_configs = get_all_difficulty_configs(base_seed)[:num_noise_variants]
 
     if verbose:
         print(f"\nGenerating evaluation dataset...")
@@ -278,10 +304,19 @@ def print_dataset_summary(dataset: List[EvaluationInstance]):
     # Noise statistics
     print(f"\nNoise configurations:")
     noise_tables = [inst.noise_config.num_noise_tables for inst in dataset]
-    noise_columns = [inst.noise_config.num_noise_columns_per_table for inst in dataset]
-
     print(f"  Noise tables: {min(noise_tables)}-{max(noise_tables)} (avg: {sum(noise_tables)/len(noise_tables):.1f})")
-    print(f"  Noise columns/table: {min(noise_columns)}-{max(noise_columns)} (avg: {sum(noise_columns)/len(noise_columns):.1f})")
+
+    # Show column noise info per unique difficulty level
+    seen_levels = set()
+    for inst in dataset:
+        config = inst.noise_config
+        level = config.difficulty_level or 'custom'
+        if level not in seen_levels:
+            seen_levels.add(level)
+            if config.noise_columns_range is not None:
+                print(f"  Noise columns range (level {level}): {config.noise_columns_range}")
+            else:
+                print(f"  Noise columns/table (level {level}): {config.num_noise_columns_per_table}")
 
     # Schema size statistics
     total_clean_cols = sum(

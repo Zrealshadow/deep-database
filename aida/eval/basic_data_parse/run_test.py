@@ -24,15 +24,16 @@ Examples:
 
 import argparse
 import sys
-import json
 from typing import Optional
 
 from utils.data.database_factory import DatabaseFactory
-from utils.task.task_factory import TaskFactory
+
 from aida.db.profile import DatabaseSchema, PredictionTaskProfile
 from aida.query_analyzer import TableSelector, FeatureSelector
 from aida.llm import LLMClientFactory
 from .noise_generator import NoiseGenerator, NoiseConfig
+from .metrics import calculate_column_metrics
+from .dataset import get_noise_config, DIFFICULTY_LEVELS
 
 
 def print_separator(char="=", length=80):
@@ -51,8 +52,9 @@ def run_test(
     task_name: str,
     provider: str,
     model: Optional[str] = None,
-    noise_tables: int = 5,
-    noise_columns: int = 3,
+    difficulty: Optional[str] = None,
+    noise_tables: Optional[int] = None,
+    noise_columns: Optional[int] = None,
     max_tables: int = 10,
     random_seed: int = 42,
     verbose: bool = False
@@ -65,8 +67,9 @@ def run_test(
         task_name: Predefined task name
         provider: LLM provider
         model: Model name (optional)
-        noise_tables: Number of noise tables to add
-        noise_columns: Number of noise columns per table
+        difficulty: Difficulty level ("A", "B", "C") - overrides noise_tables/columns
+        noise_tables: Number of noise tables to add (deprecated, use difficulty)
+        noise_columns: Number of noise columns per table (deprecated, use difficulty)
         max_tables: Maximum number of tables to select
         random_seed: Random seed for noise generation
         verbose: Verbose output
@@ -92,7 +95,7 @@ def run_test(
     # Load task
     print(f"Loading task: {task_name}...")
     try:
-        task = TaskFactory.get_task(db_name, task_name)
+        task = DatabaseFactory.get_task(db_name, task_name)
         task_profile = PredictionTaskProfile.from_relbench_task(task, task_name)
         print(f"✓ Task loaded")
         print(f"  Task Type: {task_profile.task_type}")
@@ -110,11 +113,21 @@ def run_test(
     # ============================================================
     print_section("STEP 2: ADD NOISE TO SCHEMA")
 
-    config = NoiseConfig(
-        num_noise_tables=noise_tables,
-        num_noise_columns_per_table=noise_columns,
-        random_seed=random_seed
-    )
+    # Setup noise config - respect difficulty level unless custom noise specified
+    if difficulty:
+        config = get_noise_config(difficulty, random_seed)
+        if verbose:
+            level_info = DIFFICULTY_LEVELS[difficulty]
+            print(f"\nUsing Difficulty Level {difficulty}: {level_info['name']}")
+            print(f"  Description: {level_info['description']}")
+    else:
+        # Use custom or default noise settings
+        config = NoiseConfig(
+            num_noise_tables=noise_tables or 5,
+            num_noise_columns_per_table=noise_columns or 3,
+            random_seed=random_seed
+        )
+
     generator = NoiseGenerator(random_seed=random_seed)
 
     try:
@@ -266,7 +279,53 @@ def run_test(
         return False
 
     # ============================================================
-    # STEP 6: Summary
+    # STEP 6: Column-Level Analysis
+    # ============================================================
+    print_section("STEP 6: COLUMN-LEVEL ANALYSIS")
+
+    # Calculate metrics using the metrics module
+    metrics = calculate_column_metrics(
+        predicted_schema=final_schema,
+        ground_truth_schema=clean_schema,
+        noised_schema=noised_schema
+    )
+
+    precision = metrics['precision']
+    recall = metrics['recall']
+    f1 = metrics['f1']
+    fn_cols = metrics['false_negative_columns']
+    fp_cols = metrics['false_positive_columns']
+
+    print(f"\n📊 Column-Level Metrics:")
+    print(f"  Precision: {precision:.3f} ({metrics['true_positives']}/{metrics['predicted_count']} selected columns are ground truth)")
+    print(f"  Recall:    {recall:.3f} ({metrics['true_positives']}/{metrics['ground_truth_count']} ground truth columns kept)")
+    print(f"  F1 Score:  {f1:.3f}")
+
+    print(f"\n  True Positives (TP):  {metrics['true_positives']} - Ground truth columns correctly kept")
+    print(f"  False Negatives (FN): {metrics['false_negatives']} - Ground truth columns incorrectly removed")
+    print(f"  False Positives (FP): {metrics['false_positives']} - Noise columns incorrectly selected")
+    print(f"  True Negatives (TN):  {metrics['true_negatives']} - Noise columns correctly filtered")
+
+    # Show details if there are errors
+    if fn_cols:
+        print(f"\n❌ Ground Truth Columns Lost ({len(fn_cols)}):")
+        for col in sorted(fn_cols)[:20]:
+            print(f"     {col}")
+        if len(fn_cols) > 20:
+            print(f"     ... and {len(fn_cols) - 20} more")
+
+    if fp_cols:
+        print(f"\n⚠️  Noise Columns Incorrectly Selected ({len(fp_cols)}):")
+        for col in sorted(fp_cols)[:20]:
+            print(f"     {col}")
+        if len(fp_cols) > 20:
+            print(f"     ... and {len(fp_cols) - 20} more")
+
+    if not fn_cols and not fp_cols:
+        print(f"\n✅ Perfect filtering! All ground truth kept, all noise removed.")
+
+    # ============================================================
+    # STEP 7: Summary
     # ============================================================
     print_section("SUMMARY")
 
@@ -282,6 +341,10 @@ def run_test(
     print(f"\n🔍 Filtering Results:")
     print(f"  Tables filtered: {tables_removed}")
     print(f"  Columns filtered: {cols_removed}")
+    print(f"\n🎯 Quality Metrics:")
+    print(f"  Precision: {precision:.1%}")
+    print(f"  Recall:    {recall:.1%}")
+    print(f"  F1 Score:  {f1:.1%}")
 
     return True
 
@@ -322,23 +385,31 @@ def main():
     )
 
     parser.add_argument(
+        "--difficulty",
+        type=str,
+        default="A",
+        choices=["A", "B", "C"],
+        help="Difficulty level: A (simple), B (medium), C (challenge). Overrides --noise-tables/columns"
+    )
+
+    parser.add_argument(
         "--noise-tables",
         type=int,
-        default=5,
-        help="Number of noise tables to add (default: 5)"
+        default=None,
+        help="Number of noise tables to add (default: 5, or use --difficulty)"
     )
 
     parser.add_argument(
         "--noise-columns",
         type=int,
-        default=3,
-        help="Number of noise columns per table (default: 3)"
+        default=None,
+        help="Number of noise columns per table (default: 3, or use --difficulty)"
     )
 
     parser.add_argument(
         "--max-tables",
         type=int,
-        default=10,
+        default=15,
         help="Maximum number of tables to select (default: 10)"
     )
 
@@ -368,6 +439,7 @@ def main():
         task_name=args.task_name,
         provider=args.provider,
         model=args.model,
+        difficulty=args.difficulty,
         noise_tables=args.noise_tables,
         noise_columns=args.noise_columns,
         max_tables=args.max_tables,

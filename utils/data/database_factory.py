@@ -145,7 +145,7 @@ class DatabaseFactory(object):
             cls,
             db_name: str,
             task_name: str,
-            dataset: Dataset,
+            dataset: Optional[Dataset] = None
     ) -> BaseTask:
         """Get a task by database name and task name.
         :param db_name: The name of the database.
@@ -167,6 +167,7 @@ class DatabaseFactory(object):
             )
 
         task_class = cls._task_registry[db_name][task_name]
+        dataset = dataset if dataset else cls.get_dataset(db_name)
         cache_dir = os.path.join(dataset.cache_dir, "tasks", task_name)
         return task_class(dataset=dataset, cache_dir=cache_dir)
 
