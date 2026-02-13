@@ -77,6 +77,54 @@ class TableSchema:
 
         return f"{self.name} table - {'; '.join(parts)}"
 
+    def add_column(
+        self,
+        column_name: str,
+        is_foreign_key: bool = False,
+        references: Optional[tuple] = None  # (table, pk)
+    ) -> None:
+        """
+        Add a column to the table.
+
+        Args:
+            column_name: Name of column to add
+            is_foreign_key: Whether this is a foreign key
+            references: If FK, tuple of (referenced_table, referenced_pk)
+        """
+        if column_name in self.columns:
+            raise ValueError(f"Column {column_name} already exists in table {self.name}")
+
+        self.columns.append(column_name)
+
+        if is_foreign_key and references:
+            ref_table, ref_pk = references
+            self.foreign_keys[column_name] = ref_table
+
+    def remove_column(self, column_name: str) -> None:
+        """
+        Remove a column from the table.
+
+        Args:
+            column_name: Name of column to remove
+        """
+        if column_name not in self.columns:
+            raise ValueError(f"Column {column_name} not found in table {self.name}")
+
+        # Remove from columns list
+        self.columns.remove(column_name)
+
+        # Remove from foreign keys if it's a FK
+        if column_name in self.foreign_keys:
+            del self.foreign_keys[column_name]
+
+        # Clear primary key if removing the PK
+        if self.primary_key == column_name:
+            self.primary_key = None
+
+        # Clear time column if removing it
+        if self.time_column == column_name:
+            self.time_column = None
+
 
 @dataclass
 class DatabaseSchema:
@@ -163,6 +211,159 @@ class DatabaseSchema:
 
         return relationships
 
+    def add_table(self, table: 'TableSchema') -> None:
+        """
+        Add a table to the schema.
+
+        Args:
+            table: TableSchema to add
+
+        Raises:
+            ValueError: If table name already exists or FK references are invalid
+        """
+        if table.name in self.tables:
+            raise ValueError(f"Table {table.name} already exists")
+
+        # Validate foreign key references
+        for fk_col, ref_table_name in table.foreign_keys.items():
+            # Check if referenced table exists
+            if ref_table_name not in self.tables:
+                raise ValueError(
+                    f"Foreign key {fk_col} in table {table.name} references "
+                    f"non-existent table {ref_table_name}"
+                )
+
+            # Check if referenced table has a primary key
+            ref_table = self.tables[ref_table_name]
+            if not ref_table.primary_key:
+                raise ValueError(
+                    f"Foreign key {fk_col} in table {table.name} references "
+                    f"table {ref_table_name} which has no primary key"
+                )
+
+        self.tables[table.name] = table
+        self._cached_description = None
+
+    def remove_table(self, table_name: str, cascade: bool = True) -> None:
+        """
+        Remove a table from the schema.
+
+        Args:
+            table_name: Name of table to remove
+            cascade: If True, remove all FKs referencing this table
+
+        Raises:
+            ValueError: If table doesn't exist
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"Table {table_name} not found")
+
+        if cascade:
+            # Remove all foreign keys in other tables that reference this table
+            for other_table in self.tables.values():
+                if other_table.name == table_name:
+                    continue
+
+                # Find FKs pointing to this table
+                fks_to_remove = [
+                    fk_col for fk_col, ref_table in other_table.foreign_keys.items()
+                    if ref_table == table_name
+                ]
+
+                # Remove FK columns and FK references
+                for fk_col in fks_to_remove:
+                    other_table.remove_column(fk_col)
+
+        # Remove the table
+        del self.tables[table_name]
+        self._cached_description = None
+
+    def add_column_to_table(
+        self,
+        table_name: str,
+        column_name: str,
+        is_foreign_key: bool = False,
+        references: Optional[tuple] = None  # (table_name, pk_column)
+    ) -> None:
+        """
+        Add a column to a table.
+
+        Args:
+            table_name: Target table name
+            column_name: Column name to add
+            is_foreign_key: Whether this is a foreign key
+            references: If FK, tuple of (referenced_table, referenced_column)
+
+        Raises:
+            ValueError: If table not found or FK reference is invalid
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"Table {table_name} not found")
+
+        # Validate foreign key reference if provided
+        if is_foreign_key and references:
+            ref_table_name, ref_pk = references
+
+            # Check if referenced table exists
+            if ref_table_name not in self.tables:
+                raise ValueError(
+                    f"Foreign key {column_name} references non-existent table {ref_table_name}"
+                )
+
+            # Check if referenced table has the specified primary key
+            ref_table = self.tables[ref_table_name]
+            if not ref_table.primary_key:
+                raise ValueError(
+                    f"Foreign key {column_name} references table {ref_table_name} which has no primary key"
+                )
+
+            if ref_table.primary_key != ref_pk:
+                raise ValueError(
+                    f"Foreign key {column_name} references {ref_table_name}.{ref_pk}, "
+                    f"but primary key is {ref_table.primary_key}"
+                )
+
+        table = self.tables[table_name]
+        table.add_column(column_name, is_foreign_key, references)
+        self._cached_description = None
+
+    def remove_column_from_table(
+        self,
+        table_name: str,
+        column_name: str,
+        cascade: bool = True
+    ) -> None:
+        """
+        Remove a column from a table.
+
+        Args:
+            table_name: Target table name
+            column_name: Column to remove
+            cascade: If True and column is a PK, remove FKs referencing it
+        """
+        if table_name not in self.tables:
+            raise ValueError(f"Table {table_name} not found")
+
+        table = self.tables[table_name]
+
+        # If removing a PK, cascade delete FKs in other tables
+        if cascade and table.primary_key == column_name:
+            for other_table in self.tables.values():
+                if other_table.name == table_name:
+                    continue
+
+                # Find FKs referencing this PK
+                fks_to_remove = [
+                    fk_col for fk_col, ref_table in other_table.foreign_keys.items()
+                    if ref_table == table_name
+                ]
+
+                for fk_col in fks_to_remove:
+                    other_table.remove_column(fk_col)
+
+        table.remove_column(column_name)
+        self._cached_description = None
+
 
 @dataclass
 class PredictionTaskProfile:
@@ -240,3 +441,33 @@ class PredictionTaskProfile:
         descriptions.append(target_info)
         
         return "\n".join(descriptions).capitalize()
+
+    def to_task_profile(self):
+        """
+        Convert PredictionTaskProfile to TaskProfile for operator compatibility.
+
+        Allows using predefined benchmark tasks with operators that expect TaskProfile.
+
+        Returns:
+            TaskProfile instance with fields mapped from PredictionTaskProfile
+        """
+        # Import here to avoid circular dependency
+        from aida.query_analyzer.nl2task import TaskProfile
+
+        # Use description or docs as natural language query
+        nl_query = self.description if self.description else self.docs
+
+        # Parse timedelta to days if it's a string representation
+        time_duration = None
+        if self.timedelta:
+            # timedelta is already the number of days
+            time_duration = int(self.timedelta) if isinstance(self.timedelta, (int, float, str)) else None
+
+        return TaskProfile(
+            nl_query=nl_query,
+            task_type=self.task_type,
+            entity_table=self.entity_table,
+            time_duration=time_duration,
+            target_col=self.target_column,
+            entity_col=self.target_entity,
+        )

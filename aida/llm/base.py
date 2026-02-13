@@ -57,6 +57,9 @@ class LLMClient(ABC):
         self.model = model
         if api_key is None and self.env_key:
             api_key = os.environ.get(self.env_key)
+
+        assert api_key is not None, "API key must be provided"
+        
         self.api_key = api_key
         self.options = kwargs
 
@@ -84,6 +87,7 @@ class LLMClient(ABC):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         """
@@ -94,6 +98,7 @@ class LLMClient(ABC):
             system_prompt: Optional system prompt
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens in response
+            response_format: Response format spec, e.g. {"type": "json_object"}
             **kwargs: Additional provider-specific options
 
         Returns:
@@ -107,6 +112,7 @@ class LLMClient(ABC):
         messages: List[Message],
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         """
@@ -116,6 +122,7 @@ class LLMClient(ABC):
             messages: List of chat messages
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens in response
+            response_format: Response format spec, e.g. {"type": "json_object"}
             **kwargs: Additional provider-specific options
 
         Returns:

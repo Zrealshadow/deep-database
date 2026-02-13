@@ -49,19 +49,21 @@ class OpenAIAdapter(LLMClient):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         messages = []
         if system_prompt:
             messages.append(Message(role="system", content=system_prompt))
         messages.append(Message(role="user", content=prompt))
-        return self.chat(messages, temperature, max_tokens, **kwargs)
+        return self.chat(messages, temperature, max_tokens, response_format, **kwargs)
 
     def chat(
         self,
         messages: List[Message],
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         client = self._get_client()
@@ -80,6 +82,8 @@ class OpenAIAdapter(LLMClient):
         }
         if max_tokens:
             request_kwargs["max_tokens"] = max_tokens
+        if response_format:
+            request_kwargs["response_format"] = response_format
 
         response = client.chat.completions.create(**request_kwargs)
 
@@ -136,6 +140,7 @@ class AnthropicAdapter(LLMClient):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         messages = [Message(role="user", content=prompt)]
@@ -144,13 +149,14 @@ class AnthropicAdapter(LLMClient):
         if system_prompt:
             kwargs["system"] = system_prompt
 
-        return self.chat(messages, temperature, max_tokens, **kwargs)
+        return self.chat(messages, temperature, max_tokens, response_format, **kwargs)
 
     def chat(
         self,
         messages: List[Message],
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         client = self._get_client()
@@ -259,19 +265,21 @@ class OllamaAdapter(LLMClient):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         messages = []
         if system_prompt:
             messages.append(Message(role="system", content=system_prompt))
         messages.append(Message(role="user", content=prompt))
-        return self.chat(messages, temperature, max_tokens, **kwargs)
+        return self.chat(messages, temperature, max_tokens, response_format, **kwargs)
 
     def chat(
         self,
         messages: List[Message],
         temperature: float = 0.1,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> LLMResponse:
         try:
