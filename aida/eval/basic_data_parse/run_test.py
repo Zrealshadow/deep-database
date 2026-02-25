@@ -246,6 +246,7 @@ def run_test(
             print("❌ Feature selection failed!")
             for error in feature_result.errors:
                 print(f"  ❌ {error}")
+                print(f"Raw Response: {feature_result.raw_response}")
             return False
 
         final_schema = feature_result.db_schema
@@ -373,7 +374,7 @@ def main():
         "--provider",
         type=str,
         default="deepseek",
-        choices=["openai", "anthropic", "ollama", "deepseek"],
+        choices=LLMClientFactory.available_providers(),
         help="LLM provider (default: deepseek)"
     )
 

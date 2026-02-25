@@ -19,15 +19,22 @@ def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
     2. Extract from markdown code block (```json ... ```)
     3. Find embedded JSON object in text
 
+    Handles inline comments (// style) by stripping them before parsing.
+
     Args:
         response: Raw LLM response string
 
     Returns:
         Parsed JSON dict, or None if parsing fails
     """
+    def strip_comments(text: str) -> str:
+        """Remove inline // comments from JSON text."""
+        return re.sub(r'//.*?(?=\n|$)', '', text, flags=re.MULTILINE)
+
     # Strategy 1: Direct parse
     try:
-        return json.loads(response.strip())
+        cleaned = strip_comments(response.strip())
+        return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
@@ -35,7 +42,8 @@ def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
     match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
     if match:
         try:
-            return json.loads(match.group(1))
+            cleaned = strip_comments(match.group(1))
+            return json.loads(cleaned)
         except json.JSONDecodeError:
             pass
 
@@ -43,7 +51,8 @@ def parse_json_response(response: str) -> Optional[Dict[str, Any]]:
     match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response, re.DOTALL)
     if match:
         try:
-            return json.loads(match.group(0))
+            cleaned = strip_comments(match.group(0))
+            return json.loads(cleaned)
         except json.JSONDecodeError:
             pass
 

@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 # Define base encoders to test
-ENCODERS=("mlp" "tabm" "dfm" "resnet" "fttrans")
+ENCODERS=("mlp" "tabm" "dfm" "resnet" "fttrans", "armnet")
 
 # Define datasets with their configurations
 # Format: "db_name|tf_cache_dir|task_name"

@@ -102,6 +102,13 @@ Schema: customer(customer_id), review(customer_id, product_id, review_time)
 Query: "Analyze the data distribution"
 Output:
 {"task_type": null, "entity_table": null, "time_duration": null}
+
+### Example 7 for multi task in Natural query we return NULL due to the ambiguity
+Schema: users(user_id, name), products(product_id, name), reviews(user_id, product_id, rating, review)
+Query: "Predict whether a user will buy a product and leave a review"
+Output:
+{"task_type": null, "entity_table": null, "time_duration": null}
+
 """
 
     @classmethod

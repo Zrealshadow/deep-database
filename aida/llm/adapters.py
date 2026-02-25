@@ -122,8 +122,15 @@ class AnthropicAdapter(LLMClient):
 
     @property
     def default_model(self) -> str:
-        return "claude-3-haiku-20240307"
+        return "claude-haiku-4-5-20251001"
 
+    @property
+    def models(self) -> List[str]:
+        return [
+            'claude-haiku-4-5-20251001',
+            'claude-sonnet-4-5-20250929'
+        ]
+        
     def _get_client(self):
         """Lazy load Anthropic client"""
         try:
@@ -227,6 +234,129 @@ class DeepSeekAdapter(OpenAIAdapter):
                 "OpenAI package not found. Install with: pip install openai"
             )
         return OpenAI(api_key=self.api_key, base_url="https://api.deepseek.com")
+
+    @property
+    def models(self) -> List[str]:
+        return ["deepseek-chat", "deepseek-reasoner"]
+
+
+@LLMClientFactory.register("gemini")
+class GeminiAdapter(LLMClient):
+    """
+    Adapter for Google Gemini API.
+
+    Requires: pip install google-genai
+
+    Example:
+        >>> adapter = GeminiAdapter(model="gemini-2.0-flash")
+        >>> response = adapter.complete("Hello!")
+    """
+
+    @property
+    def env_key(self) -> str:
+        return "GEMINI_API_KEY"
+
+    @property
+    def provider_name(self) -> str:
+        return "gemini"
+
+    @property
+    def default_model(self) -> str:
+        return "gemini-2.5-pro"
+
+    @property
+    def models(self) -> List[str]:
+        return [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash"
+        ]
+
+    def _get_client(self):
+        """Lazy load Google Gemini client"""
+        try:
+            from google import genai
+        except ImportError:
+            raise ImportError(
+                "Google GenAI package not found. Install with: pip install google-genai"
+            )
+        return genai.Client(api_key=self.api_key)
+
+    def complete(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.1,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> LLMResponse:
+        messages = []
+        if system_prompt:
+            messages.append(Message(role="system", content=system_prompt))
+        messages.append(Message(role="user", content=prompt))
+        return self.chat(messages, temperature, max_tokens, response_format, **kwargs)
+
+    def chat(
+        self,
+        messages: List[Message],
+        temperature: float = 0.1,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> LLMResponse:
+        from google.genai import types
+
+        client = self._get_client()
+
+        system_prompt = None
+        gemini_contents = []
+
+        for msg in messages:
+            if msg.role == "system":
+                system_prompt = msg.content
+            else:
+                role = "model" if msg.role == "assistant" else "user"
+                gemini_contents.append(types.Content(
+                    role=role,
+                    parts=[types.Part(text=msg.content)]
+                ))
+
+        config_kwargs = {"temperature": temperature}
+        if max_tokens:
+            config_kwargs["max_output_tokens"] = max_tokens
+        if system_prompt:
+            config_kwargs["system_instruction"] = system_prompt
+        if response_format:
+            fmt_type = response_format.get("type")
+            if fmt_type in ("json_object", "json"):
+                config_kwargs["response_mime_type"] = "application/json"
+            elif fmt_type == "json_schema":
+                config_kwargs["response_mime_type"] = "application/json"
+                schema = response_format.get("json_schema", {}).get("schema")
+                if schema:
+                    config_kwargs["response_schema"] = schema
+
+        response = client.models.generate_content(
+            model=self.get_model(),
+            contents=gemini_contents,
+            config=types.GenerateContentConfig(**config_kwargs),
+        )
+
+        usage = None
+        if response.usage_metadata:
+            usage = {
+                "prompt_tokens": response.usage_metadata.prompt_token_count,
+                "completion_tokens": response.usage_metadata.candidates_token_count,
+                "total_tokens": response.usage_metadata.total_token_count,
+            }
+
+        return LLMResponse(
+            content=response.text,
+            model=self.get_model(),
+            provider=self.provider_name,
+            usage=usage,
+            raw_response=response
+        )
 
 
 @LLMClientFactory.register("ollama")

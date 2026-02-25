@@ -44,16 +44,18 @@ def run_eval(provider="deepseek", model=None, mode="all", verbose=False):
     print("BasicTaskParser Evaluation".center(80))
     print("=" * 80)
     print(f"\nProvider: {provider}")
-    if model:
-        print(f"Model: {model}")
+
+
+    llm_client = LLMClientFactory.create(provider, model=model)
+    parser = BasicTaskParser()
+    
+    model = llm_client.default_model if model is None else model
+    print(f"Model: {model}")
     print(f"Mode: {mode} ({'dry-run with 10 samples' if mode == 'random' else 'full evaluation'})")
     if verbose:
         print("Verbose: ON (will show details for failed cases)")
     print()
-
-    llm_client = LLMClientFactory.create(provider, model=model)
-    parser = BasicTaskParser()
-
+    
     # Collect dataset
     print("Collecting evaluation dataset...")
     dataset = collect_eval_dataset(mode=mode)
@@ -194,7 +196,7 @@ def main():
         "--provider",
         type=str,
         default="deepseek",
-        choices=["openai", "anthropic", "ollama", "deepseek"],
+        choices=LLMClientFactory.available_providers(),
         help="LLM provider (default: deepseek)"
     )
 

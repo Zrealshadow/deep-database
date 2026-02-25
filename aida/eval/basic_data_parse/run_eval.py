@@ -33,20 +33,10 @@ from aida.db.profile import DatabaseSchema, PredictionTaskProfile
 from aida.query_analyzer import TableSelector, FeatureSelector
 from aida.llm import LLMClientFactory
 from .noise_generator import NoiseGenerator
-from .dataset import get_noise_config, DIFFICULTY_LEVELS
+from .dataset import get_noise_config, DIFFICULTY_LEVELS, EVALUATION_BENCHMARK
 from .metrics import calculate_column_metrics, aggregate_metrics
 
 
-# Benchmark configuration
-EVALUATION_BENCHMARK = {
-    'databases': [
-        ('avito', 'user-clicks'),
-        ('hm', 'customer-churn'),
-        ('donor', 'donor-return'),
-    ],
-    'difficulty_level': 'B',  # Default to medium difficulty
-    'random_seed': 42
-}
 
 
 def print_separator(char="=", length=100):
@@ -120,7 +110,6 @@ def run_single_eval(
         if verbose:
             print("\n[3/5] Loading task...")
 
-        dataset = DatabaseFactory.get_dataset()
         task = DatabaseFactory.get_task(db_name, task_name)
         task_profile = PredictionTaskProfile.from_relbench_task(task, task_name).to_task_profile()
 
@@ -267,12 +256,26 @@ def print_results_table(results: List[Dict], aggregate: Dict):
     # Summary
     if len(results) > 1:
         print(f"\n📊 SUMMARY (Column-Level Metrics)")
-        print(f"   Precision: {aggregate['precision']['mean']:.3f} ± {aggregate['precision']['std']:.3f}")
-        print(f"   Recall:    {aggregate['recall']['mean']:.3f} ± {aggregate['recall']['std']:.3f}")
-        print(f"   F1 Score:  {aggregate['f1']['mean']:.3f} ± {aggregate['f1']['std']:.3f}")
-        print(f"   Evaluations: {len(results)}")
+
+        # Show per-difficulty statistics if multiple difficulties
         if has_multiple_difficulties:
-            print(f"   Difficulty levels: {', '.join(sorted(difficulty_levels_in_results))}")
+            for level in sorted(difficulty_levels_in_results):
+                level_results = [r for r in results if r.get('difficulty_level') == level]
+                if level_results:
+                    agg = aggregate_metrics([r['metrics'] for r in level_results])
+                    print(f"\n   Difficulty {level}:")
+                    print(f"      Precision: {agg['precision']['mean']:.3f} ± {agg['precision']['std']:.3f}")
+                    print(f"      Recall:    {agg['recall']['mean']:.3f} ± {agg['recall']['std']:.3f}")
+                    print(f"      F1 Score:  {agg['f1']['mean']:.3f} ± {agg['f1']['std']:.3f}")
+                    print(f"      Evaluations: {len(level_results)}")
+
+            # Overall statistics
+            print(f"\n   Overall:")
+
+        print(f"      Precision: {aggregate['precision']['mean']:.3f} ± {aggregate['precision']['std']:.3f}")
+        print(f"      Recall:    {aggregate['recall']['mean']:.3f} ± {aggregate['recall']['std']:.3f}")
+        print(f"      F1 Score:  {aggregate['f1']['mean']:.3f} ± {aggregate['f1']['std']:.3f}")
+        print(f"      Evaluations: {len(results)}")
 
 
 def run_benchmark_eval(
@@ -280,6 +283,7 @@ def run_benchmark_eval(
     model: Optional[str] = None,
     difficulty: str = "B",
     max_tables: int = 10,
+    random_seed: int = 42,
     verbose: bool = False
 ) -> List[Dict]:
     """
@@ -290,6 +294,7 @@ def run_benchmark_eval(
         model: Model name (optional)
         difficulty: Difficulty level ("A", "B", "C", or "all")
         max_tables: Maximum tables to select
+        random_seed: Random seed for noise generation
         verbose: Verbose output
 
     Returns:
@@ -303,10 +308,10 @@ def run_benchmark_eval(
     print_section("INITIALIZING LLM CLIENT")
     try:
         llm_client = LLMClientFactory.create(provider=provider, model=model)
+        model = llm_client.default_model if model is None else model
         print("✓ LLM client initialized")
         print(f"  Provider: {provider}")
-        if model:
-            print(f"  Model: {model}")
+        print(f"  Model: {model}")
     except Exception as e:
         print(f"❌ Error creating LLM client: {e}")
         return []
@@ -321,7 +326,7 @@ def run_benchmark_eval(
 
     for level in difficulty_levels:
         # Get noise config for this difficulty level
-        noise_config = get_noise_config(level, EVALUATION_BENCHMARK['random_seed'])
+        noise_config = get_noise_config(level, random_seed)
 
         print_section(f"DIFFICULTY LEVEL {level}: {noise_config.difficulty_level}")
 
@@ -333,10 +338,10 @@ def run_benchmark_eval(
         print(f"  Random seed: {noise_config.random_seed}")
 
         # Run evaluations for this difficulty level
-        print(f"\n  Running evaluations on {len(EVALUATION_BENCHMARK['databases'])} databases...")
+        print(f"\n  Running evaluations on {len(EVALUATION_BENCHMARK)} databases...")
 
-        for i, (db_name, task_name) in enumerate(EVALUATION_BENCHMARK['databases'], 1):
-            print(f"  [{i}/{len(EVALUATION_BENCHMARK['databases'])}] {db_name} ({task_name})...", end=" ")
+        for i, (db_name, task_name) in enumerate(EVALUATION_BENCHMARK, 1):
+            print(f"  [{i}/{len(EVALUATION_BENCHMARK)}] {db_name} ({task_name})...", end=" ")
 
             result = run_single_eval(
                 db_name=db_name,
@@ -370,7 +375,7 @@ def main():
         "--provider",
         type=str,
         default="deepseek",
-        choices=["openai", "anthropic", "ollama", "deepseek"],
+        choices=LLMClientFactory.available_providers(),
         help="LLM provider (default: deepseek)"
     )
 
@@ -397,6 +402,13 @@ def main():
     )
 
     parser.add_argument(
+        "--random-seed",
+        type=int,
+        default=42,
+        help="Random seed for noise generation (default: 42)"
+    )
+
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Verbose mode"
@@ -410,6 +422,7 @@ def main():
         model=args.model,
         difficulty=args.difficulty,
         max_tables=args.max_tables,
+        random_seed=args.random_seed,
         verbose=args.verbose
     )
 
@@ -423,7 +436,7 @@ def main():
 
     # Calculate expected total
     num_difficulties = 3 if args.difficulty == 'all' else 1
-    expected_total = len(EVALUATION_BENCHMARK['databases']) * num_difficulties
+    expected_total = len(EVALUATION_BENCHMARK) * num_difficulties
 
     print(f"\n✅ Benchmark completed: {len(results)}/{expected_total} evaluations")
     sys.exit(0)

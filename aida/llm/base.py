@@ -133,3 +133,8 @@ class LLMClient(ABC):
     def get_model(self) -> str:
         """Get the current model, falling back to default"""
         return self.model or self.default_model
+
+    @property    
+    def models(self) -> List[str]:
+        '''Return the list of available models for this provider'''
+        ...

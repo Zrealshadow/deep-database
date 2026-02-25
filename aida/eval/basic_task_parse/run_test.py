@@ -115,16 +115,17 @@ def run_test(
     # Create LLM client
     print_section("LLM CONFIGURATION")
     print(f"Provider: {provider}")
-    if model:
-        print(f"Model: {model}")
-    else:
-        print(f"Model: [using provider default]")
-
+    # if model:
+    #     print(f"Model: {model}")
+    # else:
+    #     print(f"Model: [using provider default]")
     try:
         llm_client = LLMClientFactory.create(
             provider=provider,
             model=model
         )
+        model = llm_client.default_model if model is None else model
+        print(f"Model: {model}")
     except Exception as e:
         print(f"❌ Error creating LLM client: {e}")
         return False
@@ -361,7 +362,7 @@ def main():
         "--provider",
         type=str,
         default="deepseek",
-        choices=["openai", "anthropic", "ollama", "deepseek"],
+        choices=LLMClientFactory.available_providers(),
         help="LLM provider (default: deepseek)"
     )
 
