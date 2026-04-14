@@ -6,7 +6,7 @@
 set -e  # Exit on error
 
 # Define base encoders to test
-ENCODERS=("mlp" "tabm" "dfm" "resnet" "fttrans", "armnet")
+ENCODERS=("mlp" "tabm" "dfm" "resnet" "fttrans" "armnet")
 
 # Define datasets with their configurations
 # Format: "db_name|tf_cache_dir|task_name"
@@ -15,7 +15,7 @@ CLASSIFICATION_DATASETS=(
     "event|data/rel-event-tensor-frame|user-repeat"
     "trial|data/rel-trial-tensor-frame|study-outcome"
     "avito|data/rel-avito-tensor-frame|user-clicks"
-    "ratebeer|data/ratebeer-tensor-frame|place-positive"
+    # "ratebeer|data/ratebeer-tensor-frame|place-positive"
     "ratebeer|data/ratebeer-tensor-frame|user-active"
 )
 
@@ -47,13 +47,13 @@ for dataset_config in "${CLASSIFICATION_DATASETS[@]}"; do
 
     # Loop through all encoders
     for encoder in "${ENCODERS[@]}"; do
-
+        echo "  Encoder: $encoder | DB: $db_name | Task: $task_name"
         python -m aida.aida_run \
             --db_name "$db_name" \
             --tf_cache_dir "$tf_cache_dir" \
             --task_name "$task_name" \
             --base_encoder "$encoder" \
-            $COMMON_ARGS 
+            $COMMON_ARGS
     done
     echo ""
 done
@@ -71,12 +71,13 @@ for dataset_config in "${REGRESSION_DATASETS[@]}"; do
 
     # Loop through all encoders
     for encoder in "${ENCODERS[@]}"; do
+        echo "  Encoder: $encoder | DB: $db_name | Task: $task_name"
         python -m aida.aida_run \
             --db_name "$db_name" \
             --tf_cache_dir "$tf_cache_dir" \
             --task_name "$task_name" \
             --base_encoder "$encoder" \
-            $COMMON_ARGS 
+            $COMMON_ARGS
     done
     echo ""
 done

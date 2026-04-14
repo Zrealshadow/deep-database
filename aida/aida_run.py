@@ -74,7 +74,7 @@ parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 parser.add_argument('--num_epochs', type=int, default=500,
                     help='Number of training epochs')
 parser.add_argument('--early_stop_threshold', type=int,
-                    default=10, help='Early stopping patience')
+                    default=2, help='Early stopping patience')
 parser.add_argument('--max_round_epoch', type=int,
                     default=50, help='Max batches per epoch')
 parser.add_argument('--no_need_test', action='store_false',
@@ -440,4 +440,4 @@ inference_time = end_time - start_time
 
 
 logger.success(
-    f"Final Test {evaluate_metric_func.__name__}: {test_metric:.6f} | Inference Time: {inference_time:.2f}s")
+    f"Final Test {evaluate_metric_func.__name__}: {test_metric:.6f} | Training Time: {training_duration:.2f}s | Inference Time: {inference_time:.2f}s")
